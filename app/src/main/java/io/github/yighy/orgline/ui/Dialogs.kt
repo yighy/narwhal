@@ -121,7 +121,8 @@ fun TagsDialog(
     val current = text.split(Regex("[\\s:]+")).filter { it.isNotBlank() }
 
     AlertDialog(
-        onDismissRequest = onDismiss,
+        // Closing the dialog keeps the tags typed
+        onDismissRequest = { if (current != initial) onConfirm(current) else onDismiss() },
         title = { Text("Tags") },
         text = {
             Column {
@@ -170,7 +171,10 @@ fun PropertyDialog(
     var n by remember { mutableStateOf(name) }
     var v by remember { mutableStateOf(value) }
     AlertDialog(
-        onDismissRequest = onDismiss,
+        // Closing the dialog keeps what was typed
+        onDismissRequest = {
+            if (n.isNotBlank() && (n != name || v.trim() != value)) onConfirm(n, v.trim()) else onDismiss()
+        },
         title = { Text(if (isNew) "New property" else "Property") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -221,8 +225,18 @@ fun TimestampDialog(
         val dateState = rememberDatePickerState(
             initialSelectedDateMillis = (parts?.date ?: LocalDate.now()).atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli(),
         )
+        val initialDate = parts?.date ?: LocalDate.now()
+        fun picked() = dateState.selectedDateMillis?.let { Instant.ofEpochMilli(it).atZone(ZoneOffset.UTC).toLocalDate() }
         DatePickerDialog(
-            onDismissRequest = onDismiss,
+            // Closing the calendar keeps a date that was changed (with the time it had)
+            onDismissRequest = {
+                val date = picked()
+                if (date != null && (initial == null || date != initialDate)) {
+                    onConfirm(OrgTime.build(date, parts?.time, initial))
+                } else {
+                    onDismiss()
+                }
+            },
             confirmButton = {
                 TextButton(
                     enabled = dateState.selectedDateMillis != null,
@@ -248,7 +262,8 @@ fun TimestampDialog(
             is24Hour = DateFormat.is24HourFormat(LocalContext.current),
         )
         AlertDialog(
-            onDismissRequest = onDismiss,
+            // Closing keeps the date with the time shown
+            onDismissRequest = { onConfirm(OrgTime.build(date, LocalTime.of(timeState.hour, timeState.minute), initial)) },
             title = { Text("Time") },
             text = { TimeInput(state = timeState) },
             confirmButton = {

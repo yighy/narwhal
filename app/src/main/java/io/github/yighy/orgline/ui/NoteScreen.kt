@@ -137,7 +137,10 @@ fun NoteScreen(
         dialog = d
     }
 
-    BackHandler(enabled = editing != Editing.None) { commit() }
+    BackHandler(enabled = editing != Editing.None) {
+        commit()
+        viewModel.back()
+    }
     DisposableEffect(Unit) { onDispose { commit() } }
 
     // "id:" completion while editing the title or the content
@@ -173,7 +176,7 @@ fun NoteScreen(
                 title = {},
                 colors = blendedTopBarColors(),
                 navigationIcon = {
-                    IconButton(onClick = { viewModel.back() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
+                    IconButton(onClick = { commit(); viewModel.back() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
                 },
                 actions = {
                     // Nothing to link to or add next to until the note exists

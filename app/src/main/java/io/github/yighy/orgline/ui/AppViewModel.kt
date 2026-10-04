@@ -214,7 +214,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
      */
     private suspend fun saveLatest(note: OrgNote, change: (OrgNote) -> NoteEdit): OrgNote? {
         if (note.index == DRAFT_INDEX) {
-            val screen = stack.lastOrNull { it is Screen.NewNote } as? Screen.NewNote ?: return null
+            val screen = newNoteScreen ?: return null
             return saveDraft(change(draftNote(screen)))
         }
         return saveLock.withLock {
@@ -279,7 +279,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun startNewNote(fileUri: String, anchor: OrgNote? = null, placement: Placement? = null) {
         openSwipeRow = null
         newNoteDraft = EMPTY_DRAFT
-        push(Screen.NewNote(fileUri, anchor, placement))
+        val screen = Screen.NewNote(fileUri, anchor, placement)
+        newNoteScreen = screen
+        push(screen)
     }
 
     /** The draft as a note for the note screen; [DRAFT_INDEX] marks it as not in the file yet. */
@@ -310,8 +312,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
      * Updates the draft; once it has a title, writes the note with all its fields and
      * replaces the new-note screen with the note's screen.
      */
+    /** The note being created, even after its screen was left (back saves it). */
+    private var newNoteScreen: Screen.NewNote? = null
+
     private suspend fun saveDraft(edit: NoteEdit): OrgNote? {
-        val screen = stack.lastOrNull { it is Screen.NewNote } as? Screen.NewNote ?: return null
+        val screen = newNoteScreen ?: return null
         newNoteDraft = edit
         if (edit.title.isBlank()) {
             return draftNote(screen)
@@ -331,6 +336,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             // Fields set before the title (tags, state, dates, content…) and the ID
             if (full != created.toEdit().copy(title = full.title)) repository.saveNote(created, full) else created
         } ?: return null
+        newNoteScreen = null
+        // If the screen is still shown, it becomes the note's screen
         val i = stack.indexOf(screen)
         if (i >= 0) {
             navigatedForward = true
