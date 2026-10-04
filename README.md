@@ -21,9 +21,13 @@ byte, so other apps (Emacs, Orgzly, Orgro…) see clean changes.
   `ID` property to that note if needed and inserts `[[id:…][Title]]`
 - Tap an `id:` link to open the target note; copy a link to the current note
 - Notes changed by another app are never overwritten: the save is refused and the note reloaded
+- Agenda: overdue tasks, then today and the next 6 days from SCHEDULED and DEADLINE times,
+  including each occurrence of repeating tasks; swipe right to toggle TODO / DONE
+- Reminders at scheduled and deadline times (optionally for dates without a time), with a Done
+  action; exact alarms, rescheduled after a reboot, an update or a clock change, and missed
+  reminders shown after the phone was off
 - Material 3 Expressive design (uses the material3 1.5 alpha)
 
-Planned: agenda and reminders.
 
 ## Build
 

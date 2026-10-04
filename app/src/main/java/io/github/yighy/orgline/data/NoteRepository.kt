@@ -40,6 +40,8 @@ class NoteRepository(context: Context) {
         val files: List<LoadedFile> = emptyList(),
         val loading: Boolean = false,
         val error: String? = null,
+        /** True once the folder has been read at least once. */
+        val loaded: Boolean = false,
     ) {
         val notes: List<OrgNote> by lazy { files.flatMap { it.notes } }
         val tags: List<String> by lazy { notes.flatMap { it.tags }.distinctBy { it.lowercase() }.sortedBy { it.lowercase() } }
@@ -77,7 +79,7 @@ class NoteRepository(context: Context) {
             val files = folder.listOrgFiles().map { ref ->
                 cached[ref.uri]?.takeIf { it.ref.lastModified == ref.lastModified } ?: load(folder, ref)
             }
-            _library.update { it.copy(files = files, loading = false) }
+            _library.update { it.copy(files = files, loading = false, loaded = true) }
         } catch (e: Exception) {
             _library.update { it.copy(loading = false, error = e.message ?: e.toString()) }
         }

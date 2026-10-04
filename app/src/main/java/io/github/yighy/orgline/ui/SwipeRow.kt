@@ -139,7 +139,8 @@ fun SwipeRow(
                         },
                         onHorizontalDrag = { change, delta ->
                             change.consume()
-                            val next = (offset.value + delta).coerceIn(-revealPx * 1.15f, triggerPx * 1.5f)
+                            val min = if (actions.isEmpty()) 0f else -revealPx * 1.15f
+                            val next = (offset.value + delta).coerceIn(min, triggerPx * 1.5f)
                             val nowArmed = next > triggerPx
                             if (nowArmed != armed) {
                                 armed = nowArmed

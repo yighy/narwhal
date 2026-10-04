@@ -15,8 +15,9 @@ import io.github.yighy.orgline.core.NoteStates
 import io.github.yighy.orgline.core.NoteTree
 import io.github.yighy.orgline.core.OrgTime
 import io.github.yighy.orgline.core.OrgNote
-import io.github.yighy.orgline.data.AppSettings
+import io.github.yighy.orgline.OrglineApplication
 import io.github.yighy.orgline.data.NoteRepository
+import java.time.LocalTime
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.launch
@@ -26,15 +27,25 @@ sealed interface Screen {
     data class Notebook(val fileUri: String) : Screen
     data class Note(val fileUri: String, val index: Int) : Screen
     data object Settings : Screen
+    data object Agenda : Screen
 }
 
 class AppViewModel(app: Application) : AndroidViewModel(app) {
 
-    private val repository = NoteRepository(app)
+    private val orgline = app as OrglineApplication
+    private val repository = orgline.repository
     val library = repository.library
 
-    private val appSettings = AppSettings(app)
+    private val appSettings = orgline.settings
     val settings = appSettings.values
+
+    val canScheduleExactAlarms: Boolean get() = orgline.scheduler.canScheduleExact()
+
+    var askedNotificationPermission: Boolean
+        get() = appSettings.askedNotificationPermission
+        set(value) {
+            appSettings.askedNotificationPermission = value
+        }
 
     /** True while a pull-to-refresh is running. */
     var refreshing by mutableStateOf(false)
@@ -78,8 +89,36 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun setShowContentInNotebook(show: Boolean) = appSettings.setShowContentInNotebook(show)
+    fun setRemindScheduled(on: Boolean) = appSettings.setRemindScheduled(on)
+    fun setRemindDeadline(on: Boolean) = appSettings.setRemindDeadline(on)
+    fun setRemindAllDay(on: Boolean) = appSettings.setRemindAllDay(on)
+    fun setAllDayTime(time: LocalTime) = appSettings.setAllDayTime(time)
 
     fun openSettings() = push(Screen.Settings)
+
+    fun openAgenda() {
+        if (stack.last() != Screen.Agenda) push(Screen.Agenda)
+    }
+
+    /** Note to open once the notes are loaded (from a reminder notification). */
+    private data class PendingOpen(val fileUri: String, val index: Int, val title: String?)
+    private var pendingOpen: PendingOpen? = null
+
+    fun openFromNotification(fileUri: String, index: Int, title: String?) {
+        pendingOpen = PendingOpen(fileUri, index, title)
+        openPendingNote()
+    }
+
+    /** Opens the note requested by a notification, if the notes are loaded. */
+    fun openPendingNote() {
+        val p = pendingOpen ?: return
+        val lib = library.value
+        if (!lib.loaded) return
+        pendingOpen = null
+        val note = lib.note(p.fileUri, p.index)?.takeIf { p.title == null || it.title == p.title }
+            ?: lib.file(p.fileUri)?.notes?.firstOrNull { it.title == p.title }
+        if (note != null) openNote(note) else message("This note has moved or was deleted")
+    }
 
     fun setFolder(uri: Uri) {
         viewModelScope.launch { repository.setFolder(uri) }
