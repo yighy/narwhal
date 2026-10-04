@@ -22,6 +22,7 @@ import io.github.yighy.orgline.core.OrgNote
 import io.github.yighy.orgline.OrglineApplication
 import io.github.yighy.orgline.data.NoteRepository
 import java.time.LocalTime
+import java.util.UUID
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.launch
@@ -110,6 +111,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun setRemindDeadline(on: Boolean) = appSettings.setRemindDeadline(on)
     fun setRemindAllDay(on: Boolean) = appSettings.setRemindAllDay(on)
     fun setAllDayTime(time: LocalTime) = appSettings.setAllDayTime(time)
+    fun setAddIdToNewNotes(on: Boolean) = appSettings.setAddIdToNewNotes(on)
 
     /** Sets the default state keywords from "TODO NEXT | DONE"; false if there is no keyword. */
     fun setKeywords(spec: String): Boolean {
@@ -297,14 +299,20 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (edit.title.isBlank()) {
             return draftNote(screen)
         }
+        // With the setting on, the new note gets an ID property right away
+        val full = if (settings.value.addIdToNewNotes && edit.properties.none { it.first.equals("ID", true) }) {
+            edit.copy(properties = edit.properties + ("ID" to UUID.randomUUID().toString().uppercase()))
+        } else {
+            edit
+        }
         val note = attempt {
             val created = if (screen.anchor != null && screen.placement != null) {
                 repository.createNoteNear(screen.anchor, screen.placement, edit.title)
             } else {
                 repository.createNote(Uri.parse(screen.fileUri), edit.title)
             }
-            // Fields set before the title (tags, state, dates, content…)
-            if (edit != created.toEdit().copy(title = edit.title)) repository.saveNote(created, edit) else created
+            // Fields set before the title (tags, state, dates, content…) and the ID
+            if (full != created.toEdit().copy(title = full.title)) repository.saveNote(created, full) else created
         } ?: return null
         val i = stack.indexOf(screen)
         if (i >= 0) {

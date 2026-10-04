@@ -101,6 +101,13 @@ fun SettingsScreen(
                 modifier = Modifier.clickable { editKeywords = true },
             )
 
+            SwitchItem(
+                title = "Add an ID to new notes",
+                summary = "Fill the ID property when a note is created, so other notes can link to it",
+                checked = settings.addIdToNewNotes,
+                onCheckedChange = viewModel::setAddIdToNewNotes,
+            )
+
             SectionHeader("Reminders")
             SwitchItem(
                 title = "At scheduled times",

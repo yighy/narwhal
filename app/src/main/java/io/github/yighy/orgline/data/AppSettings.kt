@@ -21,6 +21,8 @@ class AppSettings(context: Context) {
         val allDayTime: LocalTime = LocalTime.of(9, 0),
         /** State keywords for files without a #+TODO line. */
         val keywords: Keywords = Keywords.DEFAULT,
+        /** Give every new note an ID property, so it can be linked to with id:. */
+        val addIdToNewNotes: Boolean = false,
     ) {
         val reminderOptions: Agenda.ReminderOptions
             get() = Agenda.ReminderOptions(remindScheduled, remindDeadline, allDayTime.takeIf { remindAllDay })
@@ -36,6 +38,7 @@ class AppSettings(context: Context) {
             remindAllDay = prefs.getBoolean(KEY_REMIND_ALL_DAY, false),
             allDayTime = LocalTime.ofSecondOfDay(prefs.getInt(KEY_ALL_DAY_MINUTES, 9 * 60) * 60L),
             keywords = prefs.getString(KEY_KEYWORDS, null)?.let(Keywords::parse) ?: Keywords.DEFAULT,
+            addIdToNewNotes = prefs.getBoolean(KEY_ADD_ID, false),
         ),
     )
     val values: StateFlow<Values> = _values
@@ -70,6 +73,11 @@ class AppSettings(context: Context) {
         _values.update { it.copy(allDayTime = time) }
     }
 
+    fun setAddIdToNewNotes(on: Boolean) {
+        prefs.edit().putBoolean(KEY_ADD_ID, on).apply()
+        _values.update { it.copy(addIdToNewNotes = on) }
+    }
+
     fun setKeywords(keywords: Keywords) {
         prefs.edit().putString(KEY_KEYWORDS, keywords.toSpec()).apply()
         _values.update { it.copy(keywords = keywords) }
@@ -77,6 +85,7 @@ class AppSettings(context: Context) {
 
     companion object {
         private const val KEY_KEYWORDS = "keywords"
+        private const val KEY_ADD_ID = "add_id_to_new_notes"
         private const val KEY_SHOW_CONTENT = "show_content_in_notebook"
         private const val KEY_REMIND_SCHEDULED = "remind_scheduled"
         private const val KEY_REMIND_DEADLINE = "remind_deadline"
