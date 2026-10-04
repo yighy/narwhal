@@ -45,6 +45,8 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -76,7 +78,14 @@ fun NotebookScreen(
 ) {
     // Raw preface being edited in place, or null
     var prefaceDraft by remember { mutableStateOf<TextFieldValue?>(null) }
-    var confirmDiscard by remember { mutableStateOf(false) }
+    val currentFile by rememberUpdatedState(file)
+
+    /** Saves the preface being edited, if it changed (no save button). */
+    fun commitPreface() {
+        val draft = prefaceDraft ?: return
+        prefaceDraft = null
+        if (draft.text != currentFile.doc.preface.trimEnd()) viewModel.setPreface(currentFile, draft.text)
+    }
     fun editPreface() {
         val raw = file.doc.preface.trimEnd()
         prefaceDraft = TextFieldValue(raw, TextRange(raw.length))
@@ -89,9 +98,8 @@ fun NotebookScreen(
 
     BackHandler(enabled = viewModel.searchActive) { viewModel.setSearch(false) }
     BackHandler(enabled = selecting) { viewModel.clearSelection() }
-    BackHandler(enabled = prefaceDraft != null) {
-        if (prefaceDraft?.text != file.doc.preface.trimEnd()) confirmDiscard = true else prefaceDraft = null
-    }
+    BackHandler(enabled = prefaceDraft != null) { commitPreface() }
+    DisposableEffect(Unit) { onDispose { commitPreface() } }
 
     Scaffold(
         modifier = Modifier
@@ -140,7 +148,9 @@ fun NotebookScreen(
                     viewModel = viewModel,
                     file = file,
                     prefaceDraft = prefaceDraft,
-                    onPrefaceDraftChange = { prefaceDraft = it },
+                    // Only while editing: the keyboard can still update the field as it goes away
+                    onPrefaceDraftChange = { if (prefaceDraft != null) prefaceDraft = it },
+                    onCommitPreface = ::commitPreface,
                     onEditPreface = ::editPreface,
                     selected = selection?.indices.orEmpty(),
                     showContent = settings.showContentInNotebook,
@@ -154,16 +164,6 @@ fun NotebookScreen(
         }
     }
 
-    if (confirmDiscard) {
-        AlertDialog(
-            onDismissRequest = { confirmDiscard = false },
-            title = { Text("Discard changes?") },
-            confirmButton = {
-                TextButton(onClick = { confirmDiscard = false; prefaceDraft = null }) { Text("Discard") }
-            },
-            dismissButton = { TextButton(onClick = { confirmDiscard = false }) { Text("Keep editing") } },
-        )
-    }
 
 }
 
@@ -185,7 +185,8 @@ private fun NotebookOutline(
     viewModel: AppViewModel,
     file: NoteRepository.LoadedFile,
     prefaceDraft: TextFieldValue?,
-    onPrefaceDraftChange: (TextFieldValue?) -> Unit,
+    onPrefaceDraftChange: (TextFieldValue) -> Unit,
+    onCommitPreface: () -> Unit,
     onEditPreface: () -> Unit,
     selected: Set<Int>,
     showContent: Boolean,
@@ -212,8 +213,7 @@ private fun NotebookOutline(
                             label = "Preface",
                             singleLine = false,
                             minLines = 4,
-                            onSave = { viewModel.setPreface(file, prefaceDraft.text); onPrefaceDraftChange(null) },
-                            onCancel = { onPrefaceDraftChange(null) },
+                            onFocusLost = onCommitPreface,
                         )
                         Text(
                             "Text before the first note. Lines like #+TITLE: set the notebook's name.",
