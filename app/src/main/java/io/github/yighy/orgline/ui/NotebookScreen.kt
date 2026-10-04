@@ -373,7 +373,7 @@ private fun OutlineRow(
                 }
             }
             Column(Modifier.weight(1f).padding(vertical = 12.dp)) {
-                NoteLine(note, subtitle = null, onClick = null)
+                NoteLine(note, subtitle = null, onClick = null, onOpenId = onOpenId)
                 if (showContent && note.content.isNotBlank()) {
                     LinkedText(
                         note.content.trimIndent(),

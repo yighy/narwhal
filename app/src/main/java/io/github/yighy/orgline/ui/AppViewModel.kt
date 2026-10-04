@@ -26,6 +26,8 @@ import java.util.UUID
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 sealed interface Screen {
     data object Notebooks : Screen
@@ -203,25 +205,40 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         return true
     }
 
+    /** Saves are queued, each from the note as last written, so quick edits never undo each other. */
+    private val saveLock = Mutex()
+
+    /**
+     * Saves [change] applied to the note as it is now (not as it was when the edit started).
+     * A note being created (not yet in its file) only updates the draft.
+     */
+    private suspend fun saveLatest(note: OrgNote, change: (OrgNote) -> NoteEdit): OrgNote? {
+        if (note.index == DRAFT_INDEX) {
+            val screen = stack.lastOrNull { it is Screen.NewNote } as? Screen.NewNote ?: return null
+            return saveDraft(change(draftNote(screen)))
+        }
+        return saveLock.withLock {
+            val latest = library.value.note(note.fileUri, note.index) ?: note
+            attempt { repository.saveNote(latest, change(latest)) }
+        }
+    }
+
     /** Returns the saved note, or null if it could not be saved. */
-    suspend fun save(note: OrgNote, edit: NoteEdit): OrgNote? =
-        if (note.index == DRAFT_INDEX) saveDraft(edit) else attempt { repository.saveNote(note, edit) }
+    suspend fun save(note: OrgNote, edit: NoteEdit): OrgNote? = saveLatest(note) { edit }
 
     fun update(note: OrgNote, change: (NoteEdit) -> NoteEdit) {
-        viewModelScope.launch { save(note, change(note.toEdit())) }
+        viewModelScope.launch { saveLatest(note) { change(it.toEdit()) } }
     }
 
     /** Changes the state with Org semantics (CLOSED time, repeating tasks moving forward). */
     fun setState(note: OrgNote, target: String?) {
-        val keywords = library.value.file(note.fileUri)?.doc?.keywords ?: Keywords.DEFAULT
-        val result = NoteStates.apply(note.toEdit(), target, keywords)
-        if (note.index == DRAFT_INDEX) {
-            viewModelScope.launch { saveDraft(result.edit) }
-            return
-        }
+        val keywords = library.value.file(note.fileUri)?.doc?.keywords ?: repository.defaultKeywords
         viewModelScope.launch {
-            val saved = save(note, result.edit) ?: return@launch
-            if (result.shifted) {
+            var shifted = false
+            val saved = saveLatest(note) { latest ->
+                NoteStates.apply(latest.toEdit(), target, keywords).also { shifted = it.shifted }.edit
+            } ?: return@launch
+            if (shifted) {
                 val next = OrgTime.display(saved.scheduled ?: saved.deadline)
                 message("Repeating task moved to $next")
             }

@@ -71,6 +71,9 @@ import io.github.yighy.orgline.core.Placement
 import io.github.yighy.orgline.data.NoteRepository
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.rememberUpdatedState
+import io.github.yighy.orgline.core.NoteEdit
 
 /** Which part of the note is being edited. */
 private enum class Editing { None, Title, Content }
@@ -106,34 +109,36 @@ fun NoteScreen(
     var dialog by remember { mutableStateOf<MetaDialog?>(null) }
     var addMenu by remember { mutableStateOf(false) }
     var moreMenu by remember { mutableStateOf(false) }
-    var confirmDiscard by remember { mutableStateOf(false) }
+    // The note as now loaded, also when saving as the screen goes away
+    val currentNote by rememberUpdatedState(note)
 
-    val original = when (editing) {
-        Editing.Title -> note.title
-        Editing.Content -> note.content
-        Editing.None -> ""
+    fun withText(edit: NoteEdit, what: Editing, text: String) =
+        if (what == Editing.Title) edit.copy(title = text) else edit.copy(content = text)
+
+    /** Saves the title or content being edited, if it changed, and leaves edit mode (no save button). */
+    fun commit() {
+        val what = editing
+        if (what == Editing.None) return
+        editing = Editing.None
+        val text = draft.text
+        val before = if (what == Editing.Title) currentNote.title else currentNote.content
+        if (text != before) viewModel.update(currentNote) { withText(it, what, text) }
     }
 
     fun startEditing(what: Editing) {
+        commit()
         val text = if (what == Editing.Title) note.title else note.content
         draft = TextFieldValue(text, TextRange(text.length))
         editing = what
     }
 
-    fun saveDraft() {
-        val text = draft.text
-        val what = editing
-        scope.launch {
-            val saved = viewModel.save(note, note.toEdit().let {
-                if (what == Editing.Title) it.copy(title = text) else it.copy(content = text)
-            })
-            if (saved != null) editing = Editing.None
-        }
+    fun openDialog(d: MetaDialog) {
+        commit()
+        dialog = d
     }
 
-    BackHandler(enabled = editing != Editing.None) {
-        if (draft.text != original) confirmDiscard = true else editing = Editing.None
-    }
+    BackHandler(enabled = editing != Editing.None) { commit() }
+    DisposableEffect(Unit) { onDispose { commit() } }
 
     // "id:" completion while editing the title or the content
     val query = draft.takeIf { editing != Editing.None && it.selection.collapsed }
@@ -144,10 +149,18 @@ fun NoteScreen(
 
     fun insertLink(target: OrgNote) {
         val q = query ?: return
+        val what = editing
+        val text = draft.text
         scope.launch {
             val (id, _) = viewModel.idFor(target) ?: return@launch
             val link = IdLinks.format(id, displayTitle(target.title))
-            draft = TextFieldValue(draft.text.replaceRange(q.start, q.end, link), TextRange(q.start + link.length))
+            val linked = text.replaceRange(q.start, q.end, link)
+            if (editing == what) {
+                draft = TextFieldValue(linked, TextRange(q.start + link.length))
+            } else {
+                // The field was saved meanwhile (focus moved): save the link too
+                viewModel.update(currentNote) { withText(it, what, linked) }
+            }
         }
     }
 
@@ -248,17 +261,31 @@ fun NoteScreen(
             if (editing == Editing.Title) {
                 DraftField(
                     value = draft,
-                    onValueChange = { draft = TextFieldValue(it.text.replace("\n", " "), it.selection, it.composition) },
+                    onValueChange = {
+                        if (editing == Editing.Title) draft = TextFieldValue(it.text.replace("\n", " "), it.selection, it.composition)
+                    },
                     label = "Title",
                     singleLine = false,
-                    onSave = ::saveDraft,
-                    onCancel = { editing = Editing.None },
+                    onFocusLost = { if (editing == Editing.Title) commit() },
+                    onDone = { if (editing == Editing.Title) commit() },
+                )
+            } else if (note.title.isBlank()) {
+                Text(
+                    if (newNote != null) "Add a title to create the note" else "Untitled",
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { startEditing(Editing.Title) }
+                        .padding(vertical = 8.dp),
                 )
             } else {
-                Text(
-                    displayTitle(note.title).ifBlank { if (newNote != null) "Add a title to create the note" else "Untitled" },
-                    style = MaterialTheme.typography.headlineMedium,
-                    modifier = Modifier
+                // Links in the title open their note; elsewhere, a tap edits the title
+                LinkedText(
+                    note.title,
+                    MaterialTheme.typography.headlineMedium,
+                    viewModel::openById,
+                    Modifier
                         .fillMaxWidth()
                         .clickable { startEditing(Editing.Title) }
                         .padding(vertical = 8.dp),
@@ -269,23 +296,23 @@ fun NoteScreen(
 
             // Metadata: only what is set, tap to change
             if (note.tags.isNotEmpty()) {
-                MetaRow("Tags", onClick = { dialog = MetaDialog.Tags }) {
+                MetaRow("Tags", onClick = { openDialog(MetaDialog.Tags) }) {
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        note.tags.forEach { SuggestionChip(onClick = { dialog = MetaDialog.Tags }, label = { Text(it) }) }
+                        note.tags.forEach { SuggestionChip(onClick = { openDialog(MetaDialog.Tags) }, label = { Text(it) }) }
                     }
                 }
             }
-            note.state?.let { MetaRow("State", onClick = { dialog = MetaDialog.State }) { StateLabel(it, note.isDone) } }
-            note.priority?.let { MetaRow("Priority", it, onClick = { dialog = MetaDialog.Priority }) }
-            note.scheduled?.let { MetaRow("Scheduled", OrgTime.display(it).orEmpty(), onClick = { dialog = MetaDialog.Scheduled }) }
-            note.deadline?.let { MetaRow("Deadline", OrgTime.display(it).orEmpty(), onClick = { dialog = MetaDialog.Deadline }) }
+            note.state?.let { MetaRow("State", onClick = { openDialog(MetaDialog.State) }) { StateLabel(it, note.isDone) } }
+            note.priority?.let { MetaRow("Priority", it, onClick = { openDialog(MetaDialog.Priority) }) }
+            note.scheduled?.let { MetaRow("Scheduled", OrgTime.display(it).orEmpty(), onClick = { openDialog(MetaDialog.Scheduled) }) }
+            note.deadline?.let { MetaRow("Deadline", OrgTime.display(it).orEmpty(), onClick = { openDialog(MetaDialog.Deadline) }) }
             note.closed?.let { MetaRow("Closed", OrgTime.display(it).orEmpty(), onClick = null) }
             note.properties.forEach { (name, value) ->
-                MetaRow(name, value, onClick = { dialog = MetaDialog.Property(name, value, isNew = false) })
+                MetaRow(name, value, onClick = { openDialog(MetaDialog.Property(name, value, isNew = false)) })
             }
 
             Box {
-                TextButton(onClick = { addMenu = true }) {
+                TextButton(onClick = { commit(); addMenu = true }) {
                     Icon(Icons.Default.Add, null)
                     Spacer(Modifier.width(8.dp))
                     Text("Add")
@@ -310,12 +337,11 @@ fun NoteScreen(
             if (editing == Editing.Content) {
                 DraftField(
                     value = draft,
-                    onValueChange = { draft = it },
+                    onValueChange = { if (editing == Editing.Content) draft = it },
                     label = "Content",
                     singleLine = false,
                     minLines = 8,
-                    onSave = ::saveDraft,
-                    onCancel = { editing = Editing.None },
+                    onFocusLost = { if (editing == Editing.Content) commit() },
                 )
                 Text(
                     "Type id: to link to another note.",
@@ -407,16 +433,6 @@ fun NoteScreen(
     }
 
 
-    if (confirmDiscard) {
-        AlertDialog(
-            onDismissRequest = { confirmDiscard = false },
-            title = { Text("Discard changes?") },
-            confirmButton = {
-                TextButton(onClick = { confirmDiscard = false; editing = Editing.None }) { Text("Discard") }
-            },
-            dismissButton = { TextButton(onClick = { confirmDiscard = false }) { Text("Keep editing") } },
-        )
-    }
 }
 
 /** "Label    value" line; [onClick] null makes it read-only. */

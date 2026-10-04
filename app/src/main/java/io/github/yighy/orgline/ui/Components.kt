@@ -37,6 +37,10 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.MoreVert
@@ -263,6 +267,7 @@ fun SearchResults(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 10.dp),
+                    onOpenId = viewModel::openById,
                 )
             }
         }
@@ -271,7 +276,13 @@ fun SearchResults(
 
 /** State, priority, title and a details line (tags, planning, [subtitle]). */
 @Composable
-fun NoteLine(note: OrgNote, subtitle: String?, onClick: (() -> Unit)?, modifier: Modifier = Modifier) {
+fun NoteLine(
+    note: OrgNote,
+    subtitle: String?,
+    onClick: (() -> Unit)?,
+    modifier: Modifier = Modifier,
+    onOpenId: ((String) -> Unit)? = null,
+) {
     Column((if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier).then(modifier)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             note.state?.let {
@@ -282,14 +293,15 @@ fun NoteLine(note: OrgNote, subtitle: String?, onClick: (() -> Unit)?, modifier:
                 Text("#$it", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.secondary)
                 Spacer(Modifier.width(8.dp))
             }
-            Text(
-                displayTitle(note.title),
-                style = MaterialTheme.typography.bodyLarge,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
+            val titleStyle = MaterialTheme.typography.bodyLarge.copy(
                 textDecoration = if (note.isDone) TextDecoration.LineThrough else null,
                 color = if (note.isDone) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.onSurface,
             )
+            if (onOpenId != null) {
+                LinkedText(note.title, titleStyle, onOpenId, maxLines = 2)
+            } else {
+                Text(displayTitle(note.title), style = titleStyle, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            }
         }
         val details = buildList {
             if (note.tags.isNotEmpty()) add(note.tags.joinToString(" ") { "#$it" })
@@ -361,7 +373,13 @@ fun NotebookAvatar(title: String) {
 
 /** Text where [[id:...]] links are shown by their description and open the target note. */
 @Composable
-fun LinkedText(text: String, style: TextStyle, onOpenId: (String) -> Unit, modifier: Modifier = Modifier) {
+fun LinkedText(
+    text: String,
+    style: TextStyle,
+    onOpenId: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    maxLines: Int = Int.MAX_VALUE,
+) {
     val linkStyle = TextLinkStyles(
         SpanStyle(color = MaterialTheme.colorScheme.primary, textDecoration = TextDecoration.Underline),
     )
@@ -378,7 +396,7 @@ fun LinkedText(text: String, style: TextStyle, onOpenId: (String) -> Unit, modif
             append(text.substring(last))
         }
     }
-    Text(annotated, style = style, modifier = modifier)
+    Text(annotated, style = style, modifier = modifier, maxLines = maxLines, overflow = TextOverflow.Ellipsis)
 }
 
 /** Pull down to reload the files from the folder. */
@@ -403,18 +421,24 @@ fun PullToRefresh(viewModel: AppViewModel, content: @Composable () -> Unit) {
     }
 }
 
-/** Text field with cancel / save buttons, focused when shown. */
+/**
+ * Text field focused when shown. With [onSave] and [onCancel] it has ✓ / ✕ buttons; without
+ * them the caller saves on [onFocusLost] (and [onDone], the keyboard's Done key, if given).
+ */
 @Composable
 fun DraftField(
     value: TextFieldValue,
     onValueChange: (TextFieldValue) -> Unit,
     label: String,
     singleLine: Boolean,
-    onSave: () -> Unit,
-    onCancel: () -> Unit,
+    onSave: (() -> Unit)? = null,
+    onCancel: (() -> Unit)? = null,
     minLines: Int = 1,
+    onFocusLost: (() -> Unit)? = null,
+    onDone: (() -> Unit)? = null,
 ) {
     val focus = remember { FocusRequester() }
+    var focused by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { focus.requestFocus() }
     Column(Modifier.padding(vertical = 8.dp)) {
         OutlinedTextField(
@@ -423,11 +447,22 @@ fun DraftField(
             label = { Text(label) },
             singleLine = singleLine,
             minLines = minLines,
-            modifier = Modifier.fillMaxWidth().focusRequester(focus),
+            keyboardOptions = if (onDone != null) KeyboardOptions(imeAction = ImeAction.Done) else KeyboardOptions.Default,
+            keyboardActions = KeyboardActions(onDone = { onDone?.invoke() }),
+            modifier = Modifier
+                .fillMaxWidth()
+                .focusRequester(focus)
+                .onFocusChanged {
+                    // Only after the field had the focus, not on the first composition
+                    if (focused && !it.isFocused) onFocusLost?.invoke()
+                    focused = it.isFocused
+                },
         )
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-            IconButton(onClick = onCancel) { Icon(Icons.Default.Close, "Cancel") }
-            IconButton(onClick = onSave) { Icon(Icons.Default.Check, "Save") }
+        if (onSave != null || onCancel != null) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                onCancel?.let { IconButton(onClick = it) { Icon(Icons.Default.Close, "Cancel") } }
+                onSave?.let { IconButton(onClick = it) { Icon(Icons.Default.Check, "Save") } }
+            }
         }
     }
 }

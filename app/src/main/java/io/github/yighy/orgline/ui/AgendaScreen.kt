@@ -177,12 +177,13 @@ private fun AgendaRow(
                         Text("#$it", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.secondary)
                         Spacer(Modifier.width(8.dp))
                     }
-                    Text(
-                        displayTitle(note.title),
-                        style = MaterialTheme.typography.bodyLarge,
+                    LinkedText(
+                        note.title,
+                        MaterialTheme.typography.bodyLarge.copy(
+                            textDecoration = if (note.isDone) TextDecoration.LineThrough else null,
+                        ),
+                        viewModel::openById,
                         maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                        textDecoration = if (note.isDone) TextDecoration.LineThrough else null,
                     )
                 }
                 val deadline = entry.kind == Agenda.Kind.Deadline
