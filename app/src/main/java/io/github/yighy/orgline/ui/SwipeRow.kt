@@ -247,6 +247,14 @@ object OrglineIcons {
         )
     }
 
+    val ToNotebook: ImageVector by lazy {
+        icon(
+            "ToNotebook",
+            "M20,6h-8l-2,-2H4C2.9,4 2.01,4.9 2.01,6L2,18c0,1.1 0.9,2 2,2h16c1.1,0 2,-0.9 2,-2V8c0,-1.1 -0.9,-2 -2,-2zM12," +
+                "17v-3H8v-4h4V7l5,5 -5,5z",
+        )
+    }
+
     private fun icon(name: String, path: String) = ImageVector.Builder(
         name = name,
         defaultWidth = 24.dp,

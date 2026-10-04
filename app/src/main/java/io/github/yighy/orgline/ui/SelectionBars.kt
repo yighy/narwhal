@@ -1,6 +1,18 @@
 package io.github.yighy.orgline.ui
 
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
@@ -34,74 +46,81 @@ fun SelectionTopBar(viewModel: AppViewModel, library: NoteRepository.Library, fi
     val count = viewModel.selection?.indices?.size ?: 0
     val single = count == 1
     var pasteMenu by remember { mutableStateOf(false) }
-    var moveMenu by remember { mutableStateOf(false) }
     var moreMenu by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
     var pickNotebook by remember { mutableStateOf(false) }
 
+    // Move mode: the actions give way to the move arrows, like in Orgzly
+    var moving by remember { mutableStateOf(false) }
+    BackHandler(enabled = moving) { moving = false }
+
     TopAppBar(
         colors = blendedTopBarColors(),
         navigationIcon = {
-            IconButton(onClick = viewModel::clearSelection) { Icon(Icons.Default.Close, "Clear selection") }
+            if (moving) {
+                IconButton(onClick = { moving = false }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Done moving") }
+            } else {
+                IconButton(onClick = viewModel::clearSelection) { Icon(Icons.Default.Close, "Clear selection") }
+            }
         },
-        title = { Text("$count selected") },
+        title = { Text(if (moving) "Move" else "$count selected") },
         actions = {
-            IconButton(onClick = viewModel::cutSelection) { Icon(OrglineIcons.Cut, "Cut") }
-            IconButton(onClick = viewModel::copySelection) { Icon(OrglineIcons.Copy, "Copy") }
-            if (single && viewModel.clipboard.isNotEmpty()) {
-                Box {
-                    IconButton(onClick = { pasteMenu = true }) { Icon(OrglineIcons.Paste, "Paste") }
-                    DropdownMenu(expanded = pasteMenu, onDismissRequest = { pasteMenu = false }) {
-                        Placement.entries.forEach { placement ->
-                            DropdownMenuItem(
-                                text = { Text(pasteLabel(placement)) },
-                                leadingIcon = { Icon(placementIcon(placement), null) },
-                                onClick = { pasteMenu = false; viewModel.pasteAtSelection(placement) },
-                            )
+            val fade = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
+            AnimatedContent(
+                targetState = moving,
+                transitionSpec = { fadeIn(fade) togetherWith fadeOut(fade) },
+                label = "selection actions",
+            ) { isMoving ->
+                Row {
+                    if (isMoving) {
+                        IconButton(enabled = single, onClick = { viewModel.moveSelection(AppViewModel.Move.Up) }) {
+                            Icon(Icons.Default.KeyboardArrowUp, "Move up")
+                        }
+                        IconButton(enabled = single, onClick = { viewModel.moveSelection(AppViewModel.Move.Down) }) {
+                            Icon(Icons.Default.KeyboardArrowDown, "Move down")
+                        }
+                        IconButton(onClick = { viewModel.moveSelection(AppViewModel.Move.Promote) }) {
+                            Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, "Promote")
+                        }
+                        IconButton(onClick = { viewModel.moveSelection(AppViewModel.Move.Demote) }) {
+                            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, "Demote")
+                        }
+                        IconButton(enabled = library.files.size > 1, onClick = { pickNotebook = true }) {
+                            Icon(OrglineIcons.ToNotebook, "Move to notebook")
+                        }
+                    } else {
+                        IconButton(onClick = viewModel::cutSelection) { Icon(OrglineIcons.Cut, "Cut") }
+                        IconButton(onClick = viewModel::copySelection) { Icon(OrglineIcons.Copy, "Copy") }
+                        if (single && viewModel.clipboard.isNotEmpty()) {
+                            Box {
+                                IconButton(onClick = { pasteMenu = true }) { Icon(OrglineIcons.Paste, "Paste") }
+                                DropdownMenu(expanded = pasteMenu, onDismissRequest = { pasteMenu = false }) {
+                                    Placement.entries.forEach { placement ->
+                                        DropdownMenuItem(
+                                            text = { Text(pasteLabel(placement)) },
+                                            leadingIcon = { Icon(placementIcon(placement), null) },
+                                            onClick = { pasteMenu = false; viewModel.pasteAtSelection(placement) },
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                        IconButton(onClick = { moving = true }) { Icon(OrglineIcons.Move, "Move") }
+                        Box {
+                            IconButton(onClick = { moreMenu = true }) { Icon(Icons.Default.MoreVert, "More") }
+                            DropdownMenu(expanded = moreMenu, onDismissRequest = { moreMenu = false }) {
+                                DropdownMenuItem(
+                                    text = { Text("Select all") },
+                                    onClick = { moreMenu = false; viewModel.selectAll(file.notes) },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Delete") },
+                                    leadingIcon = { Icon(Icons.Default.Delete, null) },
+                                    onClick = { moreMenu = false; confirmDelete = true },
+                                )
+                            }
                         }
                     }
-                }
-            }
-            Box {
-                IconButton(onClick = { moveMenu = true }) { Icon(OrglineIcons.Move, "Move") }
-                DropdownMenu(expanded = moveMenu, onDismissRequest = { moveMenu = false }) {
-                    DropdownMenuItem(
-                        text = { Text("Move up") },
-                        enabled = single,
-                        onClick = { moveMenu = false; viewModel.moveSelection(AppViewModel.Move.Up) },
-                    )
-                    DropdownMenuItem(
-                        text = { Text("Move down") },
-                        enabled = single,
-                        onClick = { moveMenu = false; viewModel.moveSelection(AppViewModel.Move.Down) },
-                    )
-                    DropdownMenuItem(
-                        text = { Text("Promote (one level up)") },
-                        onClick = { moveMenu = false; viewModel.moveSelection(AppViewModel.Move.Promote) },
-                    )
-                    DropdownMenuItem(
-                        text = { Text("Demote (one level down)") },
-                        onClick = { moveMenu = false; viewModel.moveSelection(AppViewModel.Move.Demote) },
-                    )
-                    DropdownMenuItem(
-                        text = { Text("Move to notebook…") },
-                        enabled = library.files.size > 1,
-                        onClick = { moveMenu = false; pickNotebook = true },
-                    )
-                }
-            }
-            Box {
-                IconButton(onClick = { moreMenu = true }) { Icon(Icons.Default.MoreVert, "More") }
-                DropdownMenu(expanded = moreMenu, onDismissRequest = { moreMenu = false }) {
-                    DropdownMenuItem(
-                        text = { Text("Select all") },
-                        onClick = { moreMenu = false; viewModel.selectAll(file.notes) },
-                    )
-                    DropdownMenuItem(
-                        text = { Text("Delete") },
-                        leadingIcon = { Icon(Icons.Default.Delete, null) },
-                        onClick = { moreMenu = false; confirmDelete = true },
-                    )
                 }
             }
         },
