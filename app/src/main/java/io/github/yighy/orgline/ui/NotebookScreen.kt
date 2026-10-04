@@ -74,7 +74,6 @@ fun NotebookScreen(
     file: NoteRepository.LoadedFile,
     snackbar: SnackbarHostState,
 ) {
-    var newNote by remember { mutableStateOf(false) }
     // Raw preface being edited in place, or null
     var prefaceDraft by remember { mutableStateOf<TextFieldValue?>(null) }
     var confirmDiscard by remember { mutableStateOf(false) }
@@ -82,8 +81,6 @@ fun NotebookScreen(
         val raw = file.doc.preface.trimEnd()
         prefaceDraft = TextFieldValue(raw, TextRange(raw.length))
     }
-    // New note requested from a swipe action
-    var addNear by remember { mutableStateOf<Pair<OrgNote, Placement>?>(null) }
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val settings by viewModel.settings.collectAsState()
 
@@ -131,7 +128,7 @@ fun NotebookScreen(
         },
         floatingActionButton = {
             if (prefaceDraft == null && !selecting) {
-                FloatingActionButton(onClick = { newNote = true }) { Icon(Icons.Default.Add, "New note") }
+                FloatingActionButton(onClick = { viewModel.startNewNote(file.uri) }) { Icon(Icons.Default.Add, "New note") }
             }
         },
         snackbarHost = { SnackbarHost(snackbar) },
@@ -149,7 +146,7 @@ fun NotebookScreen(
                     selected = selection?.indices.orEmpty(),
                     showContent = settings.showContentInNotebook,
                     scrollConnection = scrollBehavior.nestedScrollConnection,
-                    onAddNear = { note, placement -> addNear = note to placement },
+                    onAddNear = { note, placement -> viewModel.startNewNote(file.uri, note, placement) },
                 )
             }
             if (selecting) {
@@ -169,25 +166,6 @@ fun NotebookScreen(
         )
     }
 
-    if (newNote) {
-        TextInputDialog(
-            title = "New note",
-            label = "Title",
-            confirmLabel = "Create",
-            onDismiss = { newNote = false },
-            onConfirm = { newNote = false; viewModel.createNote(file.uri, it) },
-        )
-    }
-
-    addNear?.let { (anchor, placement) ->
-        TextInputDialog(
-            title = newNoteTitle(placement),
-            label = "Title",
-            confirmLabel = "Create",
-            onDismiss = { addNear = null },
-            onConfirm = { addNear = null; viewModel.createNoteNear(anchor, placement, it) },
-        )
-    }
 }
 
 @Composable

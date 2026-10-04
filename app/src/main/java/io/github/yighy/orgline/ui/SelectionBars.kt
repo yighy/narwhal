@@ -157,7 +157,6 @@ private sealed interface ToolbarDialog {
     data object Scheduled : ToolbarDialog
     data object Deadline : ToolbarDialog
     data object State : ToolbarDialog
-    data class NewNote(val placement: Placement) : ToolbarDialog
 }
 
 /** Floating toolbar at the bottom while notes are selected: planning, state, done, new note. */
@@ -182,7 +181,7 @@ fun SelectionToolbar(viewModel: AppViewModel, file: NoteRepository.LoadedFile, m
                         DropdownMenuItem(
                             text = { Text(newNoteTitle(placement)) },
                             leadingIcon = { Icon(placementIcon(placement), null) },
-                            onClick = { newMenu = false; dialog = ToolbarDialog.NewNote(placement) },
+                            onClick = { newMenu = false; viewModel.startNewNoteNearSelection(placement) },
                         )
                     }
                 }
@@ -190,7 +189,7 @@ fun SelectionToolbar(viewModel: AppViewModel, file: NoteRepository.LoadedFile, m
         }
     }
 
-    when (val d = dialog) {
+    when (dialog) {
         null -> Unit
         ToolbarDialog.Scheduled -> TimestampDialog(
             initial = single?.scheduled,
@@ -208,13 +207,6 @@ fun SelectionToolbar(viewModel: AppViewModel, file: NoteRepository.LoadedFile, m
             selected = single?.state,
             onDismiss = { dialog = null },
             onSelect = { dialog = null; viewModel.setStateOfSelection(it) },
-        )
-        is ToolbarDialog.NewNote -> TextInputDialog(
-            title = newNoteTitle(d.placement),
-            label = "Title",
-            confirmLabel = "Create",
-            onDismiss = { dialog = null },
-            onConfirm = { dialog = null; viewModel.createNoteNearSelection(d.placement, it) },
         )
     }
 }

@@ -32,6 +32,12 @@ sealed interface Screen {
     data class Note(val fileUri: String, val index: Int) : Screen
     data object Settings : Screen
     data object Agenda : Screen
+
+    /**
+     * A note being created: nothing is written to the file until it gets a title.
+     * [anchor] and [placement] say where it goes; without them it is added at the end of the notebook.
+     */
+    data class NewNote(val fileUri: String, val anchor: OrgNote? = null, val placement: Placement? = null) : Screen
 }
 
 class AppViewModel(app: Application) : AndroidViewModel(app) {
@@ -225,9 +231,27 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** Adds a note above, under or below [anchor] and opens it. */
-    fun createNoteNear(anchor: OrgNote, placement: Placement, title: String) {
+    /** Opens the screen of a new note; it is created once it gets a title, see [finishNewNote]. */
+    fun startNewNote(fileUri: String, anchor: OrgNote? = null, placement: Placement? = null) {
+        openSwipeRow = null
+        push(Screen.NewNote(fileUri, anchor, placement))
+    }
+
+    /** Writes the new note with [title] and replaces its screen with the note's screen. */
+    fun finishNewNote(screen: Screen.NewNote, title: String) {
         viewModelScope.launch {
-            attempt { openNote(repository.createNoteNear(anchor, placement, title)) }
+            val note = attempt {
+                if (screen.anchor != null && screen.placement != null) {
+                    repository.createNoteNear(screen.anchor, screen.placement, title)
+                } else {
+                    repository.createNote(Uri.parse(screen.fileUri), title)
+                }
+            } ?: return@launch
+            val i = stack.indexOf(screen)
+            if (i >= 0) {
+                navigatedForward = true
+                stack[i] = Screen.Note(note.fileUri, note.index)
+            }
         }
     }
 
@@ -359,16 +383,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun setDeadlineOfSelection(timestamp: String?) = editSelection { note, _ -> note.toEdit().copy(deadline = timestamp) }
 
-    fun createNoteNearSelection(placement: Placement, title: String) {
+    fun startNewNoteNearSelection(placement: Placement) {
         val note = selectedNotes().singleOrNull() ?: return
         selection = null
-        createNoteNear(note, placement, title)
-    }
-
-    fun createNote(fileUri: String, title: String) {
-        viewModelScope.launch {
-            attempt { openNote(repository.createNote(Uri.parse(fileUri), title)) }
-        }
+        startNewNote(note.fileUri, note, placement)
     }
 
     private suspend fun <T> attempt(block: suspend () -> T): T? =

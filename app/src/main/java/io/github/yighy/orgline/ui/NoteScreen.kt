@@ -104,8 +104,6 @@ fun NoteScreen(
     var addMenu by remember { mutableStateOf(false) }
     var moreMenu by remember { mutableStateOf(false) }
     var confirmDiscard by remember { mutableStateOf(false) }
-    // Where to add a new note relative to this one
-    var addNear by remember { mutableStateOf<Placement?>(null) }
 
     val original = when (editing) {
         Editing.Title -> note.title
@@ -181,17 +179,17 @@ fun NoteScreen(
                             DropdownMenuItem(
                                 text = { Text("New note above") },
                                 leadingIcon = { Icon(OrglineIcons.NewAbove, null) },
-                                onClick = { moreMenu = false; addNear = Placement.Above },
+                                onClick = { moreMenu = false; viewModel.startNewNote(note.fileUri, note, Placement.Above) },
                             )
                             DropdownMenuItem(
                                 text = { Text("New sub-note") },
                                 leadingIcon = { Icon(OrglineIcons.SubNote, null) },
-                                onClick = { moreMenu = false; addNear = Placement.Under },
+                                onClick = { moreMenu = false; viewModel.startNewNote(note.fileUri, note, Placement.Under) },
                             )
                             DropdownMenuItem(
                                 text = { Text("New note below") },
                                 leadingIcon = { Icon(OrglineIcons.NewBelow, null) },
-                                onClick = { moreMenu = false; addNear = Placement.Below },
+                                onClick = { moreMenu = false; viewModel.startNewNote(note.fileUri, note, Placement.Below) },
                             )
                         }
                     }
@@ -403,15 +401,6 @@ fun NoteScreen(
         )
     }
 
-    addNear?.let { placement ->
-        TextInputDialog(
-            title = newNoteTitle(placement),
-            label = "Title",
-            confirmLabel = "Create",
-            onDismiss = { addNear = null },
-            onConfirm = { addNear = null; viewModel.createNoteNear(note, placement, it) },
-        )
-    }
 
     if (confirmDiscard) {
         AlertDialog(

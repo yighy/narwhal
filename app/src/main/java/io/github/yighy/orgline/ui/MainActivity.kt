@@ -255,6 +255,8 @@ private fun ScreenContent(
 
         Screen.Notebooks -> HomeScreen(viewModel, library, snackbar, onOpenDrawer)
 
+        is Screen.NewNote -> NewNoteScreen(viewModel, library, screen, snackbar)
+
         Screen.Settings -> SettingsScreen(viewModel, library, onPickFolder, notificationsAllowed, onAllowNotifications)
 
         is Screen.Notebook -> {
@@ -282,6 +284,8 @@ private fun ScreenContent(
 private fun isContainerTransform(a: Screen, b: Screen): Boolean {
     fun pair(x: Screen, y: Screen) =
         (x == Screen.Notebooks && y is Screen.Notebook) ||
-            (x is Screen.Notebook && y is Screen.Note && x.fileUri == y.fileUri)
+            (x is Screen.Notebook && y is Screen.Note && x.fileUri == y.fileUri) ||
+            // The new note's screen becomes the note's screen once it has a title
+            (x is Screen.NewNote && y is Screen.Note)
     return pair(a, b) || pair(b, a)
 }
