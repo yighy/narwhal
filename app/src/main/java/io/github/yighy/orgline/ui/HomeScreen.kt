@@ -1,6 +1,18 @@
 package io.github.yighy.orgline.ui
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -80,12 +92,29 @@ fun HomeScreen(
     onOpenDrawer: () -> Unit,
 ) {
     var newNotebook by remember { mutableStateOf(false) }
+    var confirmDelete by remember { mutableStateOf(false) }
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    val selected = viewModel.selectedNotebooks
+    val selecting = selected.isNotEmpty()
 
     BackHandler(enabled = viewModel.searchActive) { viewModel.setSearch(false) }
+    BackHandler(enabled = selecting) { viewModel.clearNotebookSelection() }
 
     Scaffold(
         topBar = {
+            if (selecting) {
+                TopAppBar(
+                    colors = blendedTopBarColors(),
+                    navigationIcon = {
+                        IconButton(onClick = viewModel::clearNotebookSelection) { Icon(Icons.Default.Close, "Clear selection") }
+                    },
+                    title = { Text("${selected.size} selected") },
+                    actions = {
+                        IconButton(onClick = { confirmDelete = true }) { Icon(Icons.Default.Delete, "Delete") }
+                    },
+                )
+                return@Scaffold
+            }
             val tasks = library.files.sumOf { it.openTasks }
             SearchableTopBar(
                 title = "Notebooks",
@@ -102,7 +131,9 @@ fun HomeScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { newNotebook = true }) { Icon(Icons.Default.Add, "New notebook") }
+            if (!selecting) {
+                FloatingActionButton(onClick = { newNotebook = true }) { Icon(Icons.Default.Add, "New notebook") }
+            }
         },
         snackbarHost = { SnackbarHost(snackbar) },
     ) { padding ->
@@ -133,12 +164,33 @@ fun HomeScreen(
                         modifier = Modifier.fillMaxSize().nestedScroll(scrollBehavior.nestedScrollConnection),
                     ) {
                         items(library.files, key = { it.uri }) { file ->
-                            NotebookCard(file, onClick = { viewModel.openNotebook(file.uri) }, modifier = Modifier.animateItem())
+                            NotebookCard(
+                                file = file,
+                                selected = file.uri in selected,
+                                onClick = {
+                                    if (selecting) viewModel.toggleNotebookSelected(file.uri) else viewModel.openNotebook(file.uri)
+                                },
+                                onLongClick = { viewModel.toggleNotebookSelected(file.uri) },
+                                modifier = Modifier.animateItem(),
+                            )
                         }
                     }
                 }
             }
         }
+    }
+
+    if (confirmDelete) {
+        val names = library.files.filter { it.uri in selected }.map { it.ref.path }
+        AlertDialog(
+            onDismissRequest = { confirmDelete = false },
+            title = { Text(if (names.size == 1) "Delete this notebook?" else "Delete ${names.size} notebooks?") },
+            text = { Text("These files are deleted from the folder, with all their notes:\n" + names.joinToString("\n") { "• $it" }) },
+            confirmButton = {
+                TextButton(onClick = { confirmDelete = false; viewModel.deleteSelectedNotebooks() }) { Text("Delete") }
+            },
+            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Cancel") } },
+        )
     }
 
     if (newNotebook) {
@@ -155,18 +207,36 @@ fun HomeScreen(
 
 val NotebookCardShape = RoundedCornerShape(28.dp)
 
+/** Notebook card; long press selects it (a check replaces the avatar). */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun NotebookCard(file: NoteRepository.LoadedFile, onClick: () -> Unit, modifier: Modifier = Modifier) {
+private fun NotebookCard(
+    file: NoteRepository.LoadedFile,
+    selected: Boolean,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     Card(
-        onClick = onClick,
         shape = NotebookCardShape,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        colors = CardDefaults.cardColors(
+            containerColor = if (selected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceContainerLow,
+        ),
         modifier = modifier
             .sharedContainer("notebook-${file.uri}", NotebookCardShape)
-            .fillMaxWidth(),
+            .fillMaxWidth()
+            .clip(NotebookCardShape)
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick),
     ) {
         Row(Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
-            NotebookAvatar(file.title)
+            if (selected) {
+                Box(
+                    Modifier.size(56.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary),
+                    contentAlignment = Alignment.Center,
+                ) { Icon(Icons.Default.Check, "Selected", tint = MaterialTheme.colorScheme.onPrimary) }
+            } else {
+                NotebookAvatar(file.title)
+            }
             Spacer(Modifier.width(16.dp))
             Column(Modifier.weight(1f)) {
                 Text(file.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)

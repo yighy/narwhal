@@ -166,23 +166,36 @@ fun SelectionToolbar(viewModel: AppViewModel, file: NoteRepository.LoadedFile, m
     val selected = viewModel.selectedNotes()
     val single = selected.singleOrNull()
     var dialog by remember { mutableStateOf<ToolbarDialog?>(null) }
-    var newMenu by remember { mutableStateOf(false) }
+    // "New note" mode: the bar shows where to add it (above, under, below)
+    var choosingPlacement by remember { mutableStateOf(false) }
+    if (single == null) choosingPlacement = false
+    BackHandler(enabled = choosingPlacement) { choosingPlacement = false }
+    val fade = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
 
     HorizontalFloatingToolbar(expanded = true, modifier = modifier) {
-        IconButton(onClick = { dialog = ToolbarDialog.Scheduled }) { Icon(OrglineIcons.Scheduled, "Schedule") }
-        IconButton(onClick = { dialog = ToolbarDialog.Deadline }) { Icon(OrglineIcons.Deadline, "Deadline") }
-        IconButton(onClick = { dialog = ToolbarDialog.State }) { Icon(OrglineIcons.State, "State") }
-        IconButton(onClick = viewModel::toggleDoneOfSelection) { Icon(Icons.Default.Check, "Done") }
-        if (single != null) {
-            Box {
-                IconButton(onClick = { newMenu = true }) { Icon(Icons.Default.Add, "New note") }
-                DropdownMenu(expanded = newMenu, onDismissRequest = { newMenu = false }) {
+        AnimatedContent(
+            targetState = choosingPlacement,
+            transitionSpec = { fadeIn(fade) togetherWith fadeOut(fade) },
+            label = "toolbar actions",
+        ) { placing ->
+            Row {
+                if (placing) {
+                    IconButton(onClick = { choosingPlacement = false }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back to actions")
+                    }
                     Placement.entries.forEach { placement ->
-                        DropdownMenuItem(
-                            text = { Text(newNoteTitle(placement)) },
-                            leadingIcon = { Icon(placementIcon(placement), null) },
-                            onClick = { newMenu = false; viewModel.startNewNoteNearSelection(placement) },
-                        )
+                        IconButton(onClick = {
+                            choosingPlacement = false
+                            viewModel.startNewNoteNearSelection(placement)
+                        }) { Icon(placementIcon(placement), newNoteTitle(placement)) }
+                    }
+                } else {
+                    IconButton(onClick = { dialog = ToolbarDialog.Scheduled }) { Icon(OrglineIcons.Scheduled, "Schedule") }
+                    IconButton(onClick = { dialog = ToolbarDialog.Deadline }) { Icon(OrglineIcons.Deadline, "Deadline") }
+                    IconButton(onClick = { dialog = ToolbarDialog.State }) { Icon(OrglineIcons.State, "State") }
+                    IconButton(onClick = viewModel::toggleDoneOfSelection) { Icon(Icons.Default.Check, "Done") }
+                    if (single != null) {
+                        IconButton(onClick = { choosingPlacement = true }) { Icon(Icons.Default.Add, "New note") }
                     }
                 }
             }

@@ -255,6 +255,31 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    // ---- Multiple selection of notebooks on the home screen ----
+
+    var selectedNotebooks by mutableStateOf<Set<String>>(emptySet())
+        private set
+
+    fun toggleNotebookSelected(fileUri: String) {
+        selectedNotebooks = if (fileUri in selectedNotebooks) selectedNotebooks - fileUri else selectedNotebooks + fileUri
+    }
+
+    fun clearNotebookSelection() {
+        selectedNotebooks = emptySet()
+    }
+
+    /** Deletes the selected notebooks' files. */
+    fun deleteSelectedNotebooks() {
+        val uris = selectedNotebooks
+        selectedNotebooks = emptySet()
+        viewModelScope.launch {
+            attempt {
+                repository.deleteFiles(uris)
+                message(if (uris.size == 1) "Notebook deleted" else "${uris.size} notebooks deleted")
+            }
+        }
+    }
+
     // ---- Multiple selection in a notebook (long press) ----
 
     data class Selection(val fileUri: String, val indices: Set<Int>)

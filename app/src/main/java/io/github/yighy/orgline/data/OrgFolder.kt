@@ -55,6 +55,11 @@ class OrgFolder(private val resolver: ContentResolver, val treeUri: Uri) {
             ?: error("Cannot write $uri")
     }
 
+    /** Deletes the file from the folder. */
+    fun delete(uri: Uri) {
+        if (!DocumentsContract.deleteDocument(resolver, uri)) error("Cannot delete $uri")
+    }
+
     /** Creates an empty .org file at the root of the folder. */
     fun createFile(name: String): Uri {
         val parent = DocumentsContract.buildDocumentUriUsingTree(treeUri, DocumentsContract.getTreeDocumentId(treeUri))

@@ -113,6 +113,17 @@ class NoteRepository(context: Context) {
         }
     }
 
+    /** Deletes notebook files from the folder. */
+    suspend fun deleteFiles(fileUris: Collection<String>) = withContext(Dispatchers.IO) {
+        writeLock.withLock {
+            val folder = folder() ?: error("No folder")
+            fileUris.forEach { uri ->
+                folder.delete(Uri.parse(uri))
+                _library.update { lib -> lib.copy(files = lib.files.filterNot { it.uri == uri }) }
+            }
+        }
+    }
+
     suspend fun createFile(name: String): Uri = withContext(Dispatchers.IO) {
         val folder = folder() ?: error("No folder")
         folder.createFile(name).also { refresh() }
