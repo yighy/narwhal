@@ -52,6 +52,7 @@ fun SwipeRow(
     onSwipeRight: () -> Unit,
     actions: List<SwipeAction>,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
     content: @Composable () -> Unit,
 ) {
     val density = LocalDensity.current
@@ -67,9 +68,9 @@ fun SwipeRow(
     val currentOnSwipeRight by rememberUpdatedState(onSwipeRight)
     val currentOnOpenChange by rememberUpdatedState(onOpenChange)
 
-    // Close when another row opens
-    LaunchedEffect(openKey) {
-        if (openKey != key && offset.value != 0f) offset.animateTo(0f, spatial)
+    // Close when another row opens, or when swiping is turned off
+    LaunchedEffect(openKey, enabled) {
+        if ((openKey != key || !enabled) && offset.value != 0f) offset.animateTo(0f, spatial)
     }
 
     Box(modifier.fillMaxWidth()) {
@@ -112,7 +113,8 @@ fun SwipeRow(
             Modifier
                 .offset { IntOffset(offset.value.roundToInt(), 0) }
                 .background(MaterialTheme.colorScheme.surface)
-                .pointerInput(revealPx, triggerPx) {
+                .pointerInput(revealPx, triggerPx, enabled) {
+                    if (!enabled) return@pointerInput
                     detectHorizontalDragGestures(
                         onDragEnd = {
                             scope.launch {
@@ -183,6 +185,65 @@ object OrglineIcons {
         icon(
             "UnfoldLess",
             "M7.41,18.59L8.83,20 12,16.41 15.17,20l1.41,-1.41L12,14l-4.59,4.59zM16.59,5.41L15.17,4 12,7.59 8.83,4 7.41,5.41 12,10l4.59,-4.59z",
+        )
+    }
+
+    val NewAbove: ImageVector by lazy { icon("NewAbove", "M8,11h3v10h2V11h3l-4,-4 -4,4zM4,3v2h16V3H4z") }
+
+    val NewBelow: ImageVector by lazy { icon("NewBelow", "M16,13h-3V3h-2v10H8l4,4 4,-4zM4,19v2h16v-2H4z") }
+
+    val Cut: ImageVector by lazy {
+        icon(
+            "Cut",
+            "M9.64,7.64c0.23,-0.5 0.36,-1.05 0.36,-1.64 0,-2.21 -1.79,-4 -4,-4S2,3.79 2,6s1.79,4 4,4c0.59,0 1.14,-0.13 " +
+                "1.64,-0.36L10,12l-2.36,2.36C7.14,14.13 6.59,14 6,14c-2.21,0 -4,1.79 -4,4s1.79,4 4,4 4,-1.79 4,-4c0,-0.59 " +
+                "-0.13,-1.14 -0.36,-1.64L12,14l7,7h3v-1L9.64,7.64zM6,8c-1.1,0 -2,-0.89 -2,-2s0.9,-2 2,-2 2,0.89 2,2 -0.9,2 " +
+                "-2,2zM6,20c-1.1,0 -2,-0.89 -2,-2s0.9,-2 2,-2 2,0.89 2,2 -0.9,2 -2,2zM12,12.5c-0.28,0 -0.5,-0.22 -0.5,-0.5s0.22," +
+                "-0.5 0.5,-0.5 0.5,0.22 0.5,0.5 -0.22,0.5 -0.5,0.5zM19,3l-6,6 2,2 7,-7L22,3z",
+        )
+    }
+
+    val Copy: ImageVector by lazy {
+        icon(
+            "Copy",
+            "M16,1L4,1c-1.1,0 -2,0.9 -2,2v14h2L4,3h12L16,1zM19,5L8,5c-1.1,0 -2,0.9 -2,2v14c0,1.1 0.9,2 2,2h11c1.1,0 2," +
+                "-0.9 2,-2L21,7c0,-1.1 -0.9,-2 -2,-2zM19,21L8,21L8,7h11v14z",
+        )
+    }
+
+    val Paste: ImageVector by lazy {
+        icon(
+            "Paste",
+            "M19,2h-4.18C14.4,0.84 13.3,0 12,0c-1.3,0 -2.4,0.84 -2.82,2L5,2c-1.1,0 -2,0.9 -2,2v16c0,1.1 0.9,2 2,2h14c1.1," +
+                "0 2,-0.9 2,-2L21,4c0,-1.1 -0.9,-2 -2,-2zM12,2c0.55,0 1,0.45 1,1s-0.45,1 -1,1 -1,-0.45 -1,-1 0.45,-1 1,-1zM19," +
+                "20L5,20L5,4h2v3h10L17,4h2v16z",
+        )
+    }
+
+    val Move: ImageVector by lazy { icon("Move", "M16,17.01V10h-2v7.01h-3L15,21l4,-3.99h-3zM9,3L5,6.99h3V14h2V6.99h3L9,3z") }
+
+    val Scheduled: ImageVector by lazy {
+        icon(
+            "Scheduled",
+            "M17,12h-5v5h5v-5zM16,1v2L8,3L8,1L6,1v2L5,3c-1.11,0 -1.99,0.9 -1.99,2L3,19c0,1.1 0.89,2 2,2h14c1.1,0 2,-0.9 " +
+                "2,-2L21,5c0,-1.1 -0.9,-2 -2,-2h-1L18,1h-2zM19,19L5,19L5,8h14v11z",
+        )
+    }
+
+    val Deadline: ImageVector by lazy {
+        icon(
+            "Deadline",
+            "M22,5.72l-4.6,-3.86 -1.29,1.53 4.6,3.86L22,5.72zM7.88,3.39L6.6,1.86 2,5.71l1.29,1.53 4.59,-3.85zM12.5,8L11," +
+                "8v6l4.75,2.85 0.75,-1.23 -4,-2.37L12.5,8zM12,4c-4.97,0 -9,4.03 -9,9s4.02,9 9,9c4.97,0 9,-4.03 9,-9s-4.03,-9 " +
+                "-9,-9zM12,20c-3.87,0 -7,-3.13 -7,-7s3.13,-7 7,-7 7,3.13 7,7 -3.13,7 -7,7z",
+        )
+    }
+
+    val State: ImageVector by lazy {
+        icon(
+            "State",
+            "M17.63,5.84C17.27,5.33 16.67,5 16,5L5,5.01C3.9,5.01 3,5.9 3,7v10c0,1.1 0.9,1.99 2,1.99L16,19c0.67,0 1.27," +
+                "-0.33 1.63,-0.84L22,12l-4.37,-6.16z",
         )
     }
 

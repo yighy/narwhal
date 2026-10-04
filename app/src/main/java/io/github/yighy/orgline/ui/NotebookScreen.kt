@@ -8,21 +8,9 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.combinedClickable
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.runtime.collectAsState
-import androidx.compose.ui.draw.rotate
-import androidx.compose.foundation.layout.imePadding
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.TextButton
-import androidx.compose.ui.text.TextRange
-import androidx.compose.ui.text.input.TextFieldValue
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.foundation.clickable
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -30,6 +18,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -38,13 +27,13 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.ui.graphics.RectangleShape
-import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -52,7 +41,10 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -60,9 +52,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import io.github.yighy.orgline.core.NoteTree
 import io.github.yighy.orgline.core.OrgNote
+import io.github.yighy.orgline.core.Placement
 import io.github.yighy.orgline.data.NoteRepository
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
@@ -81,12 +82,16 @@ fun NotebookScreen(
         val raw = file.doc.preface.trimEnd()
         prefaceDraft = TextFieldValue(raw, TextRange(raw.length))
     }
-    // Note to add a child (true) or a sibling (false) to, from the long-press menu
-    var addNear by remember { mutableStateOf<Pair<OrgNote, Boolean>?>(null) }
+    // New note requested from a swipe action
+    var addNear by remember { mutableStateOf<Pair<OrgNote, Placement>?>(null) }
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val settings by viewModel.settings.collectAsState()
 
+    val selection = viewModel.selection?.takeIf { it.fileUri == file.uri }
+    val selecting = selection != null
+
     BackHandler(enabled = viewModel.searchActive) { viewModel.setSearch(false) }
+    BackHandler(enabled = selecting) { viewModel.clearSelection() }
     BackHandler(enabled = prefaceDraft != null) {
         if (prefaceDraft?.text != file.doc.preface.trimEnd()) confirmDiscard = true else prefaceDraft = null
     }
@@ -96,139 +101,59 @@ fun NotebookScreen(
             .sharedContainer("notebook-${file.uri}", NotebookCardShape)
             .imePadding(),
         topBar = {
-            SearchableTopBar(
-                title = file.title,
-                subtitle = buildList {
-                    add(if (file.notes.size == 1) "1 note" else "${file.notes.size} notes")
-                    if (file.openTasks > 0) add("${file.openTasks} to do")
-                }.joinToString(" · "),
-                navigationIcon = Icons.AutoMirrored.Filled.ArrowBack,
-                navigationDescription = "Back",
-                onNavigation = { viewModel.back() },
-                searchActive = viewModel.searchActive,
-                onSearchActiveChange = viewModel::setSearch,
-                query = viewModel.query,
-                onQueryChange = { viewModel.query = it },
-                searchPlaceholder = "Search in ${file.title}",
-                scrollBehavior = scrollBehavior,
-                extraActions = {
-                    val anyExpanded = file.notes.indices.any { i ->
-                        NoteTree.hasChildren(file.notes, i) && !viewModel.isFolded(file.notes[i])
-                    }
-                    if (file.notes.indices.any { NoteTree.hasChildren(file.notes, it) }) {
-                        IconButton(onClick = { viewModel.setAllFolded(file.notes, anyExpanded) }) {
-                            Icon(
-                                if (anyExpanded) OrglineIcons.UnfoldLess else OrglineIcons.UnfoldMore,
-                                if (anyExpanded) "Collapse all" else "Expand all",
-                            )
-                        }
-                    }
-                },
-            ) { dismiss ->
-                DropdownMenuItem(
-                    text = { Text("Edit preface") },
-                    leadingIcon = { Icon(Icons.Default.Edit, null) },
-                    onClick = { dismiss(); editPreface() },
-                )
+            if (selecting) {
+                SelectionTopBar(viewModel, library, file)
+            } else {
+                SearchableTopBar(
+                    title = file.title,
+                    subtitle = buildList {
+                        add(if (file.notes.size == 1) "1 note" else "${file.notes.size} notes")
+                        if (file.openTasks > 0) add("${file.openTasks} to do")
+                    }.joinToString(" · "),
+                    navigationIcon = Icons.AutoMirrored.Filled.ArrowBack,
+                    navigationDescription = "Back",
+                    onNavigation = { viewModel.back() },
+                    searchActive = viewModel.searchActive,
+                    onSearchActiveChange = viewModel::setSearch,
+                    query = viewModel.query,
+                    onQueryChange = { viewModel.query = it },
+                    searchPlaceholder = "Search in ${file.title}",
+                    scrollBehavior = scrollBehavior,
+                    extraActions = { FoldAllButton(viewModel, file.notes) },
+                ) { dismiss ->
+                    DropdownMenuItem(
+                        text = { Text("Edit preface") },
+                        leadingIcon = { Icon(Icons.Default.Edit, null) },
+                        onClick = { dismiss(); editPreface() },
+                    )
+                }
             }
         },
         floatingActionButton = {
-            if (prefaceDraft == null) {
+            if (prefaceDraft == null && !selecting) {
                 FloatingActionButton(onClick = { newNote = true }) { Icon(Icons.Default.Add, "New note") }
             }
         },
         snackbarHost = { SnackbarHost(snackbar) },
     ) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding)) {
+        Box(Modifier.fillMaxSize().padding(padding)) {
             if (viewModel.searchActive) {
                 SearchResults(viewModel, library, file.notes, file.notes.flatMap { it.tags }.distinct().sorted())
-                return@Column
+            } else {
+                NotebookOutline(
+                    viewModel = viewModel,
+                    file = file,
+                    prefaceDraft = prefaceDraft,
+                    onPrefaceDraftChange = { prefaceDraft = it },
+                    onEditPreface = ::editPreface,
+                    selected = selection?.indices.orEmpty(),
+                    showContent = settings.showContentInNotebook,
+                    scrollConnection = scrollBehavior.nestedScrollConnection,
+                    onAddNear = { note, placement -> addNear = note to placement },
+                )
             }
-
-            val shown = NoteTree.visible(file.notes, viewModel::isFolded).map { it.index }.toSet()
-            val ancestorLevels = remember(file.notes) { NoteTree.ancestorLevels(file.notes) }
-            PullToRefresh(viewModel) {
-                LazyColumn(
-                    contentPadding = PaddingValues(bottom = 120.dp),
-                    // On the list rather than the Scaffold, so pulling down expands the app bar
-                    // before pull-to-refresh takes the rest of the gesture
-                    modifier = Modifier.fillMaxSize().nestedScroll(scrollBehavior.nestedScrollConnection),
-                ) {
-                    item(key = "header") {
-                        val draft = prefaceDraft
-                        if (draft != null) {
-                            Column(Modifier.padding(horizontal = 16.dp)) {
-                                DraftField(
-                                    value = draft,
-                                    onValueChange = { prefaceDraft = it },
-                                    label = "Preface",
-                                    singleLine = false,
-                                    minLines = 4,
-                                    onSave = { viewModel.setPreface(file, draft.text); prefaceDraft = null },
-                                    onCancel = { prefaceDraft = null },
-                                )
-                                Text(
-                                    "Text before the first note. Lines like #+TITLE: set the notebook's name.",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.padding(bottom = 12.dp),
-                                )
-                            }
-                        } else if (file.preface.isNotBlank()) {
-                            LinkedText(
-                                file.preface,
-                                MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
-                                viewModel::openById,
-                                Modifier
-                                    .fillMaxWidth()
-                                    .clickable { editPreface() }
-                                    .padding(start = 16.dp, end = 16.dp, bottom = 12.dp),
-                            )
-                        }
-                    }
-                    if (file.notes.isEmpty()) {
-                        item {
-                            Text(
-                                "No notes yet. Tap + to add one.",
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(16.dp),
-                            )
-                        }
-                    }
-                    // Every note stays in the list; folded ones collapse to zero height so
-                    // that folding and unfolding animate like an outline
-                    items(file.notes, key = { it.fileUri + "#" + it.index }) { note ->
-                        AnimatedVisibility(
-                            visible = note.index in shown,
-                            enter = expandVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) +
-                                fadeIn(MaterialTheme.motionScheme.defaultEffectsSpec()),
-                            exit = shrinkVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) +
-                                fadeOut(MaterialTheme.motionScheme.defaultEffectsSpec()),
-                        ) {
-                            val rowKey = note.fileUri + "#" + note.index
-                            OutlineRow(
-                                note = note,
-                                ancestorLevels = ancestorLevels[note.index],
-                                swipeOpen = viewModel.openSwipeRow,
-                                onSwipeOpenChange = { open ->
-                                    viewModel.openSwipeRow = if (open) rowKey else viewModel.openSwipeRow.takeIf { it != rowKey }
-                                },
-                                onToggleDone = { viewModel.toggleDone(note) },
-                                hasChildren = NoteTree.hasChildren(file.notes, note.index),
-                                folded = viewModel.isFolded(note),
-                                showContent = settings.showContentInNotebook,
-                                onToggle = { viewModel.toggleFold(note) },
-                                onClick = {
-                                    // A tap while a row shows its actions just closes it
-                                    if (viewModel.openSwipeRow != null) viewModel.openSwipeRow = null else viewModel.openNote(note)
-                                },
-                                onOpenId = viewModel::openById,
-                                onAddChild = { addNear = note to true },
-                                onAddSibling = { addNear = note to false },
-                            )
-                        }
-                    }
-                }
+            if (selecting) {
+                SelectionToolbar(viewModel, file, Modifier.align(Alignment.BottomCenter).padding(bottom = 16.dp))
             }
         }
     }
@@ -254,39 +179,162 @@ fun NotebookScreen(
         )
     }
 
-    addNear?.let { (anchor, asChild) ->
+    addNear?.let { (anchor, placement) ->
         TextInputDialog(
-            title = if (asChild) "New sub-note" else "New note after",
+            title = newNoteTitle(placement),
             label = "Title",
             confirmLabel = "Create",
             onDismiss = { addNear = null },
-            onConfirm = { addNear = null; viewModel.createNoteNear(anchor, asChild, it) },
+            onConfirm = { addNear = null; viewModel.createNoteNear(anchor, placement, it) },
         )
+    }
+}
+
+@Composable
+private fun FoldAllButton(viewModel: AppViewModel, notes: List<OrgNote>) {
+    if (notes.indices.none { NoteTree.hasChildren(notes, it) }) return
+    val anyExpanded = notes.indices.any { i -> NoteTree.hasChildren(notes, i) && !viewModel.isFolded(notes[i]) }
+    IconButton(onClick = { viewModel.setAllFolded(notes, anyExpanded) }) {
+        Icon(
+            if (anyExpanded) OrglineIcons.UnfoldLess else OrglineIcons.UnfoldMore,
+            if (anyExpanded) "Collapse all" else "Expand all",
+        )
+    }
+}
+
+/** Preface (editable in place) and the foldable outline of notes. */
+@Composable
+private fun NotebookOutline(
+    viewModel: AppViewModel,
+    file: NoteRepository.LoadedFile,
+    prefaceDraft: TextFieldValue?,
+    onPrefaceDraftChange: (TextFieldValue?) -> Unit,
+    onEditPreface: () -> Unit,
+    selected: Set<Int>,
+    showContent: Boolean,
+    scrollConnection: androidx.compose.ui.input.nestedscroll.NestedScrollConnection,
+    onAddNear: (OrgNote, Placement) -> Unit,
+) {
+    val shown = NoteTree.visible(file.notes, viewModel::isFolded).map { it.index }.toSet()
+    val ancestorLevels = remember(file.notes) { NoteTree.ancestorLevels(file.notes) }
+    val selecting = selected.isNotEmpty()
+
+    PullToRefresh(viewModel) {
+        LazyColumn(
+            contentPadding = PaddingValues(bottom = 120.dp),
+            // On the list rather than the Scaffold, so pulling down expands the app bar
+            // before pull-to-refresh takes the rest of the gesture
+            modifier = Modifier.fillMaxSize().nestedScroll(scrollConnection),
+        ) {
+            item(key = "header") {
+                if (prefaceDraft != null) {
+                    Column(Modifier.padding(horizontal = 16.dp)) {
+                        DraftField(
+                            value = prefaceDraft,
+                            onValueChange = { onPrefaceDraftChange(it) },
+                            label = "Preface",
+                            singleLine = false,
+                            minLines = 4,
+                            onSave = { viewModel.setPreface(file, prefaceDraft.text); onPrefaceDraftChange(null) },
+                            onCancel = { onPrefaceDraftChange(null) },
+                        )
+                        Text(
+                            "Text before the first note. Lines like #+TITLE: set the notebook's name.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(bottom = 12.dp),
+                        )
+                    }
+                } else if (file.preface.isNotBlank()) {
+                    LinkedText(
+                        file.preface,
+                        MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
+                        viewModel::openById,
+                        Modifier
+                            .fillMaxWidth()
+                            .clickable(onClick = onEditPreface)
+                            .padding(start = 16.dp, end = 16.dp, bottom = 12.dp),
+                    )
+                }
+            }
+            if (file.notes.isEmpty()) {
+                item {
+                    Text(
+                        "No notes yet. Tap + to add one.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(16.dp),
+                    )
+                }
+            }
+            // Every note stays in the list; folded ones collapse to zero height so
+            // that folding and unfolding animate like an outline
+            items(file.notes, key = { it.fileUri + "#" + it.index }) { note ->
+                AnimatedVisibility(
+                    visible = note.index in shown,
+                    enter = expandVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) +
+                        fadeIn(MaterialTheme.motionScheme.defaultEffectsSpec()),
+                    exit = shrinkVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) +
+                        fadeOut(MaterialTheme.motionScheme.defaultEffectsSpec()),
+                ) {
+                    val rowKey = note.fileUri + "#" + note.index
+                    OutlineRow(
+                        note = note,
+                        ancestorLevels = ancestorLevels[note.index],
+                        hasChildren = NoteTree.hasChildren(file.notes, note.index),
+                        folded = viewModel.isFolded(note),
+                        showContent = showContent,
+                        selected = note.index in selected,
+                        selecting = selecting,
+                        swipeOpen = viewModel.openSwipeRow,
+                        onSwipeOpenChange = { open ->
+                            viewModel.openSwipeRow = if (open) rowKey else viewModel.openSwipeRow.takeIf { it != rowKey }
+                        },
+                        onToggleDone = { viewModel.toggleDone(note) },
+                        onToggleFold = { viewModel.toggleFold(note) },
+                        onClick = {
+                            when {
+                                selecting -> viewModel.toggleSelected(note)
+                                // A tap while a row shows its actions just closes it
+                                viewModel.openSwipeRow != null -> viewModel.openSwipeRow = null
+                                else -> viewModel.openNote(note)
+                            }
+                        },
+                        onLongClick = {
+                            viewModel.openSwipeRow = null
+                            viewModel.toggleSelected(note)
+                        },
+                        onOpenId = viewModel::openById,
+                        onAddNear = { placement -> onAddNear(note, placement) },
+                    )
+                }
+            }
+        }
     }
 }
 
 /**
  * One note in the notebook outline: fold chevron (or bullet), then the note.
- * Swipe left shows actions, swipe right toggles TODO / DONE; long press opens the same actions as a menu.
+ * Swipe left for new-note actions, swipe right to toggle TODO / DONE, long press to select.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun OutlineRow(
     note: OrgNote,
     ancestorLevels: List<Int>,
-    swipeOpen: String?,
-    onSwipeOpenChange: (Boolean) -> Unit,
-    onToggleDone: () -> Unit,
     hasChildren: Boolean,
     folded: Boolean,
     showContent: Boolean,
-    onToggle: () -> Unit,
+    selected: Boolean,
+    selecting: Boolean,
+    swipeOpen: String?,
+    onSwipeOpenChange: (Boolean) -> Unit,
+    onToggleDone: () -> Unit,
+    onToggleFold: () -> Unit,
     onClick: () -> Unit,
+    onLongClick: () -> Unit,
     onOpenId: (String) -> Unit,
-    onAddChild: () -> Unit,
-    onAddSibling: () -> Unit,
+    onAddNear: (Placement) -> Unit,
 ) {
-    var menuOpen by remember { mutableStateOf(false) }
     val chevronRotation by animateFloatAsState(
         targetValue = if (folded) -90f else 0f,
         animationSpec = MaterialTheme.motionScheme.defaultSpatialSpec(),
@@ -301,15 +349,16 @@ private fun OutlineRow(
         onOpenChange = onSwipeOpenChange,
         swipeRightIcon = if (note.isDone) OrglineIcons.Undo else OrglineIcons.Check,
         onSwipeRight = onToggleDone,
-        actions = listOf(
-            SwipeAction(OrglineIcons.SubNote, "Add sub-note", onAddChild),
-            SwipeAction(Icons.Default.Add, "Add note after", onAddSibling),
-        ),
+        actions = Placement.entries.map { placement ->
+            SwipeAction(placementIcon(placement), newNoteTitle(placement)) { onAddNear(placement) }
+        },
         modifier = Modifier.sharedContainer("note-$key", RectangleShape),
+        enabled = !selecting,
     ) {
         Row(
             Modifier
                 .fillMaxWidth()
+                .background(if (selected) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent)
                 .drawBehind {
                     // Vertical guides: one per expanded ancestor, and one under this note's
                     // chevron when it is expanded, so they join into lines along the subtree
@@ -323,13 +372,13 @@ private fun OutlineRow(
                         drawLine(guideColor, Offset(x, 40.dp.toPx()), Offset(x, size.height), stroke)
                     }
                 }
-                .combinedClickable(onClick = onClick, onLongClick = { menuOpen = true })
+                .combinedClickable(onClick = onClick, onLongClick = onLongClick)
                 .heightIn(min = 52.dp)
                 .padding(start = indent(note.level), end = 16.dp),
             verticalAlignment = Alignment.Top,
         ) {
             if (hasChildren) {
-                IconButton(onClick = onToggle) {
+                IconButton(onClick = onToggleFold) {
                     Icon(
                         Icons.Default.KeyboardArrowDown,
                         if (folded) "Expand" else "Collapse",
@@ -357,10 +406,6 @@ private fun OutlineRow(
                     )
                 }
             }
-        }
-        DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-            DropdownMenuItem(text = { Text("Add sub-note") }, onClick = { menuOpen = false; onAddChild() })
-            DropdownMenuItem(text = { Text("Add note after") }, onClick = { menuOpen = false; onAddSibling() })
         }
     }
 }

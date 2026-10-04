@@ -5,6 +5,9 @@ import android.content.Intent
 import android.net.Uri
 import io.github.yighy.orgline.core.NoteEdit
 import io.github.yighy.orgline.core.Notebooks
+import io.github.yighy.orgline.core.Outline
+import io.github.yighy.orgline.core.Placement
+import io.github.yighy.orgline.core.Subtree
 import io.github.yighy.orgline.core.OrgDocument
 import io.github.yighy.orgline.core.OrgNote
 import io.github.yighy.orgline.core.SectionEditor
@@ -133,20 +136,52 @@ class NoteRepository(context: Context) {
         }
     }
 
-    /**
-     * Adds a note at the end of [anchor]'s subtree: as its last child, or as the next sibling.
-     */
-    suspend fun createNoteNear(anchor: OrgNote, asChild: Boolean, title: String): OrgNote = withContext(Dispatchers.IO) {
+    /** Adds a note above, under (as last child) or below [anchor] and returns it. */
+    suspend fun createNoteNear(anchor: OrgNote, placement: Placement, title: String): OrgNote {
+        var at = 0
+        val file = modifyFile(anchor.fileUri, listOf(anchor)) { doc, (index) ->
+            val (section, level) = Outline.target(doc, index, placement)
+            at = section
+            doc.insertNote(section, level, title)
+        }
+        return file.notes[at]
+    }
+
+    /** The subtrees of [notes] (with their sub-notes), as they are now in the file. */
+    suspend fun copySubtrees(fileUri: String, notes: List<OrgNote>): List<Subtree> = withContext(Dispatchers.IO) {
         writeLock.withLock {
             val folder = folder() ?: error("No folder")
-            val uri = Uri.parse(anchor.fileUri)
+            val uri = Uri.parse(fileUri)
             val doc = OrgDocument.parse(folder.read(uri))
-            val index = locate(folder, uri, doc, anchor)
+            Outline.extract(doc, notes.map { locate(folder, uri, doc, it) })
+        }
+    }
 
-            val at = doc.subtreeEnd(index)
-            val level = doc.sections[index].level + if (asChild) 1 else 0
-            folder.write(uri, doc.insertNote(at, level, title).toFileText())
-            reloadFile(folder, uri).notes[at]
+    /** Moves [notes] with their sub-notes to the end of another notebook, as top-level notes. */
+    suspend fun moveToFile(notes: List<OrgNote>, targetUri: String) {
+        val sourceUri = notes.first().fileUri
+        val subtrees = copySubtrees(sourceUri, notes)
+        modifyFile(targetUri, emptyList()) { doc, _ -> Outline.insert(doc, doc.sections.size, 1, subtrees) }
+        modifyFile(sourceUri, notes) { doc, indices -> Outline.delete(doc, indices) }
+    }
+
+    /**
+     * Re-reads the file, finds [notes] by their exact text, applies [transform] and writes the
+     * result once. Fails without writing if a note changed on disk since it was loaded.
+     */
+    suspend fun modifyFile(
+        fileUri: String,
+        notes: List<OrgNote>,
+        transform: (OrgDocument, List<Int>) -> OrgDocument,
+    ): LoadedFile = withContext(Dispatchers.IO) {
+        writeLock.withLock {
+            val folder = folder() ?: error("No folder")
+            val uri = Uri.parse(fileUri)
+            val doc = OrgDocument.parse(folder.read(uri))
+            val indices = notes.map { locate(folder, uri, doc, it) }
+            val updated = transform(doc, indices)
+            if (updated.text != doc.text) folder.write(uri, updated.toFileText())
+            reloadFile(folder, uri)
         }
     }
 

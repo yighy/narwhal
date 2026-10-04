@@ -67,6 +67,7 @@ import io.github.yighy.orgline.core.Keywords
 import io.github.yighy.orgline.core.NoteTree
 import io.github.yighy.orgline.core.OrgNote
 import io.github.yighy.orgline.core.OrgTime
+import io.github.yighy.orgline.core.Placement
 import io.github.yighy.orgline.data.NoteRepository
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.LaunchedEffect
@@ -103,8 +104,8 @@ fun NoteScreen(
     var addMenu by remember { mutableStateOf(false) }
     var moreMenu by remember { mutableStateOf(false) }
     var confirmDiscard by remember { mutableStateOf(false) }
-    // Add a sub-note (true) or a note after this one (false)
-    var addNear by remember { mutableStateOf<Boolean?>(null) }
+    // Where to add a new note relative to this one
+    var addNear by remember { mutableStateOf<Placement?>(null) }
 
     val original = when (editing) {
         Editing.Title -> note.title
@@ -178,14 +179,19 @@ fun NoteScreen(
                                 },
                             )
                             DropdownMenuItem(
-                                text = { Text("Add sub-note") },
-                                leadingIcon = { Icon(Icons.Default.Add, null) },
-                                onClick = { moreMenu = false; addNear = true },
+                                text = { Text("New note above") },
+                                leadingIcon = { Icon(OrglineIcons.NewAbove, null) },
+                                onClick = { moreMenu = false; addNear = Placement.Above },
                             )
                             DropdownMenuItem(
-                                text = { Text("Add note after") },
-                                leadingIcon = { Icon(Icons.Default.Add, null) },
-                                onClick = { moreMenu = false; addNear = false },
+                                text = { Text("New sub-note") },
+                                leadingIcon = { Icon(OrglineIcons.SubNote, null) },
+                                onClick = { moreMenu = false; addNear = Placement.Under },
+                            )
+                            DropdownMenuItem(
+                                text = { Text("New note below") },
+                                leadingIcon = { Icon(OrglineIcons.NewBelow, null) },
+                                onClick = { moreMenu = false; addNear = Placement.Below },
                             )
                         }
                     }
@@ -397,13 +403,13 @@ fun NoteScreen(
         )
     }
 
-    addNear?.let { asChild ->
+    addNear?.let { placement ->
         TextInputDialog(
-            title = if (asChild) "New sub-note" else "New note after",
+            title = newNoteTitle(placement),
             label = "Title",
             confirmLabel = "Create",
             onDismiss = { addNear = null },
-            onConfirm = { addNear = null; viewModel.createNoteNear(note, asChild, it) },
+            onConfirm = { addNear = null; viewModel.createNoteNear(note, placement, it) },
         )
     }
 
@@ -443,4 +449,10 @@ private fun MetaRow(label: String, onClick: (() -> Unit)?, value: @Composable ()
         )
         Box(Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) { value() }
     }
+}
+
+fun newNoteTitle(placement: Placement) = when (placement) {
+    Placement.Above -> "New note above"
+    Placement.Under -> "New sub-note"
+    Placement.Below -> "New note below"
 }

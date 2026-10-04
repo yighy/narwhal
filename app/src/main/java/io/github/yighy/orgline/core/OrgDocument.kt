@@ -82,7 +82,8 @@ class OrgDocument private constructor(
         return rebuild(sb.toString())
     }
 
-    private fun rebuild(newText: String) = parse(newText).let {
+    /** Same document type (keeps the line separator) with new text. */
+    internal fun rebuild(newText: String) = parse(newText).let {
         OrgDocument(it.text, lineSeparator, it.preface, it.sections, it.keywords)
     }
 

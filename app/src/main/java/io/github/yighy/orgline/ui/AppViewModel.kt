@@ -11,6 +11,10 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.yighy.orgline.core.Keywords
 import io.github.yighy.orgline.core.NoteEdit
+import io.github.yighy.orgline.core.Outline
+import io.github.yighy.orgline.core.Placement
+import io.github.yighy.orgline.core.SectionEditor
+import io.github.yighy.orgline.core.Subtree
 import io.github.yighy.orgline.core.NoteStates
 import io.github.yighy.orgline.core.NoteTree
 import io.github.yighy.orgline.core.OrgTime
@@ -220,11 +224,145 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    /** Adds a note at the end of [anchor]'s subtree, as a child or as the next sibling, and opens it. */
-    fun createNoteNear(anchor: OrgNote, asChild: Boolean, title: String) {
+    /** Adds a note above, under or below [anchor] and opens it. */
+    fun createNoteNear(anchor: OrgNote, placement: Placement, title: String) {
         viewModelScope.launch {
-            attempt { openNote(repository.createNoteNear(anchor, asChild, title)) }
+            attempt { openNote(repository.createNoteNear(anchor, placement, title)) }
         }
+    }
+
+    // ---- Multiple selection in a notebook (long press) ----
+
+    data class Selection(val fileUri: String, val indices: Set<Int>)
+
+    var selection by mutableStateOf<Selection?>(null)
+        private set
+
+    /** Notes cut or copied, with their sub-notes; can be pasted in any notebook. */
+    var clipboard by mutableStateOf<List<Subtree>>(emptyList())
+        private set
+
+    fun toggleSelected(note: OrgNote) {
+        val current = selection?.takeIf { it.fileUri == note.fileUri }
+        val indices = current?.indices.orEmpty().let { if (note.index in it) it - note.index else it + note.index }
+        selection = if (indices.isEmpty()) null else Selection(note.fileUri, indices)
+    }
+
+    fun clearSelection() {
+        selection = null
+    }
+
+    fun selectAll(notes: List<OrgNote>) {
+        val uri = notes.firstOrNull()?.fileUri ?: return
+        selection = Selection(uri, notes.map { it.index }.toSet())
+    }
+
+    fun selectedNotes(): List<OrgNote> {
+        val s = selection ?: return emptyList()
+        return s.indices.sorted().mapNotNull { library.value.note(s.fileUri, it) }
+    }
+
+    /** Runs [block] on the selected notes; [keep] returns the selection to keep afterwards (null clears it). */
+    private fun withSelection(keep: (List<OrgNote>) -> Set<Int>? = { null }, block: suspend (List<OrgNote>) -> Unit) {
+        val notes = selectedNotes()
+        if (notes.isEmpty()) return
+        viewModelScope.launch {
+            attempt { block(notes) }
+            selection = keep(notes)?.takeIf { it.isNotEmpty() }?.let { Selection(notes.first().fileUri, it) }
+        }
+    }
+
+    private fun count(n: Int) = if (n == 1) "1 note" else "$n notes"
+
+    fun copySelection() = withSelection { notes ->
+        clipboard = repository.copySubtrees(notes.first().fileUri, notes)
+        message("${count(clipboard.size)} copied")
+    }
+
+    fun cutSelection() = withSelection { notes ->
+        var cut = emptyList<Subtree>()
+        repository.modifyFile(notes.first().fileUri, notes) { doc, indices ->
+            cut = Outline.extract(doc, indices)
+            Outline.delete(doc, indices)
+        }
+        clipboard = cut
+        message("${count(cut.size)} cut")
+    }
+
+    fun pasteAtSelection(placement: Placement) = withSelection { notes ->
+        val subtrees = clipboard
+        repository.modifyFile(notes.first().fileUri, notes.take(1)) { doc, (index) ->
+            val (at, level) = Outline.target(doc, index, placement)
+            Outline.insert(doc, at, level, subtrees)
+        }
+    }
+
+    fun deleteSelection() = withSelection { notes ->
+        var deleted = 0
+        repository.modifyFile(notes.first().fileUri, notes) { doc, indices ->
+            deleted = Outline.roots(doc, indices).size
+            Outline.delete(doc, indices)
+        }
+        message("${count(deleted)} deleted")
+    }
+
+    enum class Move { Up, Down, Promote, Demote }
+
+    fun moveSelection(move: Move) {
+        val notes = selectedNotes()
+        if (notes.isEmpty()) return
+        var newIndex: Int? = null
+        withSelection(keep = { list -> newIndex?.let { setOf(it) } ?: list.map { it.index }.toSet() }) {
+            repository.modifyFile(notes.first().fileUri, notes) { doc, indices ->
+                when (move) {
+                    Move.Up -> Outline.moveUp(doc, indices.single())?.also { newIndex = it.second }?.first ?: doc
+                    Move.Down -> Outline.moveDown(doc, indices.single())?.also { newIndex = it.second }?.first ?: doc
+                    Move.Promote -> Outline.shift(doc, indices, -1)
+                    Move.Demote -> Outline.shift(doc, indices, 1)
+                }
+            }
+        }
+    }
+
+    fun moveSelectionTo(fileUri: String) = withSelection { notes ->
+        repository.moveToFile(notes, fileUri)
+        message("${count(notes.size)} moved to ${library.value.file(fileUri)?.title}")
+    }
+
+    /** Applies [change] to every selected note in one write, keeping the selection. */
+    private fun editSelection(change: (OrgNote, Keywords) -> NoteEdit) =
+        withSelection(keep = { notes -> notes.map { it.index }.toSet() }) { notes ->
+            val uri = notes.first().fileUri
+            repository.modifyFile(uri, notes) { doc, indices ->
+                Outline.replaceSections(doc, indices.withIndex().associate { (k, i) ->
+                    val section = doc.sections[i]
+                    i to SectionEditor.rewrite(section.raw, section.level, doc.keywords, change(notes[k], doc.keywords))
+                })
+            }
+        }
+
+    fun setStateOfSelection(target: String?) = editSelection { note, keywords ->
+        NoteStates.apply(note.toEdit(), target, keywords).edit
+    }
+
+    /** Marks the selection done, or back to to-do when all selected notes are done. */
+    fun toggleDoneOfSelection() {
+        val notes = selectedNotes()
+        val allDone = notes.isNotEmpty() && notes.all { it.isDone }
+        editSelection { note, keywords ->
+            val target = if (allDone) keywords.todo.firstOrNull() else keywords.done.firstOrNull()
+            NoteStates.apply(note.toEdit(), target, keywords).edit
+        }
+    }
+
+    fun setScheduledOfSelection(timestamp: String?) = editSelection { note, _ -> note.toEdit().copy(scheduled = timestamp) }
+
+    fun setDeadlineOfSelection(timestamp: String?) = editSelection { note, _ -> note.toEdit().copy(deadline = timestamp) }
+
+    fun createNoteNearSelection(placement: Placement, title: String) {
+        val note = selectedNotes().singleOrNull() ?: return
+        selection = null
+        createNoteNear(note, placement, title)
     }
 
     fun createNote(fileUri: String, title: String) {
