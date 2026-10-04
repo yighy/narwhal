@@ -255,7 +255,7 @@ private fun ScreenContent(
 
         Screen.Notebooks -> HomeScreen(viewModel, library, snackbar, onOpenDrawer)
 
-        is Screen.NewNote -> NewNoteScreen(viewModel, library, screen, snackbar)
+        is Screen.NewNote -> NoteScreen(viewModel, library, viewModel.draftNote(screen), snackbar, newNote = screen)
 
         Screen.Settings -> SettingsScreen(viewModel, library, onPickFolder, notificationsAllowed, onAllowNotifications)
 

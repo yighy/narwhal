@@ -188,7 +188,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** Returns the saved note, or null if it could not be saved. */
-    suspend fun save(note: OrgNote, edit: NoteEdit): OrgNote? = attempt { repository.saveNote(note, edit) }
+    suspend fun save(note: OrgNote, edit: NoteEdit): OrgNote? =
+        if (note.index == DRAFT_INDEX) saveDraft(edit) else attempt { repository.saveNote(note, edit) }
 
     fun update(note: OrgNote, change: (NoteEdit) -> NoteEdit) {
         viewModelScope.launch { save(note, change(note.toEdit())) }
@@ -198,6 +199,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun setState(note: OrgNote, target: String?) {
         val keywords = library.value.file(note.fileUri)?.doc?.keywords ?: Keywords.DEFAULT
         val result = NoteStates.apply(note.toEdit(), target, keywords)
+        if (note.index == DRAFT_INDEX) {
+            viewModelScope.launch { saveDraft(result.edit) }
+            return
+        }
         viewModelScope.launch {
             val saved = save(note, result.edit) ?: return@launch
             if (result.shifted) {
@@ -231,28 +236,68 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** Adds a note above, under or below [anchor] and opens it. */
-    /** Opens the screen of a new note; it is created once it gets a title, see [finishNewNote]. */
+    // ---- New note: shown in the note screen, written to the file once it has a title ----
+
+    /** Fields of the note being created, kept in memory until it has a title. */
+    var newNoteDraft by mutableStateOf(EMPTY_DRAFT)
+        private set
+
+    /** Opens the note screen for a new note, title being edited; see [saveDraft]. */
     fun startNewNote(fileUri: String, anchor: OrgNote? = null, placement: Placement? = null) {
         openSwipeRow = null
+        newNoteDraft = EMPTY_DRAFT
         push(Screen.NewNote(fileUri, anchor, placement))
     }
 
-    /** Writes the new note with [title] and replaces its screen with the note's screen. */
-    fun finishNewNote(screen: Screen.NewNote, title: String) {
-        viewModelScope.launch {
-            val note = attempt {
-                if (screen.anchor != null && screen.placement != null) {
-                    repository.createNoteNear(screen.anchor, screen.placement, title)
-                } else {
-                    repository.createNote(Uri.parse(screen.fileUri), title)
-                }
-            } ?: return@launch
-            val i = stack.indexOf(screen)
-            if (i >= 0) {
-                navigatedForward = true
-                stack[i] = Screen.Note(note.fileUri, note.index)
-            }
+    /** The draft as a note for the note screen; [DRAFT_INDEX] marks it as not in the file yet. */
+    fun draftNote(screen: Screen.NewNote): OrgNote {
+        val d = newNoteDraft
+        val keywords = library.value.file(screen.fileUri)?.doc?.keywords ?: Keywords.DEFAULT
+        val level = (screen.anchor?.level ?: 1) + if (screen.placement == Placement.Under) 1 else 0
+        return OrgNote(
+            fileUri = screen.fileUri,
+            fileName = library.value.file(screen.fileUri)?.ref?.name ?: "",
+            index = DRAFT_INDEX,
+            level = level,
+            state = d.state,
+            isDone = d.state != null && d.state in keywords.done,
+            priority = d.priority,
+            title = d.title,
+            tags = d.tags,
+            scheduled = d.scheduled,
+            deadline = d.deadline,
+            closed = d.closed,
+            properties = d.properties,
+            content = d.content,
+            raw = "",
+        )
+    }
+
+    /**
+     * Updates the draft; once it has a title, writes the note with all its fields and
+     * replaces the new-note screen with the note's screen.
+     */
+    private suspend fun saveDraft(edit: NoteEdit): OrgNote? {
+        val screen = stack.lastOrNull { it is Screen.NewNote } as? Screen.NewNote ?: return null
+        newNoteDraft = edit
+        if (edit.title.isBlank()) {
+            return draftNote(screen)
         }
+        val note = attempt {
+            val created = if (screen.anchor != null && screen.placement != null) {
+                repository.createNoteNear(screen.anchor, screen.placement, edit.title)
+            } else {
+                repository.createNote(Uri.parse(screen.fileUri), edit.title)
+            }
+            // Fields set before the title (tags, state, dates, content…)
+            if (edit != created.toEdit().copy(title = edit.title)) repository.saveNote(created, edit) else created
+        } ?: return null
+        val i = stack.indexOf(screen)
+        if (i >= 0) {
+            navigatedForward = true
+            stack[i] = Screen.Note(note.fileUri, note.index)
+        }
+        return note
     }
 
     // ---- Multiple selection of notebooks on the home screen ----
@@ -421,6 +466,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             message(e.message ?: e.toString())
             null
         }
+
+    companion object {
+        /** Index of a note that is not in its file yet (being created). */
+        const val DRAFT_INDEX = -1
+        private val EMPTY_DRAFT = NoteEdit(title = "", state = null, tags = emptyList(), properties = emptyList(), content = "")
+    }
 
     fun message(text: String) {
         _messages.tryEmit(text)

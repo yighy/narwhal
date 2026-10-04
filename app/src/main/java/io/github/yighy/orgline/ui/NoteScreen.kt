@@ -92,13 +92,16 @@ fun NoteScreen(
     library: NoteRepository.Library,
     note: OrgNote,
     snackbar: SnackbarHostState,
+    /** Set while the note is being created: it is written to the file once its title is saved. */
+    newNote: Screen.NewNote? = null,
 ) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val file = library.file(note.fileUri)
     val keywords = file?.doc?.keywords ?: Keywords.DEFAULT
 
-    var editing by remember { mutableStateOf(Editing.None) }
+    // A new note starts with its title being edited
+    var editing by remember { mutableStateOf(if (newNote != null) Editing.Title else Editing.None) }
     var draft by remember { mutableStateOf(TextFieldValue("")) }
     var dialog by remember { mutableStateOf<MetaDialog?>(null) }
     var addMenu by remember { mutableStateOf(false) }
@@ -160,7 +163,8 @@ fun NoteScreen(
                     IconButton(onClick = { viewModel.back() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
                 },
                 actions = {
-                    Box {
+                    // Nothing to link to or add next to until the note exists
+                    if (newNote == null) Box {
                         IconButton(onClick = { moreMenu = true }) { Icon(Icons.Default.MoreVert, "More") }
                         DropdownMenu(expanded = moreMenu, onDismissRequest = { moreMenu = false }) {
                             DropdownMenuItem(
@@ -220,11 +224,12 @@ fun NoteScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp),
         ) {
-            // Breadcrumbs: notebook · ancestors
+            // Breadcrumbs: notebook · ancestors (or where a new note goes)
             FlowRow(verticalArrangement = Arrangement.Center) {
                 val crumbs = buildList<Pair<String, () -> Unit>> {
                     add((file?.title ?: note.fileName) to { viewModel.openNotebook(note.fileUri) })
-                    file?.notes?.let { notes ->
+                    if (newNote != null) add(positionLabel(newNote) to {})
+                    else file?.notes?.let { notes ->
                         NoteTree.ancestors(notes, note.index).forEach { a -> add(displayTitle(a.title) to { viewModel.openNote(a) }) }
                     }
                 }
@@ -251,7 +256,7 @@ fun NoteScreen(
                 )
             } else {
                 Text(
-                    displayTitle(note.title).ifBlank { "Untitled" },
+                    displayTitle(note.title).ifBlank { if (newNote != null) "Add a title to create the note" else "Untitled" },
                     style = MaterialTheme.typography.headlineMedium,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -444,4 +449,14 @@ fun newNoteTitle(placement: Placement) = when (placement) {
     Placement.Above -> "New note above"
     Placement.Under -> "New sub-note"
     Placement.Below -> "New note below"
+}
+
+/** Where a new note goes, e.g. "sub-note of Design". */
+private fun positionLabel(screen: Screen.NewNote): String {
+    val anchor = screen.anchor?.let { displayTitle(it.title) } ?: return "new note at the end"
+    return when (screen.placement) {
+        Placement.Above -> "new note above $anchor"
+        Placement.Under -> "sub-note of $anchor"
+        Placement.Below, null -> "new note below $anchor"
+    }
 }

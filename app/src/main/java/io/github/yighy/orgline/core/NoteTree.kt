@@ -30,6 +30,17 @@ object NoteTree {
         }
     }
 
+    /** For each note, the tags of its ancestors (Org tag inheritance). */
+    fun inheritedTags(notes: List<OrgNote>): List<List<String>> {
+        val stack = ArrayDeque<OrgNote>()
+        return notes.map { note ->
+            while (stack.isNotEmpty() && stack.last().level >= note.level) stack.removeLast()
+            val tags = stack.flatMap { it.tags }.distinct()
+            stack.addLast(note)
+            tags
+        }
+    }
+
     /** Notes not hidden under a folded ancestor. */
     fun visible(notes: List<OrgNote>, isFolded: (OrgNote) -> Boolean): List<OrgNote> {
         val result = mutableListOf<OrgNote>()

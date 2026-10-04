@@ -75,7 +75,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withLink
 import androidx.compose.ui.unit.dp
 import io.github.yighy.orgline.core.IdLinks
-import io.github.yighy.orgline.core.NoteSearch
+import io.github.yighy.orgline.core.NoteTree
+import io.github.yighy.orgline.core.SearchQuery
+import java.time.LocalDateTime
 import io.github.yighy.orgline.core.OrgNote
 import io.github.yighy.orgline.core.OrgTime
 import io.github.yighy.orgline.data.NoteRepository
@@ -222,7 +224,12 @@ fun SearchResults(
     modifier: Modifier = Modifier,
 ) {
     val idle = viewModel.query.isBlank() && viewModel.tag == null
-    val results = if (idle) emptyList() else notes.filter { NoteSearch.matches(it, viewModel.query, viewModel.tag) }
+    // Orgzly-style query; the selected tag chip adds a t. condition
+    val queryText = listOfNotNull(viewModel.query, viewModel.tag?.let { "t.\"$it\"" }).joinToString(" ")
+    val context = remember(library) { searchContext(library) }
+    val results = remember(queryText, notes, context) {
+        if (idle) emptyList() else SearchQuery.parse(queryText).apply(notes, context)
+    }
     Column(modifier) {
         if (tags.isNotEmpty()) {
             LazyRow(
@@ -242,7 +249,7 @@ fun SearchResults(
             if (results.isEmpty()) {
                 item {
                     Text(
-                        if (idle) "Type to search titles, content and tags, or pick a tag" else "No matching notes",
+                        if (idle) "Type words, or a query like  i.todo t.work s.today  o.p" else "No matching notes",
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(24.dp),
                     )
@@ -423,4 +430,16 @@ fun DraftField(
             IconButton(onClick = onSave) { Icon(Icons.Default.Check, "Save") }
         }
     }
+}
+
+/** Notebook names, keywords and inherited tags that search queries need. */
+fun searchContext(library: NoteRepository.Library): SearchQuery.Context {
+    val inherited = library.files.associate { it.uri to NoteTree.inheritedTags(it.notes) }
+    return SearchQuery.Context(
+        now = LocalDateTime.now(),
+        keywords = { note -> library.file(note.fileUri)?.doc?.keywords ?: io.github.yighy.orgline.core.Keywords.DEFAULT },
+        // Orgzly's notebook name: the file name without .org
+        notebookName = { note -> note.fileName.removeSuffix(".org") },
+        inheritedTags = { note -> inherited[note.fileUri]?.getOrNull(note.index).orEmpty() },
+    )
 }

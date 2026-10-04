@@ -50,17 +50,3 @@ data class OrgNote(
             }
     }
 }
-
-object NoteSearch {
-    /** All words of [query] must appear in the title, content or tags. */
-    fun matches(note: OrgNote, query: String, tag: String?): Boolean {
-        if (tag != null && note.tags.none { it.equals(tag, ignoreCase = true) }) return false
-        val words = query.trim().split(Regex("\\s+")).filter { it.isNotEmpty() }
-        if (words.isEmpty()) return true
-        val haystack = buildString {
-            append(note.title).append('\n').append(note.content).append('\n')
-            note.tags.joinTo(this, " ")
-        }
-        return words.all { haystack.contains(it, ignoreCase = true) }
-    }
-}
