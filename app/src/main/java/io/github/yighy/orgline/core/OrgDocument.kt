@@ -49,6 +49,39 @@ class OrgDocument private constructor(
         return rebuild(sb.toString())
     }
 
+    /**
+     * Returns a document with the text before the first heading replaced by [newPreface].
+     * Keeps a line break, and a blank line when there are notes, before the first heading.
+     */
+    fun replacePreface(newPreface: String): OrgDocument {
+        val body = text.substring(preface.length)
+        val trimmed = newPreface.replace("\r\n", "\n").trimEnd()
+        val separator = when {
+            trimmed.isEmpty() -> ""
+            body.isEmpty() -> "\n"
+            else -> "\n\n"
+        }
+        return rebuild(trimmed + separator + body)
+    }
+
+    /** Index of the first section after the subtree of section [index]. */
+    fun subtreeEnd(index: Int): Int {
+        val level = sections[index].level
+        var i = index + 1
+        while (i < sections.size && sections[i].level > level) i++
+        return i
+    }
+
+    /** Returns a document with a new heading inserted before section [atSection] (or at the end). */
+    fun insertNote(atSection: Int, level: Int, title: String): OrgDocument {
+        val offset = sections.getOrNull(atSection)?.start ?: text.length
+        val sb = StringBuilder(text.substring(0, offset))
+        if (sb.isNotEmpty() && !sb.endsWith("\n")) sb.append('\n')
+        sb.append("*".repeat(level)).append(' ').append(title.trim()).append('\n')
+        sb.append(text.substring(offset))
+        return rebuild(sb.toString())
+    }
+
     private fun rebuild(newText: String) = parse(newText).let {
         OrgDocument(it.text, lineSeparator, it.preface, it.sections, it.keywords)
     }
@@ -96,6 +129,12 @@ data class NoteEdit(
     val tags: List<String>,
     val properties: List<Pair<String, String>>,
     val content: String,
+    val priority: String? = null,
+    /** Org timestamps, e.g. "<2026-10-05 Mon 09:00>" */
+    val scheduled: String? = null,
+    val deadline: String? = null,
+    /** Inactive timestamp, e.g. "[2026-10-04 Sun 17:00]" */
+    val closed: String? = null,
 )
 
 object SectionEditor {
@@ -114,6 +153,10 @@ object SectionEditor {
 
         head.title = edit.title.replace('\n', ' ').trim()
         head.state = edit.state?.takeIf { it.isNotBlank() }
+        head.priority = edit.priority?.takeIf { it.isNotBlank() }
+        head.scheduled = edit.scheduled?.let(OrgTime::range)
+        head.deadline = edit.deadline?.let(OrgTime::range)
+        head.closed = edit.closed?.let(OrgTime::range)
         head.setTags(edit.tags.filter { it.isNotBlank() }.toTypedArray())
 
         val properties = OrgProperties()
@@ -160,7 +203,9 @@ object SectionEditor {
             }
         }
 
-        lines.addAll(i, listOf(":PROPERTIES:", OrgDocument.formatProperty(name, value), ":END:"))
+        // Same indentation as the planning line above, if any
+        val indent = if (i > 1) lines[i - 1].takeWhile { it == ' ' || it == '\t' } else ""
+        lines.addAll(i, listOf(":PROPERTIES:", OrgDocument.formatProperty(name, value), ":END:").map { indent + it })
         return lines.joinToString("\n")
     }
 

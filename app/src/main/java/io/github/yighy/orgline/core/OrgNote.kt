@@ -24,7 +24,7 @@ data class OrgNote(
     fun property(name: String): String? =
         properties.firstOrNull { it.first.equals(name, ignoreCase = true) }?.second
 
-    fun toEdit() = NoteEdit(title, state, tags, properties, content)
+    fun toEdit() = NoteEdit(title, state, tags, properties, content, priority, scheduled, deadline, closed)
 
     companion object {
         fun fromDocument(doc: OrgDocument, fileUri: String, fileName: String): List<OrgNote> =

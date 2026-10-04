@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import io.github.yighy.orgline.core.NoteEdit
+import io.github.yighy.orgline.core.Notebooks
 import io.github.yighy.orgline.core.OrgDocument
 import io.github.yighy.orgline.core.OrgNote
 import io.github.yighy.orgline.core.SectionEditor
@@ -27,7 +28,12 @@ class NoteChangedException : Exception("The note was changed by another app. It 
  */
 class NoteRepository(context: Context) {
 
-    data class LoadedFile(val ref: OrgFolder.FileRef, val doc: OrgDocument, val notes: List<OrgNote>)
+    data class LoadedFile(val ref: OrgFolder.FileRef, val doc: OrgDocument, val notes: List<OrgNote>) {
+        val uri: String get() = ref.uri.toString()
+        val title: String by lazy { Notebooks.title(doc, ref.name) }
+        val preface: String by lazy { Notebooks.prefaceText(doc) }
+        val openTasks: Int by lazy { notes.count { it.state != null && !it.isDone } }
+    }
 
     data class Library(
         val folderUri: Uri? = null,
@@ -39,8 +45,8 @@ class NoteRepository(context: Context) {
         val tags: List<String> by lazy { notes.flatMap { it.tags }.distinctBy { it.lowercase() }.sortedBy { it.lowercase() } }
 
         fun noteById(id: String): OrgNote? = notes.firstOrNull { it.id == id }
-        fun note(fileUri: String, index: Int): OrgNote? =
-            files.firstOrNull { it.ref.uri.toString() == fileUri }?.notes?.getOrNull(index)
+        fun file(fileUri: String): LoadedFile? = files.firstOrNull { it.uri == fileUri }
+        fun note(fileUri: String, index: Int): OrgNote? = file(fileUri)?.notes?.getOrNull(index)
     }
 
     private val appContext = context.applicationContext
@@ -108,9 +114,55 @@ class NoteRepository(context: Context) {
     }
 
     /**
-     * Re-reads the file, finds the note's section by its exact text and replaces it.
+     * Replaces the notebook's preface. Fails if the preface on disk is no longer [expected]
+     * (changed by another app since it was loaded).
+     */
+    suspend fun setPreface(fileUri: String, expected: String, newPreface: String) = withContext(Dispatchers.IO) {
+        writeLock.withLock {
+            val folder = folder() ?: error("No folder")
+            val uri = Uri.parse(fileUri)
+            val doc = OrgDocument.parse(folder.read(uri))
+            if (doc.preface != expected) {
+                reloadFile(folder, uri)
+                throw NoteChangedException()
+            }
+            folder.write(uri, doc.replacePreface(newPreface).toFileText())
+            reloadFile(folder, uri)
+        }
+    }
+
+    /**
+     * Adds a note at the end of [anchor]'s subtree: as its last child, or as the next sibling.
+     */
+    suspend fun createNoteNear(anchor: OrgNote, asChild: Boolean, title: String): OrgNote = withContext(Dispatchers.IO) {
+        writeLock.withLock {
+            val folder = folder() ?: error("No folder")
+            val uri = Uri.parse(anchor.fileUri)
+            val doc = OrgDocument.parse(folder.read(uri))
+            val index = locate(folder, uri, doc, anchor)
+
+            val at = doc.subtreeEnd(index)
+            val level = doc.sections[index].level + if (asChild) 1 else 0
+            folder.write(uri, doc.insertNote(at, level, title).toFileText())
+            reloadFile(folder, uri).notes[at]
+        }
+    }
+
+    /**
+     * Index of the note's section in [doc], found by its exact text.
      * Fails if the section no longer exists as loaded, so changes from other apps are never overwritten.
      */
+    private fun locate(folder: OrgFolder, uri: Uri, doc: OrgDocument, note: OrgNote): Int {
+        val index = doc.sections.getOrNull(note.index)?.takeIf { it.raw == note.raw }?.let { note.index }
+            ?: doc.sections.indexOfFirst { it.raw == note.raw }.takeIf { it >= 0 && doc.sections.count { s -> s.raw == note.raw } == 1 }
+        if (index == null) {
+            reloadFile(folder, uri)
+            throw NoteChangedException()
+        }
+        return index
+    }
+
+    /** Re-reads the file and replaces the note's section with [transform]'s result. */
     private suspend fun modifySection(
         note: OrgNote,
         transform: (OrgDocument, OrgDocument.Section) -> String,
@@ -119,14 +171,7 @@ class NoteRepository(context: Context) {
             val folder = folder() ?: error("No folder")
             val uri = Uri.parse(note.fileUri)
             val doc = OrgDocument.parse(folder.read(uri))
-
-            val index = doc.sections.getOrNull(note.index)?.takeIf { it.raw == note.raw }?.let { note.index }
-                ?: doc.sections.indexOfFirst { it.raw == note.raw }.takeIf { it >= 0 && doc.sections.count { s -> s.raw == note.raw } == 1 }
-
-            if (index == null) {
-                reloadFile(folder, uri)
-                throw NoteChangedException()
-            }
+            val index = locate(folder, uri, doc, note)
 
             val section = doc.sections[index]
             val newRaw = transform(doc, section)

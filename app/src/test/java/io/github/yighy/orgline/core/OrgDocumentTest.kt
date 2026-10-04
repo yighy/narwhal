@@ -77,7 +77,7 @@ class OrgDocumentTest {
     @Test
     fun rewriteKeepsTagColumnAndIndentation() {
         val raw = "* TODO Buy groceries                                              :home:\n  SCHEDULED: <2026-10-05 Mon>\n  Milk.\n\n"
-        val edit = NoteEdit("Buy food", "TODO", listOf("home"), emptyList(), "  Milk.")
+        val edit = NoteEdit("Buy food", "TODO", listOf("home"), emptyList(), "  Milk.", scheduled = "<2026-10-05 Mon>")
         assertEquals(
             "* TODO Buy food                                                   :home:\n  SCHEDULED: <2026-10-05 Mon>\n  Milk.\n\n",
             SectionEditor.rewrite(raw, 1, Keywords.DEFAULT, edit),
@@ -100,6 +100,19 @@ class OrgDocumentTest {
     }
 
     @Test
+    fun rewriteSetsPriorityAndPlanning() {
+        val edit = NoteEdit("Task", "TODO", emptyList(), emptyList(), "", priority = "A",
+            scheduled = "<2026-10-05 Mon 09:00>", deadline = "<2026-10-09 Fri>")
+        assertEquals(
+            "* TODO [#A] Task\nDEADLINE: <2026-10-09 Fri> SCHEDULED: <2026-10-05 Mon 09:00>\n",
+            SectionEditor.rewrite("* Task\n", 1, Keywords.DEFAULT, edit),
+        )
+        val cleared = SectionEditor.rewrite("* TODO [#A] Task\nSCHEDULED: <2026-10-05 Mon>\n", 1, Keywords.DEFAULT,
+            edit.copy(priority = null, scheduled = null, deadline = null))
+        assertEquals("* TODO Task\n", cleared)
+    }
+
+    @Test
     fun addPropertyToExistingDrawer() {
         val raw = "* Note\n  SCHEDULED: <2026-10-05 Mon>\n  :PROPERTIES:\n  :A:        1\n  :END:\nBody\n"
         assertEquals(
@@ -118,6 +131,10 @@ class OrgDocumentTest {
             "* Note\n:PROPERTIES:\n:ID:       abc\n:END:\n",
             SectionEditor.addProperty("* Note\n", "ID", "abc"),
         )
+        assertEquals(
+            "* Note\n  SCHEDULED: <2026-10-05 Mon>\n  :PROPERTIES:\n  :ID:       abc\n  :END:\n  Body\n",
+            SectionEditor.addProperty("* Note\n  SCHEDULED: <2026-10-05 Mon>\n  Body\n", "ID", "abc"),
+        )
     }
 
     @Test
@@ -133,6 +150,32 @@ class OrgDocumentTest {
         val doc = OrgDocument.parse("* A").appendNote("New", listOf("ID" to "u1"))
         assertEquals("* A\n* New\n:PROPERTIES:\n:ID:       u1\n:END:\n", doc.text)
         assertEquals("u1", OrgNote.fromDocument(doc, "uri", "f.org")[1].id)
+    }
+
+    @Test
+    fun insertSubNoteAndSibling() {
+        val doc = OrgDocument.parse("* A\n** A1\ntext\n\n* B\n")
+        assertEquals(2, doc.subtreeEnd(0))
+        assertEquals(2, doc.subtreeEnd(1))
+
+        val child = doc.insertNote(doc.subtreeEnd(0), 2, "A2")
+        assertEquals("* A\n** A1\ntext\n\n** A2\n* B\n", child.text)
+
+        val sibling = doc.insertNote(doc.subtreeEnd(2), 1, "C")
+        assertEquals("* A\n** A1\ntext\n\n* B\n* C\n", sibling.text)
+
+        assertEquals("* A\n** New\n", OrgDocument.parse("* A").insertNote(1, 2, "New").text)
+    }
+
+    @Test
+    fun replacePreface() {
+        val doc = OrgDocument.parse("#+TITLE: Old\n\n* A\nBody\n")
+        assertEquals("#+TITLE: New\nAbout.\n\n* A\nBody\n", doc.replacePreface("#+TITLE: New\nAbout.\n\n\n").text)
+        assertEquals("* A\nBody\n", doc.replacePreface("  \n").text)
+        assertEquals("Intro\n\n* A\n", OrgDocument.parse("* A\n").replacePreface("Intro").text)
+        assertEquals("Intro\n", OrgDocument.parse("").replacePreface("Intro").text)
+        // Notes keep their exact text
+        assertEquals(doc.sections.map { it.raw }, doc.replacePreface("X").sections.map { it.raw })
     }
 
     @Test
