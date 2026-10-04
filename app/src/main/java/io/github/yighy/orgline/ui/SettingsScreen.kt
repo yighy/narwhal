@@ -58,6 +58,7 @@ fun SettingsScreen(
     val settings by viewModel.settings.collectAsState()
     val context = LocalContext.current
     var pickAllDayTime by remember { mutableStateOf(false) }
+    var editKeywords by remember { mutableStateOf(false) }
 
     // System settings can change while the app is in the background
     var resumes by remember { mutableIntStateOf(0) }
@@ -92,6 +93,12 @@ fun SettingsScreen(
                 summary = "Display each note's text under its title in the outline",
                 checked = settings.showContentInNotebook,
                 onCheckedChange = viewModel::setShowContentInNotebook,
+            )
+
+            ListItem(
+                headlineContent = { Text("State keywords") },
+                supportingContent = { Text(settings.keywords.toSpec() + "\nFor files without a #+TODO: line") },
+                modifier = Modifier.clickable { editKeywords = true },
             )
 
             SectionHeader("Reminders")
@@ -154,6 +161,17 @@ fun SettingsScreen(
                 },
             )
         }
+    }
+
+    if (editKeywords) {
+        TextInputDialog(
+            title = "State keywords",
+            label = "To-do keywords | done keywords",
+            confirmLabel = "Save",
+            initial = settings.keywords.toSpec(),
+            onDismiss = { editKeywords = false },
+            onConfirm = { spec -> if (viewModel.setKeywords(spec)) editKeywords = false else viewModel.message("Type at least one keyword") },
+        )
     }
 
     if (pickAllDayTime) {

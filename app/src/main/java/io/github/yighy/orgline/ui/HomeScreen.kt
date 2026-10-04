@@ -118,7 +118,11 @@ fun HomeScreen(
             val tasks = library.files.sumOf { it.openTasks }
             SearchableTopBar(
                 title = "Notebooks",
-                subtitle = if (tasks > 0) "$tasks to do" else null,
+                subtitle = if (tasks > 0) {
+                    { CountsSubtitle(notes = null, todo = tasks, onTodoClick = { viewModel.searchFor("it.todo") }) }
+                } else {
+                    null
+                },
                 navigationIcon = Icons.Default.Menu,
                 navigationDescription = "Menu",
                 onNavigation = onOpenDrawer,

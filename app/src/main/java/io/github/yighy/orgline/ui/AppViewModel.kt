@@ -72,6 +72,13 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var query by mutableStateOf("")
     var tag by mutableStateOf<String?>(null)
 
+    /** Opens the search (of the current screen) with [query], e.g. "it.todo". */
+    fun searchFor(query: String) {
+        this.query = query
+        tag = null
+        searchActive = true
+    }
+
     fun setSearch(active: Boolean) {
         searchActive = active
         if (!active) {
@@ -103,6 +110,13 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun setRemindDeadline(on: Boolean) = appSettings.setRemindDeadline(on)
     fun setRemindAllDay(on: Boolean) = appSettings.setRemindAllDay(on)
     fun setAllDayTime(time: LocalTime) = appSettings.setAllDayTime(time)
+
+    /** Sets the default state keywords from "TODO NEXT | DONE"; false if there is no keyword. */
+    fun setKeywords(spec: String): Boolean {
+        val keywords = Keywords.parse(spec) ?: return false
+        appSettings.setKeywords(keywords)
+        return true
+    }
 
     fun openSettings() = push(Screen.Settings)
 

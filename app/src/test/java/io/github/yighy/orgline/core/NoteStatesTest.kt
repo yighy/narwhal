@@ -15,7 +15,7 @@ class NoteStatesTest {
     fun toggleTargets() {
         val k = Keywords.DEFAULT
         assertEquals("DONE", NoteStates.toggleTarget(note("* TODO a\n"), k))
-        assertEquals("DONE", NoteStates.toggleTarget(note("* WAITING a\n"), k))
+        assertEquals("DONE", NoteStates.toggleTarget(note("* NEXT a\n"), k))
         assertEquals("TODO", NoteStates.toggleTarget(note("* DONE a\n"), k))
         assertEquals("TODO", NoteStates.toggleTarget(note("* a\n"), k))
     }

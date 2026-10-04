@@ -112,7 +112,7 @@ fun blendedTopBarColors() = TopAppBarDefaults.topAppBarColors(
 @Composable
 fun SearchableTopBar(
     title: String,
-    subtitle: String?,
+    subtitle: (@Composable () -> Unit)?,
     navigationIcon: ImageVector,
     navigationDescription: String,
     onNavigation: () -> Unit,
@@ -167,7 +167,7 @@ fun SearchableTopBar(
     } else {
         LargeFlexibleTopAppBar(
             title = { Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-            subtitle = subtitle?.let { { Text(it, maxLines = 1, overflow = TextOverflow.Ellipsis) } },
+            subtitle = subtitle,
             navigationIcon = {
                 IconButton(onClick = onNavigation) { Icon(navigationIcon, navigationDescription) }
             },
@@ -442,4 +442,26 @@ fun searchContext(library: NoteRepository.Library): SearchQuery.Context {
         notebookName = { note -> note.fileName.removeSuffix(".org") },
         inheritedTags = { note -> inherited[note.fileUri]?.getOrNull(note.index).orEmpty() },
     )
+}
+
+/**
+ * "12 notes · 3 to do" under a title; tapping "3 to do" runs [onTodoClick]
+ * (a search for the notes to do).
+ */
+@Composable
+fun CountsSubtitle(notes: Int?, todo: Int, onTodoClick: () -> Unit) {
+    Row {
+        notes?.let {
+            Text(if (it == 1) "1 note" else "$it notes", maxLines = 1)
+            if (todo > 0) Text(" · ", maxLines = 1)
+        }
+        if (todo > 0) {
+            Text(
+                "$todo to do",
+                color = MaterialTheme.colorScheme.primary,
+                maxLines = 1,
+                modifier = Modifier.clickable(onClick = onTodoClick),
+            )
+        }
+    }
 }

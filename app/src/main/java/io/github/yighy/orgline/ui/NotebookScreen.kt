@@ -103,10 +103,9 @@ fun NotebookScreen(
             } else {
                 SearchableTopBar(
                     title = file.title,
-                    subtitle = buildList {
-                        add(if (file.notes.size == 1) "1 note" else "${file.notes.size} notes")
-                        if (file.openTasks > 0) add("${file.openTasks} to do")
-                    }.joinToString(" · "),
+                    subtitle = {
+                        CountsSubtitle(file.notes.size, file.openTasks, onTodoClick = { viewModel.searchFor("it.todo") })
+                    },
                     navigationIcon = Icons.AutoMirrored.Filled.ArrowBack,
                     navigationDescription = "Back",
                     onNavigation = { viewModel.back() },

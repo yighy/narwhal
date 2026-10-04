@@ -9,6 +9,7 @@ class QueryTest {
 
     private val doc = OrgDocument.parse(
         """
+        #+TODO: TODO NEXT WAITING | DONE CANCELLED
         * TODO Write report                                        :work:
           SCHEDULED: <2026-10-05 Mon 09:00>
         ** NEXT [#A] Collect numbers
@@ -26,7 +27,7 @@ class QueryTest {
 
     private val ctx = SearchQuery.Context(
         now = LocalDateTime.of(2026, 10, 5, 12, 0), // Monday noon
-        keywords = { Keywords.DEFAULT },
+        keywords = { doc.keywords },
         notebookName = { "work" },
         inheritedTags = { inherited[it.index] },
     )

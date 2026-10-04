@@ -179,6 +179,18 @@ class OrgDocumentTest {
     }
 
     @Test
+    fun defaultKeywords() {
+        val custom = Keywords.parse("TODO WAITING | DONE CANCELLED")!!
+        assertEquals("TODO WAITING | DONE CANCELLED", custom.toSpec())
+        assertNull(Keywords.parse("   "))
+        // Used only when the file has no #+TODO line
+        val doc = OrgDocument.parse("* WAITING Call\n", custom)
+        assertEquals("WAITING", OrgNote.fromDocument(doc, "u", "f").first().state)
+        assertEquals("WAITING Call", OrgNote.fromDocument(OrgDocument.parse("* WAITING Call\n"), "u", "f").first().title)
+        assertEquals(Keywords(listOf("A"), listOf("B")), OrgDocument.parse("#+TODO: A | B\n* x\n", custom).keywords)
+    }
+
+    @Test
     fun emptyFile() {
         val doc = OrgDocument.parse("")
         assertTrue(doc.sections.isEmpty())

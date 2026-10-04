@@ -21,6 +21,8 @@ class OrgDocument private constructor(
     val preface: String,
     val sections: List<Section>,
     val keywords: Keywords,
+    /** Keywords used when the file has no #+TODO line (kept for [rebuild]). */
+    private val defaults: Keywords,
 ) {
 
     /** A heading and everything up to the next heading. [end] is exclusive. */
@@ -83,14 +85,15 @@ class OrgDocument private constructor(
     }
 
     /** Same document type (keeps the line separator) with new text. */
-    internal fun rebuild(newText: String) = parse(newText).let {
-        OrgDocument(it.text, lineSeparator, it.preface, it.sections, it.keywords)
+    internal fun rebuild(newText: String) = parse(newText, defaults).let {
+        OrgDocument(it.text, lineSeparator, it.preface, it.sections, it.keywords, defaults)
     }
 
     companion object {
         private val HEADING = Regex("""^\*+[ \t]""", RegexOption.MULTILINE)
 
-        fun parse(fileText: String): OrgDocument {
+        /** [defaults] are the state keywords for files without a #+TODO line. */
+        fun parse(fileText: String, defaults: Keywords = Keywords.DEFAULT): OrgDocument {
             val lineSeparator = if (fileText.contains("\r\n")) "\r\n" else "\n"
             val text = fileText.replace("\r\n", "\n")
 
@@ -104,7 +107,7 @@ class OrgDocument private constructor(
                 Section(start, end, raw, raw.takeWhile { it == '*' }.length)
             }
 
-            return OrgDocument(text, lineSeparator, preface, sections, Keywords.fromPreface(preface))
+            return OrgDocument(text, lineSeparator, preface, sections, Keywords.fromPreface(preface, defaults), defaults)
         }
 
         fun parseSectionHead(raw: String, keywords: Keywords): OrgHead {
@@ -225,12 +228,21 @@ object SectionEditor {
 data class Keywords(val todo: List<String>, val done: List<String>) {
     val all: List<String> get() = todo + done
 
+    /** As written after #+TODO:, e.g. "TODO NEXT | DONE". */
+    fun toSpec(): String = (todo + "|" + done).joinToString(" ")
+
     companion object {
-        val DEFAULT = Keywords(listOf("TODO", "NEXT", "WAITING"), listOf("DONE", "CANCELLED"))
+        /** Same as Orgzly's default; Emacs' own default is TODO | DONE. */
+        val DEFAULT = Keywords(listOf("TODO", "NEXT"), listOf("DONE"))
+
+        /** Parses "TODO NEXT | DONE" (the #+TODO: syntax); null if there is no keyword. */
+        fun parse(spec: String): Keywords? = read("#+TODO: $spec", defaults = null)
 
         private val LINE = Regex("""^#\+(?:SEQ_|TYP_)?TODO:[ \t]*(.*)$""", setOf(RegexOption.MULTILINE, RegexOption.IGNORE_CASE))
 
-        fun fromPreface(preface: String): Keywords {
+        fun fromPreface(preface: String, defaults: Keywords = DEFAULT): Keywords = read(preface, defaults)!!
+
+        private fun read(preface: String, defaults: Keywords?): Keywords? {
             val todo = mutableListOf<String>()
             val done = mutableListOf<String>()
 
@@ -248,7 +260,7 @@ data class Keywords(val todo: List<String>, val done: List<String>) {
                 }
             }
 
-            return if (todo.isEmpty() && done.isEmpty()) DEFAULT else Keywords(todo.distinct(), done.distinct())
+            return if (todo.isEmpty() && done.isEmpty()) defaults else Keywords(todo.distinct(), done.distinct())
         }
     }
 }

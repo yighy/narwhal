@@ -3,6 +3,7 @@ package io.github.yighy.orgline.data
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import io.github.yighy.orgline.core.Keywords
 import io.github.yighy.orgline.core.NoteEdit
 import io.github.yighy.orgline.core.Notebooks
 import io.github.yighy.orgline.core.Outline
@@ -62,6 +63,18 @@ class NoteRepository(context: Context) {
     private val _library = MutableStateFlow(Library(folderUri = prefs.getString(KEY_FOLDER, null)?.let(Uri::parse)))
     val library: StateFlow<Library> = _library
 
+    /** State keywords for files without a #+TODO line (from the settings). */
+    @Volatile
+    var defaultKeywords: Keywords = Keywords.DEFAULT
+
+    /** Changes the default keywords and re-reads every file with them. */
+    suspend fun setDefaultKeywords(keywords: Keywords) {
+        if (keywords == defaultKeywords) return
+        defaultKeywords = keywords
+        _library.update { it.copy(files = emptyList()) }
+        refresh()
+    }
+
     private fun folder(): OrgFolder? = _library.value.folderUri?.let { OrgFolder(resolver, it) }
 
     suspend fun setFolder(uri: Uri) {
@@ -89,7 +102,7 @@ class NoteRepository(context: Context) {
     }
 
     private fun load(folder: OrgFolder, ref: OrgFolder.FileRef): LoadedFile {
-        val doc = OrgDocument.parse(folder.read(ref.uri))
+        val doc = OrgDocument.parse(folder.read(ref.uri), defaultKeywords)
         return LoadedFile(ref, doc, OrgNote.fromDocument(doc, ref.uri.toString(), ref.name))
     }
 
@@ -107,7 +120,7 @@ class NoteRepository(context: Context) {
     suspend fun createNote(fileUri: Uri, title: String): OrgNote = withContext(Dispatchers.IO) {
         writeLock.withLock {
             val folder = folder() ?: error("No folder")
-            val doc = OrgDocument.parse(folder.read(fileUri)).appendNote(title)
+            val doc = OrgDocument.parse(folder.read(fileUri), defaultKeywords).appendNote(title)
             folder.write(fileUri, doc.toFileText())
             reloadFile(folder, fileUri).notes.last()
         }
@@ -137,7 +150,7 @@ class NoteRepository(context: Context) {
         writeLock.withLock {
             val folder = folder() ?: error("No folder")
             val uri = Uri.parse(fileUri)
-            val doc = OrgDocument.parse(folder.read(uri))
+            val doc = OrgDocument.parse(folder.read(uri), defaultKeywords)
             if (doc.preface != expected) {
                 reloadFile(folder, uri)
                 throw NoteChangedException()
@@ -163,7 +176,7 @@ class NoteRepository(context: Context) {
         writeLock.withLock {
             val folder = folder() ?: error("No folder")
             val uri = Uri.parse(fileUri)
-            val doc = OrgDocument.parse(folder.read(uri))
+            val doc = OrgDocument.parse(folder.read(uri), defaultKeywords)
             Outline.extract(doc, notes.map { locate(folder, uri, doc, it) })
         }
     }
@@ -188,7 +201,7 @@ class NoteRepository(context: Context) {
         writeLock.withLock {
             val folder = folder() ?: error("No folder")
             val uri = Uri.parse(fileUri)
-            val doc = OrgDocument.parse(folder.read(uri))
+            val doc = OrgDocument.parse(folder.read(uri), defaultKeywords)
             val indices = notes.map { locate(folder, uri, doc, it) }
             val updated = transform(doc, indices)
             if (updated.text != doc.text) folder.write(uri, updated.toFileText())
@@ -218,7 +231,7 @@ class NoteRepository(context: Context) {
         writeLock.withLock {
             val folder = folder() ?: error("No folder")
             val uri = Uri.parse(note.fileUri)
-            val doc = OrgDocument.parse(folder.read(uri))
+            val doc = OrgDocument.parse(folder.read(uri), defaultKeywords)
             val index = locate(folder, uri, doc, note)
 
             val section = doc.sections[index]

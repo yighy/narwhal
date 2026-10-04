@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 /**
@@ -31,6 +32,12 @@ class OrglineApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         ReminderNotifications.createChannel(this)
+
+        // Default state keywords before any file is read, then follow the setting
+        repository.defaultKeywords = settings.values.value.keywords
+        scope.launch {
+            settings.values.map { it.keywords }.distinctUntilChanged().collect { repository.setDefaultKeywords(it) }
+        }
 
         // Reschedule the next alarm whenever the notes or the reminder settings change
         scope.launch {
