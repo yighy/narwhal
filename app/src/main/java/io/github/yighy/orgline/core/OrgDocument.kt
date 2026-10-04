@@ -1,0 +1,208 @@
+package io.github.yighy.orgline.core
+
+import com.orgzly.org.OrgHead
+import com.orgzly.org.OrgProperties
+import com.orgzly.org.OrgStringUtils
+import com.orgzly.org.parser.OrgParser
+import com.orgzly.org.parser.OrgParserSettings
+import com.orgzly.org.parser.OrgParserWriter
+
+/**
+ * An Org file split into a preface and one section per heading.
+ *
+ * Sections keep their exact source text, so untouched parts of the file are written back
+ * byte for byte. Only an edited section is regenerated.
+ */
+class OrgDocument private constructor(
+    /** File text with "\n" line endings. */
+    val text: String,
+    /** Line separator used by the file on disk. */
+    val lineSeparator: String,
+    val preface: String,
+    val sections: List<Section>,
+    val keywords: Keywords,
+) {
+
+    /** A heading and everything up to the next heading. [end] is exclusive. */
+    data class Section(val start: Int, val end: Int, val raw: String, val level: Int)
+
+    /** Text to write to disk, with the file's original line endings. */
+    fun toFileText(): String =
+        if (lineSeparator == "\n") text else text.replace("\n", lineSeparator)
+
+    fun parseHead(section: Section): OrgHead = parseSectionHead(section.raw, keywords)
+
+    /** Returns a document with [section] replaced by [newRaw]. */
+    fun replaceSection(section: Section, newRaw: String): OrgDocument =
+        rebuild(text.substring(0, section.start) + newRaw + text.substring(section.end))
+
+    /** Returns a document with a new top-level note appended at the end. */
+    fun appendNote(title: String, properties: List<Pair<String, String>> = emptyList()): OrgDocument {
+        val sb = StringBuilder(text)
+        if (sb.isNotEmpty() && !sb.endsWith("\n")) sb.append('\n')
+        sb.append("* ").append(title.trim()).append('\n')
+        if (properties.isNotEmpty()) {
+            sb.append(":PROPERTIES:\n")
+            properties.forEach { (name, value) -> sb.append(formatProperty(name, value)).append('\n') }
+            sb.append(":END:\n")
+        }
+        return rebuild(sb.toString())
+    }
+
+    private fun rebuild(newText: String) = parse(newText).let {
+        OrgDocument(it.text, lineSeparator, it.preface, it.sections, it.keywords)
+    }
+
+    companion object {
+        private val HEADING = Regex("""^\*+[ \t]""", RegexOption.MULTILINE)
+
+        fun parse(fileText: String): OrgDocument {
+            val lineSeparator = if (fileText.contains("\r\n")) "\r\n" else "\n"
+            val text = fileText.replace("\r\n", "\n")
+
+            val starts = HEADING.findAll(text).map { it.range.first }.toList()
+            val prefaceEnd = starts.firstOrNull() ?: text.length
+            val preface = text.substring(0, prefaceEnd)
+
+            val sections = starts.mapIndexed { i, start ->
+                val end = starts.getOrNull(i + 1) ?: text.length
+                val raw = text.substring(start, end)
+                Section(start, end, raw, raw.takeWhile { it == '*' }.length)
+            }
+
+            return OrgDocument(text, lineSeparator, preface, sections, Keywords.fromPreface(preface))
+        }
+
+        fun parseSectionHead(raw: String, keywords: Keywords): OrgHead {
+            val parsed = OrgParser.Builder()
+                .setTodoKeywords(keywords.todo.toSet())
+                .setDoneKeywords(keywords.done.toSet())
+                .setInput(raw)
+                .build()
+                .parse()
+            return parsed.headsInList.first().head
+        }
+
+        /** Same layout as Emacs' default org-property-format. */
+        fun formatProperty(name: String, value: String): String =
+            String.format("%-10s %s", ":$name:", value).trimEnd()
+    }
+}
+
+/** Fields of a note that the editor can change. */
+data class NoteEdit(
+    val title: String,
+    val state: String?,
+    val tags: List<String>,
+    val properties: List<Pair<String, String>>,
+    val content: String,
+)
+
+object SectionEditor {
+
+    /** Emacs' default org-tags-column: tags right-aligned at column 77. */
+    private const val DEFAULT_TAGS_COLUMN = -77
+
+    private val TAGS = Regex("""[ \t](:[^\s:]+)+:[ \t]*$""")
+
+    /**
+     * Regenerates a section from [edit], keeping planning times, clock, the
+     * original trailing blank lines, tag alignment and indentation style.
+     */
+    fun rewrite(raw: String, level: Int, keywords: Keywords, edit: NoteEdit): String {
+        val head = OrgDocument.parseSectionHead(raw, keywords)
+
+        head.title = edit.title.replace('\n', ' ').trim()
+        head.state = edit.state?.takeIf { it.isNotBlank() }
+        head.setTags(edit.tags.filter { it.isNotBlank() }.toTypedArray())
+
+        val properties = OrgProperties()
+        edit.properties
+            .filter { it.first.isNotBlank() }
+            .forEach { (name, value) -> properties.put(name.trim(), value.trim()) }
+        head.properties = properties
+
+        head.content = edit.content.trimEnd().ifEmpty { null }
+
+        val lines = raw.split('\n')
+        val heading = lines.first()
+        val settings = OrgParserSettings.getBasic().apply {
+            separateHeaderAndContentWithNewLine = false
+            separateNotesWithNewLine = OrgParserSettings.SeparateNotesWithNewLine.NEVER
+            // Keep the column where this heading's tags ended
+            tagsColumn = if (TAGS.containsMatchIn(heading)) -OrgStringUtils.stringWidth(heading.trimEnd()) else DEFAULT_TAGS_COLUMN
+        }
+        // Indented if the planning line or property drawer under the heading is
+        val isIndented = lines.drop(1)
+            .firstOrNull { isPlanningLine(it) || it.trimStart().startsWith(":") }
+            ?.let { it.startsWith(" ") || it.startsWith("\t") } ?: false
+
+        val generated = OrgParserWriter(settings).whiteSpacedHead(head, level, isIndented)
+        return generated.trimEnd('\n') + trailingNewlines(raw)
+    }
+
+    /**
+     * Adds a property to a section without touching the rest of its text: into the
+     * existing property drawer, or in a new drawer right after the planning line.
+     */
+    fun addProperty(raw: String, name: String, value: String): String {
+        val lines = raw.split('\n').toMutableList()
+
+        var i = 1
+        while (i < lines.size && isPlanningLine(lines[i])) i++
+
+        if (i < lines.size && lines[i].trim().equals(":PROPERTIES:", ignoreCase = true)) {
+            val indent = lines[i].takeWhile { it == ' ' || it == '\t' }
+            val end = (i + 1 until lines.size).firstOrNull { lines[it].trim().equals(":END:", ignoreCase = true) }
+            if (end != null) {
+                lines.add(end, indent + OrgDocument.formatProperty(name, value))
+                return lines.joinToString("\n")
+            }
+        }
+
+        lines.addAll(i, listOf(":PROPERTIES:", OrgDocument.formatProperty(name, value), ":END:"))
+        return lines.joinToString("\n")
+    }
+
+    private fun isPlanningLine(line: String): Boolean {
+        val t = line.trimStart()
+        return t.startsWith("SCHEDULED:") || t.startsWith("DEADLINE:") || t.startsWith("CLOSED:")
+    }
+
+    private fun trailingNewlines(raw: String): String {
+        val count = raw.length - raw.trimEnd('\n').length
+        return "\n".repeat(count.coerceAtLeast(1))
+    }
+}
+
+/** TODO keywords, from the file's #+TODO lines or the defaults. */
+data class Keywords(val todo: List<String>, val done: List<String>) {
+    val all: List<String> get() = todo + done
+
+    companion object {
+        val DEFAULT = Keywords(listOf("TODO", "NEXT", "WAITING"), listOf("DONE", "CANCELLED"))
+
+        private val LINE = Regex("""^#\+(?:SEQ_|TYP_)?TODO:[ \t]*(.*)$""", setOf(RegexOption.MULTILINE, RegexOption.IGNORE_CASE))
+
+        fun fromPreface(preface: String): Keywords {
+            val todo = mutableListOf<String>()
+            val done = mutableListOf<String>()
+
+            for (match in LINE.findAll(preface)) {
+                // Strip fast-access keys and logging options, e.g. "TODO(t)" or "WAIT(w@/!)"
+                val words = match.groupValues[1].split(Regex("\\s+")).filter { it.isNotEmpty() }
+                    .map { it.substringBefore('(') }
+                val bar = words.indexOf("|")
+                if (bar >= 0) {
+                    todo += words.subList(0, bar)
+                    done += words.subList(bar + 1, words.size)
+                } else if (words.isNotEmpty()) {
+                    todo += words.dropLast(1)
+                    done += words.last()
+                }
+            }
+
+            return if (todo.isEmpty() && done.isEmpty()) DEFAULT else Keywords(todo.distinct(), done.distinct())
+        }
+    }
+}
