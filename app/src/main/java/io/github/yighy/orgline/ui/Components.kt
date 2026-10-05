@@ -1,5 +1,6 @@
 package io.github.yighy.orgline.ui
 
+import io.github.yighy.orgline.core.Links
 import java.time.LocalDate
 import io.github.yighy.orgline.core.Agenda
 import androidx.compose.runtime.MutableState
@@ -344,13 +345,12 @@ fun screenTransitionRunning(): Boolean {
         LocalSharedTransitionScope.current?.isTransitionActive == true
 }
 
-/** Search results with a tag filter, over [notes]. */
+/** Search results over [notes]. */
 @Composable
 fun SearchResults(
     viewModel: AppViewModel,
     library: NoteRepository.Library,
     notes: List<OrgNote>,
-    tags: List<String>,
     modifier: Modifier = Modifier,
 ) {
     val idle = viewModel.query.isBlank() && viewModel.tag == null
@@ -367,20 +367,6 @@ fun SearchResults(
         query.agendaDays?.takeIf { !idle }?.let { Agenda.build(results, today, it) }
     }
     Column(modifier) {
-        if (tags.isNotEmpty()) {
-            LazyRow(
-                contentPadding = PaddingValues(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                items(tags) { tag ->
-                    FilterChip(
-                        selected = viewModel.tag == tag,
-                        onClick = { viewModel.tag = if (viewModel.tag == tag) null else tag },
-                        label = { Text(tag) },
-                    )
-                }
-            }
-        }
         LazyColumn(contentPadding = PaddingValues(bottom = 112.dp)) {
             if (agenda != null) {
                 agendaItems(viewModel, library, agenda, today)
@@ -403,7 +389,7 @@ fun SearchResults(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 10.dp),
-                    onOpenId = viewModel::openById,
+                    onOpenLink = viewModel::openLink,
                 )
             }
         }
@@ -417,7 +403,7 @@ fun NoteLine(
     subtitle: String?,
     onClick: (() -> Unit)?,
     modifier: Modifier = Modifier,
-    onOpenId: ((String) -> Unit)? = null,
+    onOpenLink: ((String) -> Unit)? = null,
     titleModifier: Modifier = Modifier,
 ) {
     Column((if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier).then(modifier)) {
@@ -434,8 +420,8 @@ fun NoteLine(
                 textDecoration = if (note.isDone) TextDecoration.LineThrough else null,
                 color = if (note.isDone) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.onSurface,
             )
-            if (onOpenId != null) {
-                LinkedText(note.title, titleStyle, onOpenId, titleModifier, maxLines = 2)
+            if (onOpenLink != null) {
+                LinkedText(note.title, titleStyle, onOpenLink, titleModifier, maxLines = 2)
             } else {
                 Text(displayTitle(note.title), style = titleStyle, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = titleModifier)
             }
@@ -516,14 +502,15 @@ fun NotebookAvatar(title: String, icon: String? = null) {
 }
 
 /**
- * Text where [[id:...]] links are shown by their description and open the target note.
+ * Text where links ([[id:...]], [[https://...][…]], plain URLs, mailto:, tel:…) are shown by their
+ * description and open their target ([onOpenLink] gets it, e.g. "id:…" or "https://…").
  * A tap elsewhere calls [onTextTap] with the position tapped in [text], to edit it from there.
  */
 @Composable
 fun LinkedText(
     text: String,
     style: TextStyle,
-    onOpenId: (String) -> Unit,
+    onOpenLink: (String) -> Unit,
     modifier: Modifier = Modifier,
     maxLines: Int = Int.MAX_VALUE,
     onTextTap: ((Int) -> Unit)? = null,
@@ -536,11 +523,11 @@ fun LinkedText(
         val ranges = mutableListOf<Pair<IntRange, IntRange>>()
         val shown = buildAnnotatedString {
             var last = 0
-            IdLinks.find(text).forEach { link ->
+            Links.find(text).forEach { link ->
                 append(text.substring(last, link.range.first))
                 val start = length
-                withLink(LinkAnnotation.Clickable(link.id, linkStyle) { onOpenId(link.id) }) {
-                    append(link.description ?: link.id)
+                withLink(LinkAnnotation.Clickable(link.target, linkStyle) { onOpenLink(link.target) }) {
+                    append(link.shown)
                 }
                 ranges += (start until length) to link.range
                 last = link.range.last + 1

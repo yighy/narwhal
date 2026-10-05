@@ -40,15 +40,15 @@ object IdLinks {
     /** Description of a link to a note titled [title]. */
     fun description(title: String): String = plainText(title).replace('[', '(').replace(']', ')').trim()
 
-    /** [text] with its links shown as their description. */
+    /** [text] with its links shown as their description (else their target). */
     fun plainText(text: String): String {
-        val links = find(text)
+        val links = Links.find(text)
         if (links.isEmpty()) return text
         return buildString {
             var last = 0
             links.forEach { link ->
                 append(text, last, link.range.first)
-                append(link.description ?: link.id)
+                append(link.shown)
                 last = link.range.last + 1
             }
             append(text, last, text.length)

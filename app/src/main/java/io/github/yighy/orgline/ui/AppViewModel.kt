@@ -1,5 +1,7 @@
 package io.github.yighy.orgline.ui
 
+import android.content.ActivityNotFoundException
+import android.content.Intent
 import io.github.yighy.orgline.data.SavedSearch
 import android.app.Application
 import android.net.Uri
@@ -271,6 +273,50 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun openNote(note: OrgNote) = push(Screen.Note(note.fileUri, note.index))
+
+    /**
+     * Opens a link's target: id: a note, file: a notebook (.org) or a file of the folder, anything
+     * else (https:, mailto:, tel:, sms:, geo:…) in the app Android picks.
+     */
+    fun openLink(target: String) {
+        val link = target.trim()
+        when {
+            link.startsWith("id:", ignoreCase = true) -> openById(link.substring(3).trim())
+            link.startsWith("file:", ignoreCase = true) -> openFileLink(link.substring(5))
+            else -> view(Uri.parse(link))
+        }
+    }
+
+    /** file:gtd.org opens that notebook; file:Download/document.txt a file of the folder. */
+    private fun openFileLink(path: String) {
+        // Org's search options (file:gtd.org::*Heading) are not followed: the file opens
+        val relative = path.substringBefore("::").trim().removePrefix("./").removePrefix("/")
+        val files = library.value.files
+        val notebook = files.firstOrNull { it.ref.path.equals(relative, ignoreCase = true) }
+            ?: files.firstOrNull { it.ref.name.equals(relative, ignoreCase = true) }
+        if (notebook != null) {
+            openNotebook(notebook.uri)
+            return
+        }
+        viewModelScope.launch {
+            val (uri, type) = attempt { repository.findInFolder(relative) } ?: run {
+                message("No file $relative in the folder")
+                return@launch
+            }
+            view(uri, type)
+        }
+    }
+
+    private fun view(uri: Uri, type: String? = null) {
+        val intent = Intent(Intent.ACTION_VIEW)
+            .setDataAndType(uri, type)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        try {
+            getApplication<Application>().startActivity(intent)
+        } catch (e: ActivityNotFoundException) {
+            message("No app can open $uri")
+        }
+    }
 
     fun openById(id: String) {
         val note = library.value.noteById(id)

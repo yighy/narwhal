@@ -43,6 +43,18 @@ class IdLinksTest {
     }
 
     @Test
+    fun findsAllKindsOfLinks() {
+        val text = "See https://www.orgzly.com. Mail mailto:me@x.org, call tel:+33123 or " +
+            "[[https://example.com][the site]] (file:gtd.org) and [[id:u1][a note]] geo:48.8,2.3"
+        assertEquals(
+            listOf("https://www.orgzly.com", "mailto:me@x.org", "tel:+33123", "https://example.com", "file:gtd.org", "id:u1", "geo:48.8,2.3"),
+            Links.find(text).map { it.target },
+        )
+        assertEquals("the site", Links.find(text)[3].shown)
+        assertEquals("Go to the site", IdLinks.plainText("Go to [[https://example.com][the site]]"))
+    }
+
+    @Test
     fun suggestionsRankPrefixFirst() {
         fun note(title: String) = OrgNote("u", "f", 0, 1, null, false, null, title, emptyList(), null, null, null, emptyList(), "", "")
         val notes = listOf(note("Weekly shopping"), note("Shopping list"), note("Garage"))

@@ -158,6 +158,12 @@ class NoteRepository(context: Context) {
         newUri.toString()
     }
 
+    /** A file of the folder at [relativePath], with its MIME type, or null. */
+    suspend fun findInFolder(relativePath: String): Pair<Uri, String?>? = withContext(Dispatchers.IO) {
+        val folder = folder() ?: return@withContext null
+        folder.find(relativePath)?.let { it to folder.type(it) }
+    }
+
     suspend fun createFile(name: String): Uri = withContext(Dispatchers.IO) {
         val folder = folder() ?: error("No folder")
         folder.createFile(name).also { refresh() }

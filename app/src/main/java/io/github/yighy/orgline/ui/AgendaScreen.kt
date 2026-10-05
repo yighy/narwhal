@@ -198,7 +198,7 @@ private fun AgendaRow(
                         MaterialTheme.typography.bodyLarge.copy(
                             textDecoration = if (note.isDone) TextDecoration.LineThrough else null,
                         ),
-                        viewModel::openById,
+                        viewModel::openLink,
                         maxLines = 2,
                     )
                 }

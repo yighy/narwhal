@@ -60,6 +60,22 @@ class OrgFolder(private val resolver: ContentResolver, val treeUri: Uri) {
         if (!DocumentsContract.deleteDocument(resolver, uri)) error("Cannot delete $uri")
     }
 
+    /** The document at [relativePath] ("Download/document.txt") in the folder, or null. */
+    fun find(relativePath: String): Uri? {
+        var id = DocumentsContract.getTreeDocumentId(treeUri)
+        for (part in relativePath.split('/').filter { it.isNotEmpty() && it != "." }) {
+            val children = DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, id)
+            id = resolver.query(children, arrayOf(Document.COLUMN_DOCUMENT_ID, Document.COLUMN_DISPLAY_NAME), null, null, null)?.use { c ->
+                var found: String? = null
+                while (found == null && c.moveToNext()) if (c.getString(1) == part) found = c.getString(0)
+                found
+            } ?: return null
+        }
+        return DocumentsContract.buildDocumentUriUsingTree(treeUri, id)
+    }
+
+    fun type(uri: Uri): String? = resolver.getType(uri)
+
     /** Renames the file in its folder; returns its new URI. */
     fun rename(uri: Uri, name: String): Uri =
         DocumentsContract.renameDocument(resolver, uri, name) ?: error("Cannot rename to $name")

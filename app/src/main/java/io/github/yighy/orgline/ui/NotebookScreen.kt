@@ -159,7 +159,7 @@ fun NotebookScreen(
     ) { padding ->
         Box(Modifier.fillMaxSize().padding(padding)) {
             if (viewModel.searchActive) {
-                SearchResults(viewModel, library, file.notes, file.notes.flatMap { it.tags }.distinct().sorted())
+                SearchResults(viewModel, library, file.notes)
             } else {
                 NotebookOutline(
                     viewModel = viewModel,
@@ -252,7 +252,7 @@ private fun NotebookOutline(
                     LinkedText(
                         preface,
                         prefaceStyle,
-                        viewModel::openById,
+                        viewModel::openLink,
                         Modifier
                             .fillMaxWidth()
                             .clickable(interactionSource = null, indication = null) { onEditPreface(null) }
@@ -307,7 +307,7 @@ private fun NotebookOutline(
                             viewModel.openSwipeRow = null
                             viewModel.toggleSelected(note)
                         },
-                        onOpenId = viewModel::openById,
+                        onOpenLink = viewModel::openLink,
                         onAddNear = { placement -> onAddNear(note, placement) },
                     )
                 }
@@ -336,7 +336,7 @@ private fun OutlineRow(
     onToggleFold: () -> Unit,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
-    onOpenId: (String) -> Unit,
+    onOpenLink: (String) -> Unit,
     onAddNear: (Placement) -> Unit,
 ) {
     val chevronRotation by animateFloatAsState(
@@ -405,14 +405,14 @@ private fun OutlineRow(
                     note,
                     subtitle = null,
                     onClick = null,
-                    onOpenId = onOpenId,
+                    onOpenLink = onOpenLink,
                     titleModifier = Modifier.sharedText(noteTitleKey(note)),
                 )
                 if (showContent && note.content.isNotBlank()) {
                     LinkedText(
                         note.content.trimIndent(),
                         MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
-                        onOpenId,
+                        onOpenLink,
                         Modifier.padding(top = 4.dp).sharedText(noteContentKey(note)),
                     )
                 }

@@ -409,7 +409,7 @@ fun NoteScreen(
                         LinkedText(
                             title,
                             titleStyle,
-                            viewModel::openById,
+                            viewModel::openLink,
                             Modifier.sharedText(noteTitleKey(note)),
                             onTextTap = { startEditing(Editing.Title, it) },
                         )
@@ -573,7 +573,7 @@ fun NoteScreen(
                         LinkedText(
                             content,
                             contentStyle,
-                            viewModel::openById,
+                            viewModel::openLink,
                             Modifier.sharedText(noteContentKey(note)),
                             onTextTap = { startEditing(Editing.Content, it) },
                         )
