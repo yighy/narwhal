@@ -3,6 +3,7 @@ package io.github.yighy.orgline.data
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import io.github.yighy.orgline.core.IdLinks
 import io.github.yighy.orgline.core.Keywords
 import io.github.yighy.orgline.core.NoteEdit
 import io.github.yighy.orgline.core.Notebooks
@@ -207,6 +208,24 @@ class NoteRepository(context: Context) {
             if (updated.text != doc.text) folder.write(uri, updated.toFileText())
             reloadFile(folder, uri)
         }
+    }
+
+    /**
+     * In every file, gives the links to [id] still described as [oldTitle] the description of
+     * [newTitle]. Returns the number of notes changed.
+     */
+    suspend fun renameLinks(id: String, oldTitle: String, newTitle: String): Int {
+        fun renamed(raw: String) = IdLinks.renameLinks(raw, id, oldTitle, newTitle)
+        var changed = 0
+        _library.value.files.forEach { file ->
+            val notes = file.notes.filter { renamed(it.raw) != it.raw }
+            if (notes.isEmpty()) return@forEach
+            modifyFile(file.uri, notes) { doc, indices ->
+                Outline.replaceSections(doc, indices.associateWith { renamed(doc.sections[it].raw) })
+            }
+            changed += notes.size
+        }
+        return changed
     }
 
     /**

@@ -1,5 +1,8 @@
 package io.github.yighy.orgline.ui
 
+import io.github.yighy.orgline.core.IdLinks
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.AlertDialog
 import android.Manifest
 import android.content.Intent
 import android.os.Build
@@ -236,6 +239,20 @@ fun OrglineApp(viewModel: AppViewModel, notificationsAllowed: Boolean, onAllowNo
                 }
             }
         }
+    }
+
+    // A note was renamed: links to it that still show the old title can follow
+    viewModel.linkRename?.let { rename ->
+        AlertDialog(
+            onDismissRequest = viewModel::keepRenamedLinks,
+            title = { Text("Update links?") },
+            text = {
+                val where = if (rename.notes == 1) "1 note links" else "${rename.notes} notes link"
+                Text("$where to this note as “${IdLinks.description(rename.oldTitle)}”. Show the new title “${IdLinks.description(rename.newTitle)}” in these links instead?")
+            },
+            confirmButton = { TextButton(onClick = viewModel::updateRenamedLinks) { Text("Update") } },
+            dismissButton = { TextButton(onClick = viewModel::keepRenamedLinks) { Text("Keep") } },
+        )
     }
 }
 

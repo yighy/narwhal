@@ -31,15 +31,55 @@ object IdLinks {
         return Query(start, cursor, query)
     }
 
+    /** Link to a note titled [title] (its links shown as their description). */
     fun format(id: String, title: String): String {
-        val description = title.replace('[', '(').replace(']', ')').trim()
+        val description = description(title)
         return if (description.isEmpty()) "[[id:$id]]" else "[[id:$id][$description]]"
+    }
+
+    /** Description of a link to a note titled [title]. */
+    fun description(title: String): String = plainText(title).replace('[', '(').replace(']', ')').trim()
+
+    /** [text] with its links shown as their description. */
+    fun plainText(text: String): String {
+        val links = find(text)
+        if (links.isEmpty()) return text
+        return buildString {
+            var last = 0
+            links.forEach { link ->
+                append(text, last, link.range.first)
+                append(link.description ?: link.id)
+                last = link.range.last + 1
+            }
+            append(text, last, text.length)
+        }
     }
 
     fun find(text: String): List<Link> =
         LINK.findAll(text).map { m ->
             Link(m.range, m.groupValues[1].trim(), m.groupValues[2].ifEmpty { null })
         }.toList()
+
+    /**
+     * Gives the links to [id] described as [oldTitle] the description of [newTitle].
+     * Links with another description (written by hand) are left as they are.
+     */
+    fun renameLinks(text: String, id: String, oldTitle: String, newTitle: String): String {
+        val old = description(oldTitle)
+        val new = description(newTitle)
+        if (old.isEmpty() || old == new) return text
+        val links = find(text).filter { it.id.equals(id, ignoreCase = true) && it.description == old }
+        if (links.isEmpty()) return text
+        return buildString {
+            var last = 0
+            links.forEach { link ->
+                append(text, last, link.range.first)
+                append(format(link.id, newTitle))
+                last = link.range.last + 1
+            }
+            append(text, last, text.length)
+        }
+    }
 
     /** Notes whose title contains every word of [query], best matches first. */
     fun suggestions(notes: List<OrgNote>, query: String, limit: Int = 20): List<OrgNote> {

@@ -2,6 +2,7 @@ package io.github.yighy.orgline.core
 
 import com.orgzly.org.datetime.OrgDateTime
 import com.orgzly.org.datetime.OrgRange
+import com.orgzly.org.datetime.OrgRepeater
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -25,10 +26,16 @@ object OrgTime {
     }
 
     /**
-     * Builds an active timestamp such as "<2026-10-05 Mon 09:00>", keeping the repeater
-     * and warning delay of [previous] if there was one.
+     * Builds an active timestamp such as "<2026-10-05 Mon 09:00 +1w>", keeping the warning
+     * delay of [previous] if there was one. The [repeater] ("+1w", ".+2d", null for none)
+     * is the previous one unless given.
      */
-    fun build(date: LocalDate, time: LocalTime?, previous: String? = null): String {
+    fun build(
+        date: LocalDate,
+        time: LocalTime?,
+        previous: String? = null,
+        repeater: String? = parts(previous)?.repeater,
+    ): String {
         val old = previous?.let(::range)?.startTime
         val builder = (if (old != null) OrgDateTime.Builder(old) else OrgDateTime.Builder())
             .setIsActive(true)
@@ -37,8 +44,23 @@ object OrgTime {
             .setDay(date.dayOfMonth)
             .setHasTime(time != null)
             .setHasEndTime(false)
+            .setRepeater(repeater?.let { runCatching { OrgRepeater.parse(it) }.getOrNull() })
         if (time != null) builder.setHour(time.hour).setMinute(time.minute)
         return OrgRange(builder.build()).toString()
+    }
+
+    /** A repeater split into its parts: "++2w" is ("++", 2, 'w'), "/4d" habit part kept in [rest]. */
+    data class Repeat(val type: String, val every: Int, val unit: Char, val rest: String = "") {
+        override fun toString() = "$type$every$unit$rest"
+
+        companion object {
+            private val PATTERN = Regex("""^(\.\+|\+\+|\+)(\d+)([hdwmy])(/\d+[hdwmy])?$""")
+
+            fun parse(text: String?): Repeat? {
+                val m = text?.let { PATTERN.matchEntire(it.trim()) } ?: return null
+                return Repeat(m.groupValues[1], m.groupValues[2].toInt(), m.groupValues[3][0], m.groupValues[4])
+            }
+        }
     }
 
     private val dateFormat = DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)

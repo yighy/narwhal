@@ -50,4 +50,16 @@ class NoteTreeTest {
         assertEquals("+1d", parts.repeater)
         assertNull(OrgTime.parts("not a date"))
     }
+
+    @Test
+    fun repeaters() {
+        val day = LocalDate.of(2026, 10, 5)
+        assertEquals("<2026-10-05 Mon .+2w>", OrgTime.build(day, null, "<2026-10-05 Mon +1d>", ".+2w"))
+        assertEquals("<2026-10-05 Mon>", OrgTime.build(day, null, "<2026-10-05 Mon +1d>", null))
+        assertEquals("<2026-10-05 Mon ++1m>", OrgTime.build(day, null, repeater = "++1m"))
+
+        assertEquals(OrgTime.Repeat(".+", 2, 'd', "/4d"), OrgTime.Repeat.parse(".+2d/4d"))
+        assertEquals("++3w", OrgTime.Repeat("++", 3, 'w').toString())
+        assertNull(OrgTime.Repeat.parse("every week"))
+    }
 }

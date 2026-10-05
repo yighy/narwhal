@@ -211,6 +211,9 @@ fun HomeScreen(
 
 val NotebookCardShape = RoundedCornerShape(28.dp)
 
+/** The notebook's name moves from its card into the notebook's app bar. */
+fun notebookTitleKey(fileUri: String) = "notebook-title-$fileUri"
+
 /** Notebook card; long press selects it (a check replaces the avatar). */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -243,7 +246,12 @@ private fun NotebookCard(
             }
             Spacer(Modifier.width(16.dp))
             Column(Modifier.weight(1f)) {
-                Text(file.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Text(
+                    file.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.sharedText(notebookTitleKey(file.uri)),
+                )
                 val counts = buildList {
                     add(if (file.notes.size == 1) "1 note" else "${file.notes.size} notes")
                     if (file.openTasks > 0) add("${file.openTasks} to do")
@@ -252,6 +260,7 @@ private fun NotebookCard(
                     counts.joinToString(" · "),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.sharedText(subtitleKey(notebookTitleKey(file.uri))),
                 )
                 file.preface.lineSequence().firstOrNull { it.isNotBlank() }?.let {
                     Text(

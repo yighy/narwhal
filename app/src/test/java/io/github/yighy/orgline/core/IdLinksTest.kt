@@ -33,6 +33,16 @@ class IdLinksTest {
     }
 
     @Test
+    fun renamesLinksStillShowingTheOldTitle() {
+        val text = "See [[id:U1][Old (draft)]], [[id:u1][my notes]] and [[id:u2][Old (draft)]]."
+        assertEquals(
+            "See [[id:U1][New]], [[id:u1][my notes]] and [[id:u2][Old (draft)]].",
+            IdLinks.renameLinks(text, "u1", "Old [draft]", "New"),
+        )
+        assertEquals(text, IdLinks.renameLinks(text, "u3", "Old [draft]", "New"))
+    }
+
+    @Test
     fun suggestionsRankPrefixFirst() {
         fun note(title: String) = OrgNote("u", "f", 0, 1, null, false, null, title, emptyList(), null, null, null, emptyList(), "", "")
         val notes = listOf(note("Weekly shopping"), note("Shopping list"), note("Garage"))

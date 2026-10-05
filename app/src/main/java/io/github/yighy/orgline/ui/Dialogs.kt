@@ -1,5 +1,9 @@
 package io.github.yighy.orgline.ui
 
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.padding
 import android.text.format.DateFormat
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -207,8 +211,8 @@ fun PropertyDialog(
 }
 
 /**
- * Picks a date, then an optional time. Calls [onConfirm] with an Org timestamp,
- * or null when the date is removed.
+ * Picks a date, then an optional time and how it repeats. Calls [onConfirm] with an Org
+ * timestamp, or null when the date is removed.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -261,19 +265,85 @@ fun TimestampDialog(
             initialMinute = start.minute,
             is24Hour = DateFormat.is24HourFormat(LocalContext.current),
         )
+        // Until changed here, the timestamp keeps its repeater as written (even one not offered)
+        var repeat by remember { mutableStateOf(OrgTime.Repeat.parse(parts?.repeater)) }
+        var repeatChanged by remember { mutableStateOf(false) }
+        fun result(time: LocalTime?) =
+            if (repeatChanged) OrgTime.build(date, time, initial, repeat?.toString()) else OrgTime.build(date, time, initial)
+        val shownTime = { LocalTime.of(timeState.hour, timeState.minute) }
         AlertDialog(
             // Closing keeps the date with the time shown
-            onDismissRequest = { onConfirm(OrgTime.build(date, LocalTime.of(timeState.hour, timeState.minute), initial)) },
+            onDismissRequest = { onConfirm(result(shownTime())) },
             title = { Text("Time") },
-            text = { TimeInput(state = timeState) },
-            confirmButton = {
-                TextButton(onClick = {
-                    onConfirm(OrgTime.build(date, LocalTime.of(timeState.hour, timeState.minute), initial))
-                }) { Text("OK") }
+            text = {
+                Column(Modifier.verticalScroll(rememberScrollState())) {
+                    TimeInput(state = timeState)
+                    RepeatPicker(repeat) { repeat = it; repeatChanged = true }
+                }
             },
-            dismissButton = {
-                TextButton(onClick = { onConfirm(OrgTime.build(date, null, initial)) }) { Text("No time") }
-            },
+            confirmButton = { TextButton(onClick = { onConfirm(result(shownTime())) }) { Text("OK") } },
+            dismissButton = { TextButton(onClick = { onConfirm(result(null)) }) { Text("No time") } },
         )
+    }
+}
+
+/** How a date repeats: interval, and how the next date is found once done (Org's +, ++ and .+). */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun RepeatPicker(repeat: OrgTime.Repeat?, onChange: (OrgTime.Repeat?) -> Unit) {
+    val units = buildList {
+        if (repeat?.unit == 'h') add('h' to "Hourly")
+        add('d' to "Daily")
+        add('w' to "Weekly")
+        add('m' to "Monthly")
+        add('y' to "Yearly")
+    }
+    Text("Repeat", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 8.dp, bottom = 4.dp))
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FilterChip(selected = repeat == null, onClick = { onChange(null) }, label = { Text("Never") })
+        units.forEach { (unit, label) ->
+            FilterChip(
+                selected = repeat?.unit == unit,
+                onClick = { onChange(OrgTime.Repeat(repeat?.type ?: "+", repeat?.every ?: 1, unit)) },
+                label = { Text(label) },
+            )
+        }
+    }
+    if (repeat == null) return
+
+    var every by remember { mutableStateOf(repeat.every.toString()) }
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp)) {
+        Text("Every", style = MaterialTheme.typography.bodyLarge)
+        Spacer(Modifier.width(12.dp))
+        OutlinedTextField(
+            value = every,
+            onValueChange = { text ->
+                every = text.filter { it.isDigit() }.take(3)
+                every.toIntOrNull()?.takeIf { it > 0 }?.let { onChange(repeat.copy(every = it, rest = "")) }
+            },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            modifier = Modifier.width(72.dp),
+        )
+        Spacer(Modifier.width(12.dp))
+        val names = mapOf('h' to "hour", 'd' to "day", 'w' to "week", 'm' to "month", 'y' to "year")
+        Text(names.getValue(repeat.unit) + if (repeat.every == 1) "" else "s", style = MaterialTheme.typography.bodyLarge)
+    }
+
+    Text("Once done", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 12.dp, bottom = 4.dp))
+    listOf(
+        "+" to "Move by the interval",
+        "++" to "Move to the first date after today",
+        ".+" to "Start again from the day it is done",
+    ).forEach { (type, label) ->
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .selectable(selected = repeat.type == type, onClick = { onChange(repeat.copy(type = type, rest = "")) }),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            RadioButton(selected = repeat.type == type, onClick = { onChange(repeat.copy(type = type, rest = "")) })
+            Text(label, style = MaterialTheme.typography.bodyMedium)
+        }
     }
 }

@@ -9,6 +9,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import io.github.yighy.orgline.core.IdLinks
 import io.github.yighy.orgline.core.Keywords
 import io.github.yighy.orgline.core.NoteEdit
 import io.github.yighy.orgline.core.Outline
@@ -228,6 +229,36 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun update(note: OrgNote, change: (NoteEdit) -> NoteEdit) {
         viewModelScope.launch { saveLatest(note) { change(it.toEdit()) } }
+    }
+
+    /** Links to a renamed note that still show its old title, until the user says to update them. */
+    data class LinkRename(val id: String, val oldTitle: String, val newTitle: String, val notes: Int)
+
+    var linkRename by mutableStateOf<LinkRename?>(null)
+        private set
+
+    /** Saves a new title, then offers to update the links to the note that still show the old one. */
+    fun rename(note: OrgNote, title: String) {
+        val oldTitle = note.title
+        viewModelScope.launch {
+            val saved = saveLatest(note) { it.toEdit().copy(title = title) } ?: return@launch
+            val id = saved.id ?: return@launch
+            val notes = library.value.notes.count { IdLinks.renameLinks(it.raw, id, oldTitle, title) != it.raw }
+            if (notes > 0) linkRename = LinkRename(id, oldTitle, title, notes)
+        }
+    }
+
+    fun updateRenamedLinks() {
+        val rename = linkRename ?: return
+        linkRename = null
+        viewModelScope.launch {
+            val changed = attempt { repository.renameLinks(rename.id, rename.oldTitle, rename.newTitle) } ?: return@launch
+            message(if (changed == 1) "1 note updated" else "$changed notes updated")
+        }
+    }
+
+    fun keepRenamedLinks() {
+        linkRename = null
     }
 
     /** Changes the state with Org semantics (CLOSED time, repeating tasks moving forward). */

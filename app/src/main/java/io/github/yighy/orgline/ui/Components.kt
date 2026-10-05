@@ -1,12 +1,20 @@
 package io.github.yighy.orgline.ui
 
+import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.graphics.takeOrElse
+import androidx.compose.material3.TwoRowsTopAppBar
+import androidx.compose.material3.ProvideTextStyle
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.animation.SharedTransitionScope.ResizeMode.Companion.scaleToBounds
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
@@ -16,9 +24,6 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.text.input.TextFieldValue
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -87,19 +92,7 @@ import io.github.yighy.orgline.core.OrgTime
 import io.github.yighy.orgline.data.NoteRepository
 
 /** Title with id: links shown as their description. */
-fun displayTitle(title: String): String {
-    val links = IdLinks.find(title)
-    if (links.isEmpty()) return title
-    return buildString {
-        var last = 0
-        links.forEach { link ->
-            append(title, last, link.range.first)
-            append(link.description ?: link.id)
-            last = link.range.last + 1
-        }
-        append(title, last, title.length)
-    }
-}
+fun displayTitle(title: String): String = IdLinks.plainText(title)
 
 /** App bar colors matching the background, so the bar blends with the screen. */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -127,6 +120,8 @@ fun SearchableTopBar(
     searchPlaceholder: String,
     scrollBehavior: TopAppBarScrollBehavior,
     extraActions: @Composable RowScope.() -> Unit = {},
+    /** Key of the element the title moves from when the screen opens (see [sharedText]). */
+    sharedTitleKey: String? = null,
     menu: (@Composable (dismiss: () -> Unit) -> Unit)? = null,
 ) {
     var menuOpen by remember { mutableStateOf(false) }
@@ -169,9 +164,43 @@ fun SearchableTopBar(
             },
         )
     } else {
-        LargeFlexibleTopAppBar(
-            title = { Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-            subtitle = subtitle,
+        // A large flexible app bar whose expanded title (not the collapsed one) moves
+        // from the card or row that opened the screen
+        TwoRowsTopAppBar(
+            title = { expanded ->
+                if (expanded) {
+                    Text(
+                        title,
+                        style = MaterialTheme.typography.displaySmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = (sharedTitleKey?.let { Modifier.sharedText(it) } ?: Modifier)
+                            .then(if (subtitle == null) Modifier.padding(bottom = LargeTitleBottomPadding) else Modifier),
+                    )
+                } else {
+                    Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+            },
+            subtitle = subtitle?.let { content ->
+                { expanded ->
+                    if (expanded) {
+                        Box(Modifier.padding(bottom = LargeTitleBottomPadding)) {
+                            // The subtitle moves with the title, so they never overlap
+                            Box(sharedTitleKey?.let { Modifier.sharedText(subtitleKey(it)) } ?: Modifier) {
+                                ProvideTextStyle(MaterialTheme.typography.titleMedium) { content() }
+                            }
+                        }
+                    } else {
+                        content()
+                    }
+                }
+            },
+            collapsedHeight = TopAppBarDefaults.LargeAppBarCollapsedHeight,
+            expandedHeight = if (subtitle != null) {
+                TopAppBarDefaults.LargeFlexibleAppBarWithSubtitleExpandedHeight
+            } else {
+                TopAppBarDefaults.LargeFlexibleAppBarWithoutSubtitleExpandedHeight
+            },
             navigationIcon = {
                 IconButton(onClick = onNavigation) { Icon(navigationIcon, navigationDescription) }
             },
@@ -192,6 +221,12 @@ fun SearchableTopBar(
         )
     }
 }
+
+/** Key of the subtitle that moves with the title shared as [titleKey]. */
+fun subtitleKey(titleKey: String) = "$titleKey/subtitle"
+
+/** Space under the expanded title, as in LargeFlexibleTopAppBar (measured there from the baseline). */
+private val LargeTitleBottomPadding = 22.dp
 
 /** Shared transition scopes, provided by the screen host so screens can share elements. */
 @OptIn(ExperimentalSharedTransitionApi::class)
@@ -214,6 +249,27 @@ fun Modifier.sharedContainer(key: String, shape: Shape): Modifier {
             animatedVisibilityScope = visibility,
             boundsTransform = { _, _ -> motion.slowSpatialSpec() },
             clipInOverlayDuringTransition = OverlayClip(shape),
+        )
+    }
+}
+
+/**
+ * Text that moves and scales from the element with the same [key] on the previous screen
+ * (notebook name into the app bar, note title and content into the note screen).
+ */
+@OptIn(ExperimentalSharedTransitionApi::class)
+@Composable
+fun Modifier.sharedText(key: String): Modifier {
+    val shared = LocalSharedTransitionScope.current ?: return this
+    val visibility = LocalAnimatedVisibilityScope.current ?: return this
+    val motion = MaterialTheme.motionScheme
+    return with(shared) {
+        this@sharedText.sharedBounds(
+            sharedContentState = rememberSharedContentState(key),
+            animatedVisibilityScope = visibility,
+            boundsTransform = { _, _ -> motion.slowSpatialSpec() },
+            // Laid out once at its own size, then scaled: text keeps its lines while it grows
+            resizeMode = scaleToBounds(ContentScale.FillWidth, Alignment.TopStart),
         )
     }
 }
@@ -282,6 +338,7 @@ fun NoteLine(
     onClick: (() -> Unit)?,
     modifier: Modifier = Modifier,
     onOpenId: ((String) -> Unit)? = null,
+    titleModifier: Modifier = Modifier,
 ) {
     Column((if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier).then(modifier)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -298,9 +355,9 @@ fun NoteLine(
                 color = if (note.isDone) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.onSurface,
             )
             if (onOpenId != null) {
-                LinkedText(note.title, titleStyle, onOpenId, maxLines = 2)
+                LinkedText(note.title, titleStyle, onOpenId, titleModifier, maxLines = 2)
             } else {
-                Text(displayTitle(note.title), style = titleStyle, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(displayTitle(note.title), style = titleStyle, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = titleModifier)
             }
         }
         val details = buildList {
@@ -371,7 +428,10 @@ fun NotebookAvatar(title: String) {
     }
 }
 
-/** Text where [[id:...]] links are shown by their description and open the target note. */
+/**
+ * Text where [[id:...]] links are shown by their description and open the target note.
+ * A tap elsewhere calls [onTextTap] with the position tapped in [text], to edit it from there.
+ */
 @Composable
 fun LinkedText(
     text: String,
@@ -379,24 +439,56 @@ fun LinkedText(
     onOpenId: (String) -> Unit,
     modifier: Modifier = Modifier,
     maxLines: Int = Int.MAX_VALUE,
+    onTextTap: ((Int) -> Unit)? = null,
 ) {
     val linkStyle = TextLinkStyles(
         SpanStyle(color = MaterialTheme.colorScheme.primary, textDecoration = TextDecoration.Underline),
     )
-    val annotated: AnnotatedString = remember(text, linkStyle) {
-        buildAnnotatedString {
+    // The text as shown, and the shown and raw range of each link
+    val (annotated, links) = remember(text, linkStyle) {
+        val ranges = mutableListOf<Pair<IntRange, IntRange>>()
+        val shown = buildAnnotatedString {
             var last = 0
             IdLinks.find(text).forEach { link ->
                 append(text.substring(last, link.range.first))
+                val start = length
                 withLink(LinkAnnotation.Clickable(link.id, linkStyle) { onOpenId(link.id) }) {
                     append(link.description ?: link.id)
                 }
+                ranges += (start until length) to link.range
                 last = link.range.last + 1
             }
             append(text.substring(last))
         }
+        shown to ranges
     }
-    Text(annotated, style = style, modifier = modifier, maxLines = maxLines, overflow = TextOverflow.Ellipsis)
+    var layout by remember { mutableStateOf<TextLayoutResult?>(null) }
+    val tap = if (onTextTap == null) Modifier else Modifier.pointerInput(annotated) {
+        detectTapGestures { position ->
+            val shown = layout?.getOffsetForPosition(position) ?: annotated.length
+            rawOffset(shown, links)?.let(onTextTap)
+        }
+    }
+    Text(
+        annotated,
+        style = style,
+        modifier = modifier.then(tap),
+        maxLines = maxLines,
+        overflow = TextOverflow.Ellipsis,
+        onTextLayout = { layout = it },
+    )
+}
+
+/** Position in the raw text of position [shown] in the text as displayed; null on a link. */
+private fun rawOffset(shown: Int, links: List<Pair<IntRange, IntRange>>): Int? {
+    var shift = 0
+    for ((displayed, raw) in links) {
+        if (shown < displayed.first) break
+        // A tap on a link opens it (the link handles that)
+        if (shown <= displayed.last) return null
+        shift = raw.last - displayed.last
+    }
+    return shown + shift
 }
 
 /** Pull down to reload the files from the folder. */
@@ -422,49 +514,47 @@ fun PullToRefresh(viewModel: AppViewModel, content: @Composable () -> Unit) {
 }
 
 /**
- * Text field focused when shown. With [onSave] and [onCancel] it has ✓ / ✕ buttons; without
- * them the caller saves on [onFocusLost] (and [onDone], the keyboard's Done key, if given).
+ * Text field that looks like the text it edits (same [style], no box or label), focused when
+ * shown, with the cursor where [value] has it. The caller saves on [onFocusLost], and on [onDone]
+ * (the keyboard's Done key) if given. [placeholder] shows while it is empty.
  */
 @Composable
-fun DraftField(
+fun InPlaceField(
     value: TextFieldValue,
     onValueChange: (TextFieldValue) -> Unit,
-    label: String,
-    singleLine: Boolean,
-    onSave: (() -> Unit)? = null,
-    onCancel: (() -> Unit)? = null,
-    minLines: Int = 1,
+    style: TextStyle,
+    modifier: Modifier = Modifier,
+    placeholder: String? = null,
     onFocusLost: (() -> Unit)? = null,
     onDone: (() -> Unit)? = null,
 ) {
     val focus = remember { FocusRequester() }
     var focused by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { focus.requestFocus() }
-    Column(Modifier.padding(vertical = 8.dp)) {
-        OutlinedTextField(
-            value = value,
-            onValueChange = onValueChange,
-            label = { Text(label) },
-            singleLine = singleLine,
-            minLines = minLines,
-            keyboardOptions = if (onDone != null) KeyboardOptions(imeAction = ImeAction.Done) else KeyboardOptions.Default,
-            keyboardActions = KeyboardActions(onDone = { onDone?.invoke() }),
-            modifier = Modifier
-                .fillMaxWidth()
-                .focusRequester(focus)
-                .onFocusChanged {
-                    // Only after the field had the focus, not on the first composition
-                    if (focused && !it.isFocused) onFocusLost?.invoke()
-                    focused = it.isFocused
-                },
-        )
-        if (onSave != null || onCancel != null) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                onCancel?.let { IconButton(onClick = it) { Icon(Icons.Default.Close, "Cancel") } }
-                onSave?.let { IconButton(onClick = it) { Icon(Icons.Default.Check, "Save") } }
+    val textStyle = style.copy(color = style.color.takeOrElse { LocalContentColor.current })
+    BasicTextField(
+        value = value,
+        onValueChange = onValueChange,
+        textStyle = textStyle,
+        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+        keyboardOptions = if (onDone != null) KeyboardOptions(imeAction = ImeAction.Done) else KeyboardOptions.Default,
+        keyboardActions = KeyboardActions(onDone = { onDone?.invoke() }),
+        modifier = modifier
+            .focusRequester(focus)
+            .onFocusChanged {
+                // Only after the field had the focus, not on the first composition
+                if (focused && !it.isFocused) onFocusLost?.invoke()
+                focused = it.isFocused
+            },
+        decorationBox = { field ->
+            Box {
+                if (value.text.isEmpty() && placeholder != null) {
+                    Text(placeholder, style = textStyle.copy(color = MaterialTheme.colorScheme.onSurfaceVariant))
+                }
+                field()
             }
-        }
-    }
+        },
+    )
 }
 
 /** Notebook names, keywords and inherited tags that search queries need. */

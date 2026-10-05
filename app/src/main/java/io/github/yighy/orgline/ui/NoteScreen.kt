@@ -1,5 +1,9 @@
 package io.github.yighy.orgline.ui
 
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.AssistChipDefaults
+import androidx.compose.material3.AssistChip
 import android.content.ClipData
 import android.content.ClipboardManager
 import androidx.activity.compose.BackHandler
@@ -107,7 +111,6 @@ fun NoteScreen(
     var editing by remember { mutableStateOf(if (newNote != null) Editing.Title else Editing.None) }
     var draft by remember { mutableStateOf(TextFieldValue("")) }
     var dialog by remember { mutableStateOf<MetaDialog?>(null) }
-    var addMenu by remember { mutableStateOf(false) }
     var moreMenu by remember { mutableStateOf(false) }
     // The note as now loaded, also when saving as the screen goes away
     val currentNote by rememberUpdatedState(note)
@@ -122,13 +125,16 @@ fun NoteScreen(
         editing = Editing.None
         val text = draft.text
         val before = if (what == Editing.Title) currentNote.title else currentNote.content
-        if (text != before) viewModel.update(currentNote) { withText(it, what, text) }
+        if (text == before) return
+        // A new title can be offered to the links that still show the old one
+        if (what == Editing.Title) viewModel.rename(currentNote, text) else viewModel.update(currentNote) { withText(it, what, text) }
     }
 
-    fun startEditing(what: Editing) {
+    /** Edits the title or content, with the cursor at [cursor] (the end by default). */
+    fun startEditing(what: Editing, cursor: Int? = null) {
         commit()
         val text = if (what == Editing.Title) note.title else note.content
-        draft = TextFieldValue(text, TextRange(text.length))
+        draft = TextFieldValue(text, TextRange((cursor ?: text.length).coerceIn(0, text.length)))
         editing = what
     }
 
@@ -223,7 +229,12 @@ fun NoteScreen(
                         items(suggestions, key = { it.fileUri + "#" + it.index }) { target ->
                             ListItem(
                                 headlineContent = { Text(displayTitle(target.title)) },
-                                supportingContent = { Text(library.file(target.fileUri)?.title ?: target.fileName) },
+                                supportingContent = {
+                                    val targetFile = library.file(target.fileUri)
+                                    val path = listOf(targetFile?.title ?: target.fileName) +
+                                        targetFile?.notes?.let { NoteTree.ancestors(it, target.index) }.orEmpty().map { displayTitle(it.title) }
+                                    Text(path.joinToString("  ›  "), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                },
                                 modifier = Modifier.clickable { insertLink(target) },
                             )
                         }
@@ -260,39 +271,41 @@ fun NoteScreen(
                 }
             }
 
-            // Title
+            // Title: edited where it is shown, looking the same; a tap puts the cursor there
+            val titleStyle = MaterialTheme.typography.headlineMedium
+            val titlePlaceholder = if (newNote != null) "Add a title to create the note" else "Untitled"
             if (editing == Editing.Title) {
-                DraftField(
+                InPlaceField(
                     value = draft,
                     onValueChange = {
                         if (editing == Editing.Title) draft = TextFieldValue(it.text.replace("\n", " "), it.selection, it.composition)
                     },
-                    label = "Title",
-                    singleLine = false,
+                    style = titleStyle,
+                    placeholder = titlePlaceholder,
                     onFocusLost = { if (editing == Editing.Title) commit() },
                     onDone = { if (editing == Editing.Title) commit() },
-                )
-            } else if (note.title.isBlank()) {
-                Text(
-                    if (newNote != null) "Add a title to create the note" else "Untitled",
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { startEditing(Editing.Title) }
-                        .padding(vertical = 8.dp),
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                 )
             } else {
-                // Links in the title open their note; elsewhere, a tap edits the title
-                LinkedText(
-                    note.title,
-                    MaterialTheme.typography.headlineMedium,
-                    viewModel::openById,
+                Box(
                     Modifier
                         .fillMaxWidth()
-                        .clickable { startEditing(Editing.Title) }
+                        .clickable(interactionSource = null, indication = null) { startEditing(Editing.Title) }
                         .padding(vertical = 8.dp),
-                )
+                ) {
+                    if (note.title.isBlank()) {
+                        Text(titlePlaceholder, style = titleStyle, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    } else {
+                        // Links in the title open their note
+                        LinkedText(
+                            note.title,
+                            titleStyle,
+                            viewModel::openById,
+                            Modifier.sharedText(noteTitleKey(note)),
+                            onTextTap = { startEditing(Editing.Title, it) },
+                        )
+                    }
+                }
             }
 
             HorizontalDivider(Modifier.padding(vertical = 8.dp))
@@ -314,66 +327,68 @@ fun NoteScreen(
                 MetaRow(name, value, onClick = { openDialog(MetaDialog.Property(name, value, isNew = false)) })
             }
 
-            Box {
-                TextButton(onClick = { commit(); addMenu = true }) {
-                    Icon(Icons.Default.Add, null)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Add")
-                }
-                DropdownMenu(expanded = addMenu, onDismissRequest = { addMenu = false }) {
-                    listOfNotNull(
-                        ("Tags" to MetaDialog.Tags).takeIf { note.tags.isEmpty() },
-                        ("State" to MetaDialog.State).takeIf { note.state == null },
-                        ("Priority" to MetaDialog.Priority).takeIf { note.priority == null },
-                        ("Scheduled time" to MetaDialog.Scheduled).takeIf { note.scheduled == null },
-                        ("Deadline time" to MetaDialog.Deadline).takeIf { note.deadline == null },
-                        "Property" to MetaDialog.Property("", "", isNew = true),
-                    ).forEach { (label, open) ->
-                        DropdownMenuItem(text = { Text(label) }, onClick = { addMenu = false; dialog = open })
-                    }
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.padding(vertical = 4.dp),
+            ) {
+                listOfNotNull(
+                    ("Tags" to MetaDialog.Tags).takeIf { note.tags.isEmpty() },
+                    ("State" to MetaDialog.State).takeIf { note.state == null },
+                    ("Priority" to MetaDialog.Priority).takeIf { note.priority == null },
+                    ("Scheduled" to MetaDialog.Scheduled).takeIf { note.scheduled == null },
+                    ("Deadline" to MetaDialog.Deadline).takeIf { note.deadline == null },
+                    "Property" to MetaDialog.Property("", "", isNew = true),
+                ).forEach { (label, open) ->
+                    AssistChip(
+                        onClick = { openDialog(open) },
+                        label = { Text(label) },
+                        leadingIcon = { Icon(Icons.Default.Add, null, Modifier.size(AssistChipDefaults.IconSize)) },
+                    )
                 }
             }
 
             HorizontalDivider(Modifier.padding(vertical = 8.dp))
 
-            // Content
+            // Content: edited where it is shown, looking the same
+            val contentStyle = MaterialTheme.typography.bodyLarge
+            val contentPlaceholder = "Add content (type id: to link to another note)"
             if (editing == Editing.Content) {
-                DraftField(
+                InPlaceField(
                     value = draft,
                     onValueChange = { if (editing == Editing.Content) draft = it },
-                    label = "Content",
-                    singleLine = false,
-                    minLines = 8,
+                    style = contentStyle,
+                    placeholder = contentPlaceholder,
                     onFocusLost = { if (editing == Editing.Content) commit() },
-                )
-                Text(
-                    "Type id: to link to another note.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(vertical = 4.dp),
-                )
-            } else if (note.content.isBlank()) {
-                Text(
-                    "Add content",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { startEditing(Editing.Content) }
-                        .padding(vertical = 12.dp),
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                 )
             } else {
-                LinkedText(
-                    note.content,
-                    MaterialTheme.typography.bodyLarge,
-                    viewModel::openById,
+                Box(
                     Modifier
                         .fillMaxWidth()
-                        .clickable { startEditing(Editing.Content) }
+                        .clickable(interactionSource = null, indication = null) { startEditing(Editing.Content) }
                         .padding(vertical = 8.dp),
-                )
+                ) {
+                    if (note.content.isBlank()) {
+                        Text(contentPlaceholder, style = contentStyle, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    } else {
+                        LinkedText(
+                            note.content,
+                            contentStyle,
+                            viewModel::openById,
+                            Modifier.sharedText(noteContentKey(note)),
+                            onTextTap = { startEditing(Editing.Content, it) },
+                        )
+                    }
+                }
             }
-            Spacer(Modifier.heightIn(min = 96.dp))
+            Spacer(
+                Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 96.dp)
+                    .clickable(interactionSource = null, indication = null) {
+                        if (editing != Editing.Content) startEditing(Editing.Content)
+                    },
+            )
         }
     }
 
@@ -463,6 +478,11 @@ private fun MetaRow(label: String, onClick: (() -> Unit)?, value: @Composable ()
         Box(Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) { value() }
     }
 }
+
+/** The note's title and content move from its row in the notebook into the note screen. */
+fun noteTitleKey(note: OrgNote) = "note-title-${note.fileUri}#${note.index}"
+
+fun noteContentKey(note: OrgNote) = "note-content-${note.fileUri}#${note.index}"
 
 fun newNoteTitle(placement: Placement) = when (placement) {
     Placement.Above -> "New note above"

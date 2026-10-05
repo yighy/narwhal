@@ -86,9 +86,10 @@ fun NotebookScreen(
         prefaceDraft = null
         if (draft.text != currentFile.doc.preface.trimEnd()) viewModel.setPreface(currentFile, draft.text)
     }
-    fun editPreface() {
+    /** Edits the preface, with the cursor at [cursor] (the end by default). */
+    fun editPreface(cursor: Int? = null) {
         val raw = file.doc.preface.trimEnd()
-        prefaceDraft = TextFieldValue(raw, TextRange(raw.length))
+        prefaceDraft = TextFieldValue(raw, TextRange((cursor ?: raw.length).coerceIn(0, raw.length)))
     }
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val settings by viewModel.settings.collectAsState()
@@ -124,6 +125,7 @@ fun NotebookScreen(
                     searchPlaceholder = "Search in ${file.title}",
                     scrollBehavior = scrollBehavior,
                     extraActions = { FoldAllButton(viewModel, file.notes) },
+                    sharedTitleKey = notebookTitleKey(file.uri),
                 ) { dismiss ->
                     DropdownMenuItem(
                         text = { Text("Edit preface") },
@@ -151,7 +153,7 @@ fun NotebookScreen(
                     // Only while editing: the keyboard can still update the field as it goes away
                     onPrefaceDraftChange = { if (prefaceDraft != null) prefaceDraft = it },
                     onCommitPreface = ::commitPreface,
-                    onEditPreface = ::editPreface,
+                    onEditPreface = { editPreface(it) },
                     selected = selection?.indices.orEmpty(),
                     showContent = settings.showContentInNotebook,
                     scrollConnection = scrollBehavior.nestedScrollConnection,
@@ -187,7 +189,7 @@ private fun NotebookOutline(
     prefaceDraft: TextFieldValue?,
     onPrefaceDraftChange: (TextFieldValue) -> Unit,
     onCommitPreface: () -> Unit,
-    onEditPreface: () -> Unit,
+    onEditPreface: (cursor: Int?) -> Unit,
     selected: Set<Int>,
     showContent: Boolean,
     scrollConnection: androidx.compose.ui.input.nestedscroll.NestedScrollConnection,
@@ -205,32 +207,31 @@ private fun NotebookOutline(
             modifier = Modifier.fillMaxSize().nestedScroll(scrollConnection),
         ) {
             item(key = "header") {
+                val prefaceStyle = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
                 if (prefaceDraft != null) {
-                    Column(Modifier.padding(horizontal = 16.dp)) {
-                        DraftField(
-                            value = prefaceDraft,
-                            onValueChange = { onPrefaceDraftChange(it) },
-                            label = "Preface",
-                            singleLine = false,
-                            minLines = 4,
-                            onFocusLost = onCommitPreface,
-                        )
-                        Text(
-                            "Text before the first note. Lines like #+TITLE: set the notebook's name.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(bottom = 12.dp),
-                        )
-                    }
+                    InPlaceField(
+                        value = prefaceDraft,
+                        onValueChange = onPrefaceDraftChange,
+                        style = prefaceStyle,
+                        placeholder = "Text before the first note. Lines like #+TITLE: set the notebook's name.",
+                        onFocusLost = onCommitPreface,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 16.dp, end = 16.dp, bottom = 12.dp),
+                    )
                 } else if (file.preface.isNotBlank()) {
+                    // The raw preface (shown as is, without its #+ lines) is edited from the
+                    // end, or from where the text was tapped when it is shown the same
+                    val shownAsRaw = file.preface == file.doc.preface.trimEnd()
                     LinkedText(
                         file.preface,
-                        MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
+                        prefaceStyle,
                         viewModel::openById,
                         Modifier
                             .fillMaxWidth()
-                            .clickable(onClick = onEditPreface)
+                            .clickable(interactionSource = null, indication = null) { onEditPreface(null) }
                             .padding(start = 16.dp, end = 16.dp, bottom = 12.dp),
+                        onTextTap = { onEditPreface(if (shownAsRaw) it else null) },
                     )
                 }
             }
@@ -373,13 +374,20 @@ private fun OutlineRow(
                 }
             }
             Column(Modifier.weight(1f).padding(vertical = 12.dp)) {
-                NoteLine(note, subtitle = null, onClick = null, onOpenId = onOpenId)
+                // Title and content move into the note screen when the note opens
+                NoteLine(
+                    note,
+                    subtitle = null,
+                    onClick = null,
+                    onOpenId = onOpenId,
+                    titleModifier = Modifier.sharedText(noteTitleKey(note)),
+                )
                 if (showContent && note.content.isNotBlank()) {
                     LinkedText(
                         note.content.trimIndent(),
                         MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
                         onOpenId,
-                        Modifier.padding(top = 4.dp),
+                        Modifier.padding(top = 4.dp).sharedText(noteContentKey(note)),
                     )
                 }
             }
