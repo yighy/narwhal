@@ -21,6 +21,7 @@ import io.github.yighy.orgline.core.NoteTree
 import io.github.yighy.orgline.core.OrgTime
 import io.github.yighy.orgline.core.OrgNote
 import io.github.yighy.orgline.OrglineApplication
+import io.github.yighy.orgline.data.LinkRenaming
 import io.github.yighy.orgline.data.NoteRepository
 import java.time.LocalTime
 import java.util.UUID
@@ -115,6 +116,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun setRemindAllDay(on: Boolean) = appSettings.setRemindAllDay(on)
     fun setAllDayTime(time: LocalTime) = appSettings.setAllDayTime(time)
     fun setAddIdToNewNotes(on: Boolean) = appSettings.setAddIdToNewNotes(on)
+
+    fun setLinkRenaming(mode: LinkRenaming) = appSettings.setLinkRenaming(mode)
 
     /** Sets the default state keywords from "TODO NEXT | DONE"; false if there is no keyword. */
     fun setKeywords(spec: String): Boolean {
@@ -237,24 +240,33 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var linkRename by mutableStateOf<LinkRename?>(null)
         private set
 
-    /** Saves a new title, then offers to update the links to the note that still show the old one. */
+    /**
+     * Saves a new title, then, as set in the settings, updates the links to the note that still
+     * show the old one, asks first, or leaves them.
+     */
     fun rename(note: OrgNote, title: String) {
         val oldTitle = note.title
         viewModelScope.launch {
             val saved = saveLatest(note) { it.toEdit().copy(title = title) } ?: return@launch
+            val mode = settings.value.linkRenaming
+            if (mode == LinkRenaming.Never) return@launch
             val id = saved.id ?: return@launch
             val notes = library.value.notes.count { IdLinks.renameLinks(it.raw, id, oldTitle, title) != it.raw }
-            if (notes > 0) linkRename = LinkRename(id, oldTitle, title, notes)
+            if (notes == 0) return@launch
+            val rename = LinkRename(id, oldTitle, title, notes)
+            if (mode == LinkRenaming.Always) renameLinks(rename) else linkRename = rename
         }
     }
 
     fun updateRenamedLinks() {
         val rename = linkRename ?: return
         linkRename = null
-        viewModelScope.launch {
-            val changed = attempt { repository.renameLinks(rename.id, rename.oldTitle, rename.newTitle) } ?: return@launch
-            message(if (changed == 1) "1 note updated" else "$changed notes updated")
-        }
+        viewModelScope.launch { renameLinks(rename) }
+    }
+
+    private suspend fun renameLinks(rename: LinkRename) {
+        val changed = attempt { repository.renameLinks(rename.id, rename.oldTitle, rename.newTitle) } ?: return
+        message(if (changed == 1) "Link updated in 1 note" else "Links updated in $changed notes")
     }
 
     fun keepRenamedLinks() {

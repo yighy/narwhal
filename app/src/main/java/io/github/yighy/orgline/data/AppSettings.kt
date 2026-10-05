@@ -8,6 +8,13 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import java.time.LocalTime
 
+/** When a note is renamed, links to it that still show its old title can follow. */
+enum class LinkRenaming(val label: String) {
+    Ask("Ask each time"),
+    Always("Update them"),
+    Never("Leave them as they are"),
+}
+
 /** User preferences, stored in SharedPreferences. */
 class AppSettings(context: Context) {
 
@@ -23,6 +30,8 @@ class AppSettings(context: Context) {
         val keywords: Keywords = Keywords.DEFAULT,
         /** Give every new note an ID property, so it can be linked to with id:. */
         val addIdToNewNotes: Boolean = false,
+        /** What happens to links still showing a note's old title when it is renamed. */
+        val linkRenaming: LinkRenaming = LinkRenaming.Ask,
     ) {
         val reminderOptions: Agenda.ReminderOptions
             get() = Agenda.ReminderOptions(remindScheduled, remindDeadline, allDayTime.takeIf { remindAllDay })
@@ -39,6 +48,8 @@ class AppSettings(context: Context) {
             allDayTime = LocalTime.ofSecondOfDay(prefs.getInt(KEY_ALL_DAY_MINUTES, 9 * 60) * 60L),
             keywords = prefs.getString(KEY_KEYWORDS, null)?.let(Keywords::parse) ?: Keywords.DEFAULT,
             addIdToNewNotes = prefs.getBoolean(KEY_ADD_ID, false),
+            linkRenaming = LinkRenaming.entries.firstOrNull { it.name == prefs.getString(KEY_LINK_RENAMING, null) }
+                ?: LinkRenaming.Ask,
         ),
     )
     val values: StateFlow<Values> = _values
@@ -78,6 +89,11 @@ class AppSettings(context: Context) {
         _values.update { it.copy(addIdToNewNotes = on) }
     }
 
+    fun setLinkRenaming(mode: LinkRenaming) {
+        prefs.edit().putString(KEY_LINK_RENAMING, mode.name).apply()
+        _values.update { it.copy(linkRenaming = mode) }
+    }
+
     fun setKeywords(keywords: Keywords) {
         prefs.edit().putString(KEY_KEYWORDS, keywords.toSpec()).apply()
         _values.update { it.copy(keywords = keywords) }
@@ -86,6 +102,7 @@ class AppSettings(context: Context) {
     companion object {
         private const val KEY_KEYWORDS = "keywords"
         private const val KEY_ADD_ID = "add_id_to_new_notes"
+        private const val KEY_LINK_RENAMING = "link_renaming"
         private const val KEY_SHOW_CONTENT = "show_content_in_notebook"
         private const val KEY_REMIND_SCHEDULED = "remind_scheduled"
         private const val KEY_REMIND_DEADLINE = "remind_deadline"

@@ -40,6 +40,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
+import io.github.yighy.orgline.data.LinkRenaming
 import io.github.yighy.orgline.data.NoteRepository
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -59,6 +60,7 @@ fun SettingsScreen(
     val context = LocalContext.current
     var pickAllDayTime by remember { mutableStateOf(false) }
     var editKeywords by remember { mutableStateOf(false) }
+    var pickLinkRenaming by remember { mutableStateOf(false) }
 
     // System settings can change while the app is in the background
     var resumes by remember { mutableIntStateOf(0) }
@@ -106,6 +108,11 @@ fun SettingsScreen(
                 summary = "Fill the ID property when a note is created, so other notes can link to it",
                 checked = settings.addIdToNewNotes,
                 onCheckedChange = viewModel::setAddIdToNewNotes,
+            )
+            ListItem(
+                headlineContent = { Text("Links to a renamed note") },
+                supportingContent = { Text(settings.linkRenaming.label + "\nLinks that still show the old title") },
+                modifier = Modifier.clickable { pickLinkRenaming = true },
             )
 
             SectionHeader("Reminders")
@@ -170,6 +177,18 @@ fun SettingsScreen(
         }
     }
 
+    if (pickLinkRenaming) {
+        ChoiceDialog(
+            title = "Links to a renamed note",
+            options = LinkRenaming.entries.map { it.label },
+            selected = settings.linkRenaming.label,
+            onDismiss = { pickLinkRenaming = false },
+            onSelect = { label ->
+                pickLinkRenaming = false
+                LinkRenaming.entries.firstOrNull { it.label == label }?.let(viewModel::setLinkRenaming)
+            },
+        )
+    }
     if (editKeywords) {
         TextInputDialog(
             title = "State keywords",
