@@ -153,6 +153,10 @@ fun NoteScreen(
     // A new note starts with its title being edited
     var editing by remember { mutableStateOf(if (newNote != null) Editing.Title else Editing.None) }
     var draft by remember { mutableStateOf(TextFieldValue("")) }
+    // Undo / redo while editing the content
+    val history = remember { EditHistory() }
+    // Typing help in the title (brackets), without undo
+    val titleTyping = remember { EditHistory() }
     var dialog by remember { mutableStateOf<DateDialog?>(null) }
     // Tags being added, choices shown for state or priority, property being added
     var metaEdit by remember { mutableStateOf<MetaEdit?>(null) }
@@ -190,6 +194,7 @@ fun NoteScreen(
         commit()
         val text = if (what == Editing.Title) title else content
         draft = TextFieldValue(text, TextRange((cursor ?: text.length).coerceIn(0, text.length)))
+        history.clear()
         editing = what
     }
 
@@ -311,35 +316,41 @@ fun NoteScreen(
             )
         },
         bottomBar = {
-            if (fileSuggestions.isNotEmpty()) {
-                Surface(tonalElevation = 3.dp, shadowElevation = 8.dp) {
-                    LazyColumn(Modifier.heightIn(max = 240.dp)) {
-                        items(fileSuggestions, key = { it.uri }) { target ->
-                            ListItem(
-                                headlineContent = { Text(target.title) },
-                                supportingContent = { Text(target.ref.path, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                                modifier = Modifier.clickable { insertFileLink(target) },
-                            )
+            Column {
+                if (fileSuggestions.isNotEmpty()) {
+                    Surface(tonalElevation = 3.dp, shadowElevation = 8.dp) {
+                        LazyColumn(Modifier.heightIn(max = 240.dp)) {
+                            items(fileSuggestions, key = { it.uri }) { target ->
+                                ListItem(
+                                    headlineContent = { Text(target.title) },
+                                    supportingContent = { Text(target.ref.path, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                                    modifier = Modifier.clickable { insertFileLink(target) },
+                                )
+                            }
                         }
                     }
                 }
-            }
-            if (suggestions.isNotEmpty()) {
-                Surface(tonalElevation = 3.dp, shadowElevation = 8.dp) {
-                    LazyColumn(Modifier.heightIn(max = 240.dp)) {
-                        items(suggestions, key = { it.fileUri + "#" + it.index }) { target ->
-                            ListItem(
-                                headlineContent = { Text(displayTitle(target.title)) },
-                                supportingContent = {
-                                    val targetFile = library.file(target.fileUri)
-                                    val path = listOf(targetFile?.title ?: target.fileName) +
-                                        targetFile?.notes?.let { NoteTree.ancestors(it, target.index) }.orEmpty().map { displayTitle(it.title) }
-                                    Text(path.joinToString("  ›  "), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                },
-                                modifier = Modifier.clickable { insertLink(target) },
-                            )
+                if (suggestions.isNotEmpty()) {
+                    Surface(tonalElevation = 3.dp, shadowElevation = 8.dp) {
+                        LazyColumn(Modifier.heightIn(max = 240.dp)) {
+                            items(suggestions, key = { it.fileUri + "#" + it.index }) { target ->
+                                ListItem(
+                                    headlineContent = { Text(displayTitle(target.title)) },
+                                    supportingContent = {
+                                        val targetFile = library.file(target.fileUri)
+                                        val path = listOf(targetFile?.title ?: target.fileName) +
+                                            targetFile?.notes?.let { NoteTree.ancestors(it, target.index) }.orEmpty().map { displayTitle(it.title) }
+                                        Text(path.joinToString("  ›  "), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    },
+                                    modifier = Modifier.clickable { insertLink(target) },
+                                )
+                            }
                         }
                     }
+                }
+                // List, checkbox, indent… over the keyboard while the content is edited
+                if (editing == Editing.Content) {
+                    EditToolbar(draft, onChange = { if (editing == Editing.Content) draft = it }, history = history)
                 }
             }
         },
@@ -418,7 +429,11 @@ fun NoteScreen(
                 InPlaceField(
                     value = draft,
                     onValueChange = {
-                        if (editing == Editing.Title) draft = TextFieldValue(it.text.replace("\n", " "), it.selection, it.composition)
+                        if (editing == Editing.Title) {
+                            // Brackets close themselves (links); no lists in a title
+                            val typed = typedText(draft, it, titleTyping, lists = false)
+                            draft = TextFieldValue(typed.text.replace("\n", " "), typed.selection, typed.composition)
+                        }
                     },
                     style = titleStyle,
                     placeholder = titlePlaceholder,
@@ -585,7 +600,7 @@ fun NoteScreen(
             if (editing == Editing.Content) {
                 InPlaceField(
                     value = draft,
-                    onValueChange = { if (editing == Editing.Content) draft = it },
+                    onValueChange = { if (editing == Editing.Content) draft = typedText(draft, it, history) },
                     style = contentStyle,
                     placeholder = contentPlaceholder,
                     onFocusLost = { if (editing == Editing.Content) commit() },

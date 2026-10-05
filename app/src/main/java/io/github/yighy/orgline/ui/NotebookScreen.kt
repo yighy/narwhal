@@ -82,6 +82,7 @@ fun NotebookScreen(
 ) {
     // Raw preface being edited in place, or null
     var prefaceDraft by remember { mutableStateOf<TextFieldValue?>(null) }
+    val prefaceHistory = remember { EditHistory() }
     val currentFile by rememberUpdatedState(file)
     // Preface just saved, shown until the file is reloaded with it (else the old text flashes)
     var savedPreface by remember { mutableStateOf<String?>(null) }
@@ -100,6 +101,7 @@ fun NotebookScreen(
     fun editPreface(cursor: Int? = null) {
         val raw = savedPreface ?: file.doc.preface.trimEnd()
         prefaceDraft = TextFieldValue(raw, TextRange((cursor ?: raw.length).coerceIn(0, raw.length)))
+        prefaceHistory.clear()
     }
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val settings by viewModel.settings.collectAsState()
@@ -156,6 +158,12 @@ fun NotebookScreen(
                 FloatingActionButton(onClick = { viewModel.startNewNote(file.uri) }) { Icon(Icons.Default.Add, "New note") }
             }
         },
+        bottomBar = {
+            // List, checkbox, indent… over the keyboard while the preface is edited
+            prefaceDraft?.let { draft ->
+                EditToolbar(draft, onChange = { if (prefaceDraft != null) prefaceDraft = it }, history = prefaceHistory)
+            }
+        },
         snackbarHost = { SnackbarHost(snackbar) },
     ) { padding ->
         Box(Modifier.fillMaxSize().padding(padding)) {
@@ -169,7 +177,7 @@ fun NotebookScreen(
                     prefaceRaw = savedPreface ?: file.doc.preface.trimEnd(),
                     prefaceDraft = prefaceDraft,
                     // Only while editing: the keyboard can still update the field as it goes away
-                    onPrefaceDraftChange = { if (prefaceDraft != null) prefaceDraft = it },
+                    onPrefaceDraftChange = { new -> prefaceDraft?.let { prefaceDraft = typedText(it, new, prefaceHistory) } },
                     onCommitPreface = ::commitPreface,
                     onEditPreface = { editPreface(it) },
                     selected = selection?.indices.orEmpty(),
