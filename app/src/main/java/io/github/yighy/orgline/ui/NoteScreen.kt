@@ -344,11 +344,14 @@ fun NoteScreen(
         },
         snackbarHost = { SnackbarHost(snackbar) },
     ) { padding ->
+        val scrollState = rememberScrollState()
         Column(
             Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .verticalScroll(rememberScrollState())
+                // A drag during the screen transition scrolls once it is over
+                .deferScrollWhile(screenTransitionRunning(), scrollState)
+                .verticalScroll(scrollState)
                 .padding(horizontal = 16.dp),
         ) {
             // Breadcrumbs: notebook · ancestors (or where a new note goes)

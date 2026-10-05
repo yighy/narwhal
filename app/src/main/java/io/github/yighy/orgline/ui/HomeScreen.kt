@@ -1,5 +1,6 @@
 package io.github.yighy.orgline.ui
 
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material.icons.filled.Edit
@@ -190,12 +191,18 @@ fun HomeScreen(
                     )
 
                 else -> PullToRefresh(viewModel) {
+                    val listState = rememberLazyListState()
                     LazyColumn(
+                        state = listState,
                         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 120.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                         // On the list rather than the Scaffold, so pulling down expands the app bar
                         // before pull-to-refresh takes the rest of the gesture
-                        modifier = Modifier.fillMaxSize().nestedScroll(scrollBehavior.nestedScrollConnection),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            // A drag during the screen transition scrolls once it is over
+                            .deferScrollWhile(screenTransitionRunning(), listState, scrollBehavior.nestedScrollConnection)
+                            .nestedScroll(scrollBehavior.nestedScrollConnection),
                     ) {
                         items(library.files, key = { it.uri }) { file ->
                             NotebookCard(

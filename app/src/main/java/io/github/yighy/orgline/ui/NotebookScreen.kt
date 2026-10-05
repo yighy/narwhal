@@ -1,5 +1,6 @@
 package io.github.yighy.orgline.ui
 
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
@@ -203,11 +204,17 @@ private fun NotebookOutline(
     val selecting = selected.isNotEmpty()
 
     PullToRefresh(viewModel) {
+        val listState = rememberLazyListState()
         LazyColumn(
+            state = listState,
             contentPadding = PaddingValues(bottom = 120.dp),
             // On the list rather than the Scaffold, so pulling down expands the app bar
             // before pull-to-refresh takes the rest of the gesture
-            modifier = Modifier.fillMaxSize().nestedScroll(scrollConnection),
+            modifier = Modifier
+                .fillMaxSize()
+                // A drag during the screen transition scrolls once it is over
+                .deferScrollWhile(screenTransitionRunning(), listState, scrollConnection)
+                .nestedScroll(scrollConnection),
         ) {
             item(key = "header") {
                 val prefaceStyle = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)

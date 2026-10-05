@@ -1,5 +1,8 @@
 package io.github.yighy.orgline.ui
 
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -274,17 +277,23 @@ val LocalAnimatedVisibilityScope = staticCompositionLocalOf<AnimatedVisibilitySc
 fun Modifier.sharedContainer(key: String, shape: Shape): Modifier {
     val shared = LocalSharedTransitionScope.current ?: return this
     val visibility = LocalAnimatedVisibilityScope.current ?: return this
-    val motion = MaterialTheme.motionScheme
     return with(shared) {
         this@sharedContainer.sharedBounds(
             sharedContentState = rememberSharedContentState(key),
             animatedVisibilityScope = visibility,
             // Not too long: a card scrolled while coming back follows its place until it settles
-            boundsTransform = { _, _ -> motion.defaultSpatialSpec() },
+            boundsTransform = { _, _ -> SharedBoundsSpec },
             clipInOverlayDuringTransition = OverlayClip(shape),
         )
     }
 }
+
+/**
+ * Shared elements move along a fixed-length curve slowing down at the end (Material's
+ * emphasized decelerate), rather than a spring: they land at a known time, without a long tail,
+ * so scrolling held during the transition comes back soon.
+ */
+private val SharedBoundsSpec = tween<Rect>(400, easing = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1f))
 
 /**
  * Text that moves and scales from the element with the same [key] on the previous screen
@@ -295,16 +304,28 @@ fun Modifier.sharedContainer(key: String, shape: Shape): Modifier {
 fun Modifier.sharedText(key: String): Modifier {
     val shared = LocalSharedTransitionScope.current ?: return this
     val visibility = LocalAnimatedVisibilityScope.current ?: return this
-    val motion = MaterialTheme.motionScheme
     return with(shared) {
         this@sharedText.sharedBounds(
             sharedContentState = rememberSharedContentState(key),
             animatedVisibilityScope = visibility,
-            boundsTransform = { _, _ -> motion.defaultSpatialSpec() },
+            boundsTransform = { _, _ -> SharedBoundsSpec },
             // Laid out once at its own size, then scaled: text keeps its lines while it grows
             resizeMode = scaleToBounds(ContentScale.FillWidth, Alignment.TopStart),
         )
     }
+}
+
+/**
+ * True while the screen is coming in or going away, until its shared elements (cards, titles)
+ * have landed: scrolling then would move the list under them while they slide to their place.
+ */
+@OptIn(ExperimentalSharedTransitionApi::class)
+@Composable
+fun screenTransitionRunning(): Boolean {
+    // The screen is still coming in or going away until it has reached the state it is going to
+    val screen = LocalAnimatedVisibilityScope.current?.transition
+    return (screen != null && screen.currentState != screen.targetState) ||
+        LocalSharedTransitionScope.current?.isTransitionActive == true
 }
 
 /** Search results with a tag filter, over [notes]. */
