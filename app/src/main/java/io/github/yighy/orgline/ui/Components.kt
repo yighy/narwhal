@@ -1,5 +1,6 @@
 package io.github.yighy.orgline.ui
 
+import androidx.compose.runtime.MutableState
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.tween
@@ -263,6 +264,12 @@ fun subtitleKey(titleKey: String) = "$titleKey/subtitle"
 /** Space under the expanded title, as in LargeFlexibleTopAppBar (measured there from the baseline). */
 private val LargeTitleBottomPadding = 22.dp
 
+/**
+ * Set when a swipe cuts the screen transition short: shared elements then stop moving and
+ * show where they are (see [cutTransitionOnScroll]).
+ */
+val LocalSharedCut = staticCompositionLocalOf<MutableState<Boolean>> { mutableStateOf(false) }
+
 /** Shared transition scopes, provided by the screen host so screens can share elements. */
 @OptIn(ExperimentalSharedTransitionApi::class)
 val LocalSharedTransitionScope = staticCompositionLocalOf<SharedTransitionScope?> { null }
@@ -275,6 +282,7 @@ val LocalAnimatedVisibilityScope = staticCompositionLocalOf<AnimatedVisibilitySc
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun Modifier.sharedContainer(key: String, shape: Shape): Modifier {
+    if (LocalSharedCut.current.value) return this
     val shared = LocalSharedTransitionScope.current ?: return this
     val visibility = LocalAnimatedVisibilityScope.current ?: return this
     return with(shared) {
@@ -293,7 +301,7 @@ fun Modifier.sharedContainer(key: String, shape: Shape): Modifier {
  * emphasized decelerate), rather than a spring: they land at a known time, without a long tail,
  * so scrolling held during the transition comes back soon.
  */
-private val SharedBoundsSpec = tween<Rect>(400, easing = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1f))
+private val SharedBoundsSpec = tween<Rect>(200, easing = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1f))
 
 /**
  * Text that moves and scales from the element with the same [key] on the previous screen
@@ -302,6 +310,7 @@ private val SharedBoundsSpec = tween<Rect>(400, easing = CubicBezierEasing(0.05f
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun Modifier.sharedText(key: String): Modifier {
+    if (LocalSharedCut.current.value) return this
     val shared = LocalSharedTransitionScope.current ?: return this
     val visibility = LocalAnimatedVisibilityScope.current ?: return this
     return with(shared) {

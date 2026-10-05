@@ -212,8 +212,8 @@ private fun NotebookOutline(
             // before pull-to-refresh takes the rest of the gesture
             modifier = Modifier
                 .fillMaxSize()
-                // A drag during the screen transition scrolls once it is over
-                .deferScrollWhile(screenTransitionRunning(), listState, scrollConnection)
+                // A swipe during the screen transition cuts it short
+                .cutTransitionOnScroll()
                 .nestedScroll(scrollConnection),
         ) {
             item(key = "header") {

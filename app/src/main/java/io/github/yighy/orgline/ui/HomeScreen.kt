@@ -200,8 +200,8 @@ fun HomeScreen(
                         // before pull-to-refresh takes the rest of the gesture
                         modifier = Modifier
                             .fillMaxSize()
-                            // A drag during the screen transition scrolls once it is over
-                            .deferScrollWhile(screenTransitionRunning(), listState, scrollBehavior.nestedScrollConnection)
+                            // A swipe during the screen transition cuts it short
+                            .cutTransitionOnScroll()
                             .nestedScroll(scrollBehavior.nestedScrollConnection),
                     ) {
                         items(library.files, key = { it.uri }) { file ->

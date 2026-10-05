@@ -109,6 +109,7 @@ fun SettingsScreen(
                 checked = settings.addIdToNewNotes,
                 onCheckedChange = viewModel::setAddIdToNewNotes,
             )
+
             ListItem(
                 headlineContent = { Text("Links to a renamed note") },
                 supportingContent = { Text(settings.linkRenaming.label + "\nLinks that still show the old title") },

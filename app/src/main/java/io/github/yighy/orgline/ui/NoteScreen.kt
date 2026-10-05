@@ -349,8 +349,8 @@ fun NoteScreen(
             Modifier
                 .fillMaxSize()
                 .padding(padding)
-                // A drag during the screen transition scrolls once it is over
-                .deferScrollWhile(screenTransitionRunning(), scrollState)
+                // A swipe during the screen transition cuts it short
+                .cutTransitionOnScroll()
                 .verticalScroll(scrollState)
                 .padding(horizontal = 16.dp),
         ) {

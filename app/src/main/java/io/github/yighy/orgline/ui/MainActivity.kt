@@ -1,5 +1,6 @@
 package io.github.yighy.orgline.ui
 
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import io.github.yighy.orgline.core.IdLinks
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.AlertDialog
@@ -210,9 +211,23 @@ fun OrglineApp(viewModel: AppViewModel, notificationsAllowed: Boolean, onAllowNo
         },
     ) {
         val motion = MaterialTheme.motionScheme
+        // Screens below the top one keep their scroll position and app bar when shown again;
+        // the state of screens left (no longer in the stack) is dropped
+        val screenStates = rememberSaveableStateHolder()
+        val kept = remember { mutableSetOf<String>() }
+        val inStack = viewModel.stack.map { it.toString() }.toSet()
+        LaunchedEffect(inStack) {
+            (kept - inStack).forEach(screenStates::removeState)
+            kept.retainAll(inStack)
+            kept += inStack
+        }
         // App background behind the screens while they cross-fade
         SharedTransitionLayout(Modifier.background(MaterialTheme.colorScheme.surface)) {
-            CompositionLocalProvider(LocalSharedTransitionScope provides this) {
+            CompositionLocalProvider(
+                LocalSharedTransitionScope provides this,
+                // A new state for each screen change: a cut transition does not carry over
+                LocalSharedCut provides remember(top) { mutableStateOf(false) },
+            ) {
                 AnimatedContent(
                     targetState = top,
                     transitionSpec = {
@@ -230,11 +245,13 @@ fun OrglineApp(viewModel: AppViewModel, notificationsAllowed: Boolean, onAllowNo
                     label = "screens",
                 ) { screen ->
                     CompositionLocalProvider(LocalAnimatedVisibilityScope provides this) {
-                        ScreenContent(
-                            screen, viewModel, library, snackbar, notificationsAllowed, onAllowNotifications,
-                            onOpenDrawer = { scope.launch { drawer.open() } },
-                            onPickFolder = { pickFolder.launch(null) },
-                        )
+                        screenStates.SaveableStateProvider(screen.toString()) {
+                            ScreenContent(
+                                screen, viewModel, library, snackbar, notificationsAllowed, onAllowNotifications,
+                                onOpenDrawer = { scope.launch { drawer.open() } },
+                                onPickFolder = { pickFolder.launch(null) },
+                            )
+                        }
                     }
                 }
             }
