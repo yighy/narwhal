@@ -407,6 +407,20 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** Deletes the selected notebooks' files. */
+    /** Renames the selected notebook (its file, and its #+TITLE if it has one). */
+    fun renameSelectedNotebook(title: String) {
+        val uri = selectedNotebooks.singleOrNull() ?: return
+        selectedNotebooks = emptySet()
+        viewModelScope.launch {
+            val newUri = attempt { repository.renameFile(uri, title) } ?: return@launch
+            // The icon follows the file
+            notebookIcons.value[uri]?.takeIf { newUri != uri }?.let {
+                appSettings.setNotebookIcon(newUri, it)
+                appSettings.setNotebookIcon(uri, null)
+            }
+        }
+    }
+
     fun deleteSelectedNotebooks() {
         val uris = selectedNotebooks
         selectedNotebooks = emptySet()

@@ -138,6 +138,26 @@ class NoteRepository(context: Context) {
         }
     }
 
+    /**
+     * Renames a notebook: its #+TITLE line if it has one (nothing else in the file changes),
+     * and its file. Returns the file's new URI.
+     */
+    suspend fun renameFile(fileUri: String, title: String): String = withContext(Dispatchers.IO) {
+        val newUri = writeLock.withLock {
+            val folder = folder() ?: error("No folder")
+            val uri = Uri.parse(fileUri)
+            val doc = OrgDocument.parse(folder.read(uri), defaultKeywords)
+            Notebooks.retitle(doc.preface, title)?.let { preface ->
+                if (preface != doc.preface) folder.write(uri, doc.rebuild(preface + doc.text.substring(doc.preface.length)).toFileText())
+            }
+            val fileName = title.trim().replace('/', '-').let { if (it.endsWith(".org", ignoreCase = true)) it else "$it.org" }
+            val current = _library.value.files.firstOrNull { it.uri == fileUri }?.ref?.name
+            if (fileName != current) folder.rename(uri, fileName) else uri
+        }
+        refresh()
+        newUri.toString()
+    }
+
     suspend fun createFile(name: String): Uri = withContext(Dispatchers.IO) {
         val folder = folder() ?: error("No folder")
         folder.createFile(name).also { refresh() }

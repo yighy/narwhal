@@ -60,6 +60,10 @@ class OrgFolder(private val resolver: ContentResolver, val treeUri: Uri) {
         if (!DocumentsContract.deleteDocument(resolver, uri)) error("Cannot delete $uri")
     }
 
+    /** Renames the file in its folder; returns its new URI. */
+    fun rename(uri: Uri, name: String): Uri =
+        DocumentsContract.renameDocument(resolver, uri, name) ?: error("Cannot rename to $name")
+
     /** Creates an empty .org file at the root of the folder. */
     fun createFile(name: String): Uri {
         val parent = DocumentsContract.buildDocumentUriUsingTree(treeUri, DocumentsContract.getTreeDocumentId(treeUri))

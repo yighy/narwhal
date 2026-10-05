@@ -40,6 +40,13 @@ class NoteTreeTest {
     }
 
     @Test
+    fun retitlesOnlyTheTitleLine() {
+        assertEquals("#+TITLE: New\nText", Notebooks.retitle("#+TITLE: Old\nText", "New"))
+        assertEquals("#+title:   New\n", Notebooks.retitle("#+title:   Old  \n", "New"))
+        assertNull(Notebooks.retitle("Just text", "New"))
+    }
+
+    @Test
     fun timestamps() {
         assertEquals("<2026-10-05 Mon 09:30>", OrgTime.build(LocalDate.of(2026, 10, 5), LocalTime.of(9, 30)))
         assertEquals("<2026-10-06 Tue +1w>", OrgTime.build(LocalDate.of(2026, 10, 6), null, "<2026-10-05 Mon 08:00 +1w>"))

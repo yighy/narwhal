@@ -60,6 +60,12 @@ object Notebooks {
     private val TITLE = Regex("""^#\+TITLE:[ \t]*(.+)$""", setOf(RegexOption.MULTILINE, RegexOption.IGNORE_CASE))
     private val KEYWORD_LINE = Regex("""^[ \t]*#\+\S+:.*$""")
 
+    /** [preface] with its #+TITLE set to [title], or null when it has no #+TITLE line. */
+    fun retitle(preface: String, title: String): String? {
+        val value = TITLE.find(preface)?.groups?.get(1) ?: return null
+        return preface.replaceRange(value.range, title.trim())
+    }
+
     /** #+TITLE of the file, or its name without extension. */
     fun title(doc: OrgDocument, fileName: String): String =
         TITLE.find(doc.preface)?.groupValues?.get(1)?.trim()?.takeIf { it.isNotEmpty() }

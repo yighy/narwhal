@@ -1,5 +1,9 @@
 package io.github.yighy.orgline.ui
 
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.runtime.collectAsState
 import androidx.compose.material.icons.filled.Face
 import androidx.activity.compose.BackHandler
@@ -96,6 +100,8 @@ fun HomeScreen(
     var newNotebook by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
     var pickIcon by remember { mutableStateOf<String?>(null) }
+    var renaming by remember { mutableStateOf<NoteRepository.LoadedFile?>(null) }
+    var selectionMenu by remember { mutableStateOf(false) }
     val icons by viewModel.notebookIcons.collectAsState()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val selected = viewModel.selectedNotebooks
@@ -118,7 +124,23 @@ fun HomeScreen(
                         if (selected.size == 1) {
                             IconButton(onClick = { pickIcon = selected.first() }) { Icon(Icons.Default.Face, "Change icon") }
                         }
-                        IconButton(onClick = { confirmDelete = true }) { Icon(Icons.Default.Delete, "Delete") }
+                        Box {
+                            IconButton(onClick = { selectionMenu = true }) { Icon(Icons.Default.MoreVert, "More") }
+                            DropdownMenu(expanded = selectionMenu, onDismissRequest = { selectionMenu = false }) {
+                                if (selected.size == 1) {
+                                    DropdownMenuItem(
+                                        text = { Text("Rename") },
+                                        leadingIcon = { Icon(Icons.Default.Edit, null) },
+                                        onClick = { selectionMenu = false; renaming = library.file(selected.first()) },
+                                    )
+                                }
+                                DropdownMenuItem(
+                                    text = { Text("Delete") },
+                                    leadingIcon = { Icon(Icons.Default.Delete, null) },
+                                    onClick = { selectionMenu = false; confirmDelete = true },
+                                )
+                            }
+                        }
                     },
                 )
                 return@Scaffold
@@ -215,6 +237,17 @@ fun HomeScreen(
                 viewModel.setNotebookIcon(uri, emoji)
                 viewModel.clearNotebookSelection()
             },
+        )
+    }
+
+    renaming?.let { file ->
+        TextInputDialog(
+            title = "Rename notebook",
+            label = "Name",
+            confirmLabel = "Rename",
+            initial = file.title,
+            onDismiss = { renaming = null },
+            onConfirm = { renaming = null; viewModel.renameSelectedNotebook(it) },
         )
     }
 

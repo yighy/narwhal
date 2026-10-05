@@ -1,5 +1,11 @@
 package io.github.yighy.orgline.ui
 
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.animation.expandHorizontally
 import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.height
@@ -694,6 +700,16 @@ private fun TagsEditor(
     }
 
     val suggestionRow = rememberLazyListState()
+    val motion = MaterialTheme.motionScheme
+    // Tags shown, including removed ones while they fold away; those there at first do not unfold
+    val initialTags = remember { tags.map { it.lowercase() }.toSet() }
+    val shown = remember { mutableStateListOf<String>().apply { addAll(tags) } }
+    LaunchedEffect(tags) { tags.forEach { tag -> if (shown.none { it.equals(tag, ignoreCase = true) }) shown.add(tag) } }
+    // The field grows with what is typed
+    val fieldStyle = MaterialTheme.typography.labelLarge
+    val measurer = rememberTextMeasurer()
+    val typedWidth = with(LocalDensity.current) { measurer.measure(text.ifEmpty { "Tag" }, fieldStyle).size.width.toDp() }
+    val fieldWidth by animateDpAsState(typedWidth + 28.dp, motion.fastSpatialSpec(), label = "tag field")
     val chipShape = AssistChipDefaults.shape
     val chipBorder = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
 
@@ -705,9 +721,18 @@ private fun TagsEditor(
                 horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.End),
                 itemVerticalAlignment = Alignment.CenterVertically,
             ) {
-                tags.forEach { tag ->
+                // Removed tags stay until they have folded away
+                shown.toList().forEach { tag ->
                     key(tag.lowercase()) {
-                        Appear {
+                        val present = tags.any { it.equals(tag, ignoreCase = true) }
+                        val visible = remember { MutableTransitionState(tag.lowercase() in initialTags).apply { targetState = true } }
+                        visible.targetState = present
+                        if (visible.isIdle && !visible.currentState) LaunchedEffect(Unit) { shown.remove(tag) }
+                        AnimatedVisibility(
+                            visibleState = visible,
+                            enter = expandHorizontally(motion.defaultSpatialSpec()) + fadeIn(motion.defaultEffectsSpec()),
+                            exit = shrinkHorizontally(motion.defaultSpatialSpec()) + fadeOut(motion.defaultEffectsSpec()),
+                        ) {
                             InputChip(
                                 selected = false,
                                 onClick = { onRemove(tag) },
@@ -736,7 +761,7 @@ private fun TagsEditor(
                         keyboardActions = KeyboardActions(onDone = { add(text); clear() }),
                         modifier = Modifier
                             .padding(vertical = 8.dp)
-                            .width(110.dp)
+                            .width(fieldWidth)
                             .height(32.dp)
                             .focusRequester(focus)
                             .onFocusChanged {

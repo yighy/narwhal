@@ -191,23 +191,29 @@ fun SearchableTopBar(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = (sharedTitleKey?.let { Modifier.sharedText(it) } ?: Modifier)
+                            .graphicsLayer { alpha = expandedAlpha(scrollBehavior) }
                             .then(if (subtitle == null) Modifier.padding(bottom = LargeTitleBottomPadding) else Modifier),
                     )
                 } else {
-                    Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(
+                        title,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.graphicsLayer { alpha = collapsedAlpha(scrollBehavior) },
+                    )
                 }
             },
             subtitle = subtitle?.let { content ->
                 { expanded ->
                     if (expanded) {
-                        Box(Modifier.padding(bottom = LargeTitleBottomPadding)) {
+                        Box(Modifier.padding(bottom = LargeTitleBottomPadding).graphicsLayer { alpha = expandedAlpha(scrollBehavior) }) {
                             // The subtitle moves with the title, so they never overlap
                             Box(sharedTitleKey?.let { Modifier.sharedText(subtitleKey(it)) } ?: Modifier) {
                                 ProvideTextStyle(MaterialTheme.typography.titleMedium) { content() }
                             }
                         }
                     } else {
-                        content()
+                        Box(Modifier.graphicsLayer { alpha = collapsedAlpha(scrollBehavior) }) { content() }
                     }
                 }
             },
@@ -238,6 +244,16 @@ fun SearchableTopBar(
     }
 }
 
+/** The expanded title and subtitle fade out over the first half of the collapse... */
+@OptIn(ExperimentalMaterial3Api::class)
+private fun expandedAlpha(scrollBehavior: TopAppBarScrollBehavior) =
+    (1f - scrollBehavior.state.collapsedFraction * 2f).coerceIn(0f, 1f)
+
+/** ...and the collapsed ones fade in over the second half. */
+@OptIn(ExperimentalMaterial3Api::class)
+private fun collapsedAlpha(scrollBehavior: TopAppBarScrollBehavior) =
+    ((scrollBehavior.state.collapsedFraction - 0.5f) * 2f).coerceIn(0f, 1f)
+
 /** Key of the subtitle that moves with the title shared as [titleKey]. */
 fun subtitleKey(titleKey: String) = "$titleKey/subtitle"
 
@@ -263,7 +279,8 @@ fun Modifier.sharedContainer(key: String, shape: Shape): Modifier {
         this@sharedContainer.sharedBounds(
             sharedContentState = rememberSharedContentState(key),
             animatedVisibilityScope = visibility,
-            boundsTransform = { _, _ -> motion.slowSpatialSpec() },
+            // Not too long: a card scrolled while coming back follows its place until it settles
+            boundsTransform = { _, _ -> motion.defaultSpatialSpec() },
             clipInOverlayDuringTransition = OverlayClip(shape),
         )
     }
@@ -283,7 +300,7 @@ fun Modifier.sharedText(key: String): Modifier {
         this@sharedText.sharedBounds(
             sharedContentState = rememberSharedContentState(key),
             animatedVisibilityScope = visibility,
-            boundsTransform = { _, _ -> motion.slowSpatialSpec() },
+            boundsTransform = { _, _ -> motion.defaultSpatialSpec() },
             // Laid out once at its own size, then scaled: text keeps its lines while it grows
             resizeMode = scaleToBounds(ContentScale.FillWidth, Alignment.TopStart),
         )
