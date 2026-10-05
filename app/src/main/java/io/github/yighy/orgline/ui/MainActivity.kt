@@ -316,7 +316,7 @@ private fun ScreenContent(
 
         is Screen.NewNote -> NoteScreen(viewModel, library, viewModel.draftNote(screen), snackbar, newNote = screen)
 
-        Screen.Searches -> SearchesScreen(viewModel)
+        Screen.Searches -> SearchesScreen(viewModel, snackbar)
 
         Screen.Settings -> SettingsScreen(viewModel, library, onPickFolder, notificationsAllowed, onAllowNotifications)
 

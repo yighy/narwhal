@@ -130,6 +130,21 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         searchDraft = null
     }
 
+    fun deleteSavedSearches(indices: Set<Int>) {
+        appSettings.setSavedSearches(savedSearches.value.filterIndexed { i, _ -> i !in indices })
+        message(if (indices.size == 1) "Search deleted" else "${indices.size} searches deleted")
+    }
+
+    /** Moves a saved search by [delta] places; returns its new index. */
+    fun moveSavedSearch(index: Int, delta: Int): Int {
+        val list = savedSearches.value.toMutableList()
+        val target = (index + delta).coerceIn(0, list.lastIndex)
+        if (target == index) return index
+        list.add(target, list.removeAt(index))
+        appSettings.setSavedSearches(list)
+        return target
+    }
+
     /** Runs a saved search over all notebooks. */
     fun runSavedSearch(search: SavedSearch) {
         openHome()
