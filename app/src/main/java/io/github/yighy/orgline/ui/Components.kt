@@ -1,5 +1,15 @@
 package io.github.yighy.orgline.ui
 
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.unit.Dp
+import androidx.compose.foundation.lazy.LazyListState
 import kotlinx.coroutines.delay
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.foundation.layout.isImeVisible
@@ -569,6 +579,31 @@ fun InPlaceField(
         },
     )
 }
+
+/**
+ * Fades the start and end of a scrolling row where there is more to see, so it shows it scrolls.
+ */
+fun Modifier.fadingEdges(state: LazyListState, width: Dp = 32.dp): Modifier = this
+    .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+    .drawWithContent {
+        drawContent()
+        val w = width.toPx().coerceAtMost(size.width / 2)
+        if (state.canScrollBackward) {
+            drawRect(
+                Brush.horizontalGradient(listOf(Color.Transparent, Color.Black), startX = 0f, endX = w),
+                size = Size(w, size.height),
+                blendMode = BlendMode.DstIn,
+            )
+        }
+        if (state.canScrollForward) {
+            drawRect(
+                Brush.horizontalGradient(listOf(Color.Black, Color.Transparent), startX = size.width - w, endX = size.width),
+                topLeft = Offset(size.width - w, 0f),
+                size = Size(w, size.height),
+                blendMode = BlendMode.DstIn,
+            )
+        }
+    }
 
 /**
  * Clears the focus when the keyboard is closed (back, or its own close key), so the field being

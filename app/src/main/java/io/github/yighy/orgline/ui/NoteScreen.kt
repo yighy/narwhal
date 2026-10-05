@@ -1,5 +1,10 @@
 package io.github.yighy.orgline.ui
 
+import androidx.compose.foundation.layout.isImeVisible
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.border
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.ui.layout.layout
 import androidx.compose.runtime.key
@@ -305,7 +310,7 @@ fun NoteScreen(
                             checked = fabMenu,
                             onCheckedChange = { commit(); fabMenu = it },
                             modifier = Modifier.animateFloatingActionButton(
-                                visible = editing == Editing.None || fabMenu,
+                                visible = (editing == Editing.None && !WindowInsets.isImeVisible) || fabMenu,
                                 alignment = Alignment.BottomEnd,
                             ),
                         ) {
@@ -406,7 +411,10 @@ fun NoteScreen(
                     tags = note.tags,
                     allTags = library.tags,
                     focusOnStart = metaEdit == MetaEdit.Tags,
-                    onAdd = { tag -> viewModel.update(note) { e -> e.copy(tags = e.tags + tag) } },
+                    // Tags already there are not added twice (several can be typed before the note reloads)
+                    onAdd = { tag ->
+                        viewModel.update(note) { e -> if (e.tags.any { it.equals(tag, ignoreCase = true) }) e else e.copy(tags = e.tags + tag) }
+                    },
                     onRemove = { tag -> viewModel.update(note) { e -> e.copy(tags = e.tags.filterNot { it.equals(tag, ignoreCase = true) }) } },
                     onFocusLost = { if (metaEdit == MetaEdit.Tags) metaEdit = null },
                 )
@@ -510,7 +518,7 @@ fun NoteScreen(
                     val extra = 16.dp.roundToPx() * 2
                     val placeable = measurable.measure(constraints.copy(maxWidth = constraints.maxWidth + extra))
                     layout(constraints.maxWidth, placeable.height) { placeable.place(-extra / 2, 0) }
-                },
+                }.fadingEdges(addRow),
                 contentPadding = PaddingValues(horizontal = 16.dp),
             ) {
                 items(addChips, key = { it.first }) { (label, onClick) ->
@@ -647,6 +655,7 @@ private fun fieldStyle(style: TextStyle, end: Boolean = false) =
  * Tags as chips (a tap removes one) followed by a field adding tags: space, ":" or Done adds
  * what was typed, and existing tags containing it are suggested below.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun TagsEditor(
     tags: List<String>,
@@ -656,10 +665,14 @@ private fun TagsEditor(
     onRemove: (String) -> Unit,
     onFocusLost: () -> Unit,
 ) {
-    var text by remember { mutableStateOf("") }
+    var field by remember { mutableStateOf(TextFieldValue("")) }
+    val text = field.text
+    fun clear() { field = TextFieldValue("") }
+    // The + chip shows a field while typing
+    var typing by remember { mutableStateOf(focusOnStart) }
     val focus = remember { FocusRequester() }
     var focused by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) { if (focusOnStart) focus.requestFocus() }
+    LaunchedEffect(typing) { if (typing) focus.requestFocus() }
 
     fun add(raw: String) {
         raw.split(Regex("[\\s:]+"))
@@ -680,79 +693,98 @@ private fun TagsEditor(
         }
     }
 
-    val row = rememberLazyListState()
-    // Show the field after the last tag once one is added
-    var tagCount by remember { mutableIntStateOf(tags.size) }
-    LaunchedEffect(tags.size) {
-        if (tags.size > tagCount) row.animateScrollToItem(tags.size)
-        tagCount = tags.size
-    }
+    val suggestionRow = rememberLazyListState()
+    val chipShape = AssistChipDefaults.shape
+    val chipBorder = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
 
     Column(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.heightIn(min = 48.dp)) {
             Text("Tags", style = metaLabelStyle(), modifier = Modifier.width(130.dp))
-            LazyRow(
-                state = row,
-                modifier = Modifier.weight(1f),
+            FlowRow(
+                Modifier.weight(1f),
                 horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.End),
-                verticalAlignment = Alignment.CenterVertically,
+                itemVerticalAlignment = Alignment.CenterVertically,
             ) {
-                items(tags, key = { it.lowercase() }) { tag ->
-                    InputChip(
-                        selected = false,
-                        onClick = { onRemove(tag) },
-                        label = { Text(tag) },
-                        trailingIcon = { Icon(Icons.Default.Close, "Remove $tag", Modifier.size(InputChipDefaults.IconSize)) },
-                        modifier = Modifier.animateItem(fadeOutSpec = null),
-                    )
+                tags.forEach { tag ->
+                    key(tag.lowercase()) {
+                        Appear {
+                            InputChip(
+                                selected = false,
+                                onClick = { onRemove(tag) },
+                                label = { Text(tag) },
+                                trailingIcon = { Icon(Icons.Default.Close, "Remove $tag", Modifier.size(InputChipDefaults.IconSize)) },
+                            )
+                        }
+                    }
                 }
-                item(key = "field") {
+                if (typing) {
+                    // A field shaped like the chips
                     BasicTextField(
-                        value = text,
+                        value = field,
                         onValueChange = { typed ->
-                            if (typed.any { it.isWhitespace() || it == ':' }) {
-                                add(typed)
-                                text = ""
+                            if (typed.text.any { it.isWhitespace() || it == ':' }) {
+                                add(typed.text)
+                                clear()
                             } else {
-                                text = typed
+                                field = typed
                             }
                         },
                         singleLine = true,
-                        textStyle = fieldStyle(MaterialTheme.typography.bodyLarge, end = true),
+                        textStyle = fieldStyle(MaterialTheme.typography.labelLarge),
                         cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                        keyboardActions = KeyboardActions(onDone = { add(text); text = "" }),
+                        keyboardActions = KeyboardActions(onDone = { add(text); clear() }),
                         modifier = Modifier
-                            .animateItem(fadeOutSpec = null)
+                            .padding(vertical = 8.dp)
                             .width(110.dp)
+                            .height(32.dp)
                             .focusRequester(focus)
                             .onFocusChanged {
                                 if (focused && !it.isFocused) {
                                     add(text)
-                                    text = ""
+                                    clear()
+                                    typing = false
                                     onFocusLost()
                                 }
                                 focused = it.isFocused
                             },
-                        decorationBox = { field ->
-                            Box(contentAlignment = Alignment.CenterEnd) {
+                        decorationBox = { inner ->
+                            Box(
+                                Modifier
+                                    .border(chipBorder, chipShape)
+                                    .padding(horizontal = 12.dp),
+                                contentAlignment = Alignment.CenterStart,
+                            ) {
                                 if (text.isEmpty()) {
-                                    Text("Add tag", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text("Tag", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
-                                field()
+                                inner()
                             }
                         },
                     )
+                } else {
+                    // Small + chip
+                    Surface(
+                        onClick = { typing = true },
+                        shape = chipShape,
+                        border = chipBorder,
+                        modifier = Modifier.padding(vertical = 8.dp).size(32.dp),
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(Icons.Default.Add, "Add tag", Modifier.size(AssistChipDefaults.IconSize))
+                        }
+                    }
                 }
             }
         }
         AnimatedVisibility(suggestions.isNotEmpty()) {
             LazyRow(
-                Modifier.fillMaxWidth(),
+                state = suggestionRow,
+                modifier = Modifier.fillMaxWidth().fadingEdges(suggestionRow),
                 horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.End),
             ) {
                 items(suggestions, key = { it.lowercase() }) { tag ->
-                    SuggestionChip(onClick = { add(tag); text = "" }, label = { Text(tag) }, modifier = Modifier.animateItem(fadeOutSpec = null))
+                    SuggestionChip(onClick = { add(tag); clear() }, label = { Text(tag) }, modifier = Modifier.animateItem(fadeOutSpec = null))
                 }
             }
         }
