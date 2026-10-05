@@ -8,7 +8,6 @@ import android.os.PowerManager
 import android.provider.DocumentsContract
 import android.provider.Settings
 import android.text.format.DateFormat
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -86,10 +85,9 @@ fun SettingsScreen(
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState())) {
             ListItem(
-                headlineContent = { Text("Folder") },
+                onClick = onPickFolder,
                 supportingContent = { Text(library.folderUri?.let(::folderLabel) ?: "None") },
-                modifier = Modifier.clickable(onClick = onPickFolder),
-            )
+            ) { Text("Folder") }
             SwitchItem(
                 title = "Show note content in notebooks",
                 summary = "Display each note's text under its title in the outline",
@@ -98,10 +96,9 @@ fun SettingsScreen(
             )
 
             ListItem(
-                headlineContent = { Text("State keywords") },
+                onClick = { editKeywords = true },
                 supportingContent = { Text(settings.keywords.toSpec() + "\nFor files without a #+TODO: line") },
-                modifier = Modifier.clickable { editKeywords = true },
-            )
+            ) { Text("State keywords") }
 
             SwitchItem(
                 title = "Add an ID to new notes",
@@ -117,10 +114,9 @@ fun SettingsScreen(
             )
 
             ListItem(
-                headlineContent = { Text("Links to a renamed note") },
+                onClick = { pickLinkRenaming = true },
                 supportingContent = { Text(settings.linkRenaming.label + "\nLinks that still show the old title") },
-                modifier = Modifier.clickable { pickLinkRenaming = true },
-            )
+            ) { Text("Links to a renamed note") }
 
             SectionHeader("Reminders")
             SwitchItem(
@@ -149,10 +145,9 @@ fun SettingsScreen(
             )
             if (settings.remindAllDay) {
                 ListItem(
-                    headlineContent = { Text("Time for dates without a time") },
+                    onClick = { pickAllDayTime = true },
                     supportingContent = { Text(settings.allDayTime.format(DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT))) },
-                    modifier = Modifier.clickable { pickAllDayTime = true },
-                )
+                ) { Text("Time for dates without a time") }
             }
 
             SectionHeader("Reliability")
@@ -247,25 +242,26 @@ private fun SectionHeader(title: String) {
 @Composable
 private fun SwitchItem(title: String, summary: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
     ListItem(
-        headlineContent = { Text(title) },
+        onClick = { onCheckedChange(!checked) },
         supportingContent = { Text(summary) },
         trailingContent = { Switch(checked = checked, onCheckedChange = onCheckedChange) },
-        modifier = Modifier.clickable { onCheckedChange(!checked) },
-    )
+    ) { Text(title) }
 }
 
 @Composable
 private fun StatusItem(title: String, ok: Boolean, okText: String, problemText: String, onFix: () -> Unit) {
-    ListItem(
-        headlineContent = { Text(title) },
-        supportingContent = {
-            Text(
-                if (ok) okText else problemText,
-                color = if (ok) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error,
-            )
-        },
-        modifier = if (ok) Modifier else Modifier.clickable(onClick = onFix),
-    )
+    val status: @Composable () -> Unit = {
+        Text(
+            if (ok) okText else problemText,
+            color = if (ok) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error,
+        )
+    }
+    // A tap fixes it, only when there is something to fix
+    if (ok) {
+        ListItem(supportingContent = status) { Text(title) }
+    } else {
+        ListItem(onClick = onFix, supportingContent = status) { Text(title) }
+    }
 }
 
 /** "primary:Documents/org" → "Documents/org". */

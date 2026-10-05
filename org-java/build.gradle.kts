@@ -9,6 +9,5 @@ java {
 }
 
 dependencies {
-    implementation("joda-time:joda-time:2.14.0")
     compileOnly("org.jetbrains:annotations:18.0.0")
 }

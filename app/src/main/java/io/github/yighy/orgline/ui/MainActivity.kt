@@ -4,9 +4,6 @@ import kotlinx.coroutines.delay
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.lifecycleScope
-import androidx.compose.material3.IconButton
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import io.github.yighy.orgline.core.IdLinks

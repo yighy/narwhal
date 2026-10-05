@@ -1,5 +1,6 @@
 package io.github.yighy.orgline.data
 
+import android.content.SharedPreferences
 import org.json.JSONObject
 import org.json.JSONArray
 import android.content.Context
@@ -99,55 +100,33 @@ class AppSettings(context: Context) {
         get() = prefs.getBoolean(KEY_ASKED_NOTIFICATIONS, false)
         set(value) = prefs.edit().putBoolean(KEY_ASKED_NOTIFICATIONS, value).apply()
 
-    fun setShowContentInNotebook(show: Boolean) {
-        prefs.edit().putBoolean(KEY_SHOW_CONTENT, show).apply()
-        _values.update { it.copy(showContentInNotebook = show) }
+    /** Saves a setting with [edit] and updates [values] with [change]. */
+    private fun save(edit: SharedPreferences.Editor.() -> Unit, change: (Values) -> Values) {
+        prefs.edit().apply(edit).apply()
+        _values.update(change)
     }
 
-    fun setRemindScheduled(on: Boolean) {
-        prefs.edit().putBoolean(KEY_REMIND_SCHEDULED, on).apply()
-        _values.update { it.copy(remindScheduled = on) }
-    }
+    fun setShowContentInNotebook(show: Boolean) =
+        save({ putBoolean(KEY_SHOW_CONTENT, show) }) { it.copy(showContentInNotebook = show) }
 
-    fun setAddCreatedToNewNotes(on: Boolean) {
-        prefs.edit().putBoolean(KEY_ADD_CREATED, on).apply()
-        _values.update { it.copy(addCreatedToNewNotes = on) }
-    }
+    fun setRemindScheduled(on: Boolean) = save({ putBoolean(KEY_REMIND_SCHEDULED, on) }) { it.copy(remindScheduled = on) }
 
-    fun setUseAlarmClock(on: Boolean) {
-        prefs.edit().putBoolean(KEY_ALARM_CLOCK, on).apply()
-        _values.update { it.copy(useAlarmClock = on) }
-    }
+    fun setRemindDeadline(on: Boolean) = save({ putBoolean(KEY_REMIND_DEADLINE, on) }) { it.copy(remindDeadline = on) }
 
-    fun setRemindDeadline(on: Boolean) {
-        prefs.edit().putBoolean(KEY_REMIND_DEADLINE, on).apply()
-        _values.update { it.copy(remindDeadline = on) }
-    }
+    fun setRemindAllDay(on: Boolean) = save({ putBoolean(KEY_REMIND_ALL_DAY, on) }) { it.copy(remindAllDay = on) }
 
-    fun setRemindAllDay(on: Boolean) {
-        prefs.edit().putBoolean(KEY_REMIND_ALL_DAY, on).apply()
-        _values.update { it.copy(remindAllDay = on) }
-    }
+    fun setAllDayTime(time: LocalTime) =
+        save({ putInt(KEY_ALL_DAY_MINUTES, time.hour * 60 + time.minute) }) { it.copy(allDayTime = time) }
 
-    fun setAllDayTime(time: LocalTime) {
-        prefs.edit().putInt(KEY_ALL_DAY_MINUTES, time.hour * 60 + time.minute).apply()
-        _values.update { it.copy(allDayTime = time) }
-    }
+    fun setAddIdToNewNotes(on: Boolean) = save({ putBoolean(KEY_ADD_ID, on) }) { it.copy(addIdToNewNotes = on) }
 
-    fun setAddIdToNewNotes(on: Boolean) {
-        prefs.edit().putBoolean(KEY_ADD_ID, on).apply()
-        _values.update { it.copy(addIdToNewNotes = on) }
-    }
+    fun setAddCreatedToNewNotes(on: Boolean) = save({ putBoolean(KEY_ADD_CREATED, on) }) { it.copy(addCreatedToNewNotes = on) }
 
-    fun setLinkRenaming(mode: LinkRenaming) {
-        prefs.edit().putString(KEY_LINK_RENAMING, mode.name).apply()
-        _values.update { it.copy(linkRenaming = mode) }
-    }
+    fun setUseAlarmClock(on: Boolean) = save({ putBoolean(KEY_ALARM_CLOCK, on) }) { it.copy(useAlarmClock = on) }
 
-    fun setKeywords(keywords: Keywords) {
-        prefs.edit().putString(KEY_KEYWORDS, keywords.toSpec()).apply()
-        _values.update { it.copy(keywords = keywords) }
-    }
+    fun setLinkRenaming(mode: LinkRenaming) = save({ putString(KEY_LINK_RENAMING, mode.name) }) { it.copy(linkRenaming = mode) }
+
+    fun setKeywords(keywords: Keywords) = save({ putString(KEY_KEYWORDS, keywords.toSpec()) }) { it.copy(keywords = keywords) }
 
     companion object {
         private const val KEY_KEYWORDS = "keywords"

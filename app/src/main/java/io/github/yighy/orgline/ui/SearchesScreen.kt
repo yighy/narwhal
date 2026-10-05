@@ -1,8 +1,6 @@
 package io.github.yighy.orgline.ui
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -24,7 +22,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
-import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -48,7 +45,7 @@ import androidx.compose.ui.unit.dp
  * Saved searches: a tap runs one over all notebooks, the pencil edits it. A long press selects:
  * the selection can be deleted, and a single one moved up or down.
  */
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SearchesScreen(viewModel: AppViewModel, snackbar: SnackbarHostState) {
     val searches by viewModel.savedSearches.collectAsState()
@@ -110,7 +107,9 @@ fun SearchesScreen(viewModel: AppViewModel, snackbar: SnackbarHostState) {
             itemsIndexed(searches, key = { i, _ -> keys[i] }) { index, search ->
                 val isSelected = index in selected
                 ListItem(
-                    headlineContent = { Text(search.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                    selected = isSelected,
+                    onClick = { if (selecting) toggle(index) else viewModel.runSavedSearch(search) },
+                    onLongClick = { toggle(index) },
                     supportingContent = { Text(search.query, maxLines = 2, overflow = TextOverflow.Ellipsis) },
                     leadingContent = {
                         if (isSelected) {
@@ -127,16 +126,8 @@ fun SearchesScreen(viewModel: AppViewModel, snackbar: SnackbarHostState) {
                             IconButton(onClick = { viewModel.editSavedSearch(index) }) { Icon(Icons.Default.Edit, "Edit ${search.name}") }
                         }
                     },
-                    colors = ListItemDefaults.colors(
-                        containerColor = if (isSelected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface,
-                    ),
-                    modifier = Modifier
-                        .animateItem()
-                        .combinedClickable(
-                            onClick = { if (selecting) toggle(index) else viewModel.runSavedSearch(search) },
-                            onLongClick = { toggle(index) },
-                        ),
-                )
+                    modifier = Modifier.animateItem(),
+                ) { Text(search.name, maxLines = 1, overflow = TextOverflow.Ellipsis) }
             }
         }
     }

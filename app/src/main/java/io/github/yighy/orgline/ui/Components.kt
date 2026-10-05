@@ -61,7 +61,6 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -72,7 +71,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
@@ -85,7 +83,6 @@ import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialShapes
@@ -106,7 +103,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLinkStyles
@@ -437,11 +433,14 @@ fun NoteLine(
                 Text(displayTitle(note.title), style = titleStyle, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = titleModifier)
             }
         }
-        val details = buildList {
-            if (note.tags.isNotEmpty()) add(note.tags.joinToString(" ") { "#$it" })
-            note.scheduled?.let { add("Scheduled " + OrgTime.display(it)) }
-            note.deadline?.let { add("Deadline " + OrgTime.display(it)) }
-            subtitle?.let { add(it) }
+        // Timestamps are parsed once per note, not on every redraw of the list
+        val details = remember(note.tags, note.scheduled, note.deadline, subtitle) {
+            buildList {
+                if (note.tags.isNotEmpty()) add(note.tags.joinToString(" ") { "#$it" })
+                note.scheduled?.let { add("Scheduled " + OrgTime.display(it)) }
+                note.deadline?.let { add("Deadline " + OrgTime.display(it)) }
+                subtitle?.let { add(it) }
+            }
         }
         if (details.isNotEmpty()) {
             Text(

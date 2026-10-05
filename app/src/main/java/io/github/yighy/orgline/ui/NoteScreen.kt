@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.border
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.ui.layout.layout
 import androidx.compose.runtime.key
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -74,11 +73,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Share
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
@@ -89,14 +86,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.TopAppBar
 import androidx.compose.ui.graphics.RectangleShape
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -322,10 +317,9 @@ fun NoteScreen(
                         LazyColumn(Modifier.heightIn(max = 240.dp)) {
                             items(fileSuggestions, key = { it.uri }) { target ->
                                 ListItem(
-                                    headlineContent = { Text(target.title) },
+                                    onClick = { insertFileLink(target) },
                                     supportingContent = { Text(target.ref.path, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                                    modifier = Modifier.clickable { insertFileLink(target) },
-                                )
+                                ) { Text(target.title) }
                             }
                         }
                     }
@@ -335,15 +329,14 @@ fun NoteScreen(
                         LazyColumn(Modifier.heightIn(max = 240.dp)) {
                             items(suggestions, key = { it.fileUri + "#" + it.index }) { target ->
                                 ListItem(
-                                    headlineContent = { Text(displayTitle(target.title)) },
+                                    onClick = { insertLink(target) },
                                     supportingContent = {
                                         val targetFile = library.file(target.fileUri)
                                         val path = listOf(targetFile?.title ?: target.fileName) +
                                             targetFile?.notes?.let { NoteTree.ancestors(it, target.index) }.orEmpty().map { displayTitle(it.title) }
                                         Text(path.joinToString("  ›  "), maxLines = 1, overflow = TextOverflow.Ellipsis)
                                     },
-                                    modifier = Modifier.clickable { insertLink(target) },
-                                )
+                                ) { Text(displayTitle(target.title)) }
                             }
                         }
                     }

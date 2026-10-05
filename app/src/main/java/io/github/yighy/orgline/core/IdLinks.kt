@@ -10,8 +10,6 @@ object IdLinks {
 
     private const val MAX_QUERY_LENGTH = 60
 
-    private val LINK = Regex("""\[\[id:([^\]]+)](?:\[([^\]]*)])?]""")
-
     /**
      * Returns the "id:" query (or another [prefix], such as "file:") being typed just before
      * [cursor], or null. Ignores one inside an existing link ("[[id:...") or in the middle of a word.
@@ -69,10 +67,10 @@ object IdLinks {
         }
     }
 
-    fun find(text: String): List<Link> =
-        LINK.findAll(text).map { m ->
-            Link(m.range, m.groupValues[1].trim(), m.groupValues[2].ifEmpty { null })
-        }.toList()
+    /** The [[id:…]] links of [text]. */
+    fun find(text: String): List<Link> = Links.find(text)
+        .filter { it.target.startsWith("id:", ignoreCase = true) }
+        .map { Link(it.range, it.target.substring(3).trim(), it.description) }
 
     /**
      * Gives the links to [id] described as [oldTitle] the description of [newTitle].
