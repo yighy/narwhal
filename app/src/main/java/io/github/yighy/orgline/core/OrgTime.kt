@@ -53,7 +53,16 @@ object OrgTime {
     data class Repeat(val type: String, val every: Int, val unit: Char, val rest: String = "") {
         override fun toString() = "$type$every$unit$rest"
 
+        /** E.g. "every week (+)", "every 2 days from done (.+)". */
+        fun describe(): String {
+            val name = UNITS.getValue(unit)
+            val interval = if (every == 1) "every $name" else "every $every ${name}s"
+            val from = if (type == ".+") " from done" else ""
+            return "$interval$from ($type)"
+        }
+
         companion object {
+            private val UNITS = mapOf('h' to "hour", 'd' to "day", 'w' to "week", 'm' to "month", 'y' to "year")
             private val PATTERN = Regex("""^(\.\+|\+\+|\+)(\d+)([hdwmy])(/\d+[hdwmy])?$""")
 
             fun parse(text: String?): Repeat? {
@@ -66,13 +75,13 @@ object OrgTime {
     private val dateFormat = DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)
     private val timeFormat = DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)
 
-    /** Human-readable form, e.g. "Mon, Oct 5, 2026 · 09:00 · repeats +1w". */
+    /** Human-readable form, e.g. "Mon, Oct 5, 2026 · 09:00 · every week (+)". */
     fun display(timestamp: String?): String? {
         val p = parts(timestamp) ?: return timestamp
         return buildList {
             add(p.date.dayOfWeek.getDisplayName(java.time.format.TextStyle.SHORT, java.util.Locale.getDefault()) + ", " + p.date.format(dateFormat))
             p.time?.let { add(it.format(timeFormat)) }
-            p.repeater?.let { add("repeats $it") }
+            p.repeater?.let { add(Repeat.parse(it)?.describe() ?: "repeats $it") }
         }.joinToString(" · ")
     }
 }

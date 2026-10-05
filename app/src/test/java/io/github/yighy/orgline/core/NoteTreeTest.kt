@@ -61,5 +61,9 @@ class NoteTreeTest {
         assertEquals(OrgTime.Repeat(".+", 2, 'd', "/4d"), OrgTime.Repeat.parse(".+2d/4d"))
         assertEquals("++3w", OrgTime.Repeat("++", 3, 'w').toString())
         assertNull(OrgTime.Repeat.parse("every week"))
+
+        assertEquals("every week (+)", OrgTime.Repeat.parse("+1w")!!.describe())
+        assertEquals("every 3 months (++)", OrgTime.Repeat.parse("++3m")!!.describe())
+        assertEquals("every 2 days from done (.+)", OrgTime.Repeat.parse(".+2d/4d")!!.describe())
     }
 }

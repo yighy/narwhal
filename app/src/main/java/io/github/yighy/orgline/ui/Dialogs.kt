@@ -1,5 +1,11 @@
 package io.github.yighy.orgline.ui
 
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.background
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.layout.width
@@ -343,7 +349,21 @@ private fun RepeatPicker(repeat: OrgTime.Repeat?, onChange: (OrgTime.Repeat?) ->
             verticalAlignment = Alignment.CenterVertically,
         ) {
             RadioButton(selected = repeat.type == type, onClick = { onChange(repeat.copy(type = type, rest = "")) })
-            Text(label, style = MaterialTheme.typography.bodyMedium)
+            // The symbol as written in the file, for those who know Org
+            Text(
+                type,
+                style = MaterialTheme.typography.labelLarge.copy(fontFamily = FontFamily.Monospace),
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(MaterialTheme.colorScheme.secondaryContainer)
+                    .width(32.dp)
+                    .padding(vertical = 2.dp),
+            )
+            Spacer(Modifier.width(12.dp))
+            Text(label, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
         }
     }
 }
