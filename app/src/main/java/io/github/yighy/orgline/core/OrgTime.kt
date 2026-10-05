@@ -54,6 +54,14 @@ object OrgTime {
         return OrgRange(builder.build()).toString()
     }
 
+    private val ACTIVE = Regex("""<\d{4}-\d{2}-\d{2}[^<>\n]*>""")
+
+    /** Active timestamps written in [text] (Org's events), e.g. "Meeting <2026-10-06 Tue 14:00>". */
+    fun events(text: String): List<String> = ACTIVE.findAll(text).map { it.value }.filter { range(it) != null }.toList()
+
+    /** Events of a note: active timestamps in its title and content (not its planning line). */
+    fun events(note: OrgNote): List<String> = events(note.title + "\n" + note.content)
+
     /** A repeater split into its parts: "++2w" is ("++", 2, 'w'), "/4d" habit part kept in [rest]. */
     data class Repeat(val type: String, val every: Int, val unit: Char, val rest: String = "") {
         override fun toString() = "$type$every$unit$rest"

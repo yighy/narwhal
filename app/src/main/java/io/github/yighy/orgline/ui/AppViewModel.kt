@@ -38,6 +38,7 @@ sealed interface Screen {
     data class Note(val fileUri: String, val index: Int) : Screen
     data object Settings : Screen
     data object Agenda : Screen
+    data object Searches : Screen
 
     /**
      * A note being created: nothing is written to the file until it gets a title.
@@ -182,6 +183,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun openSettings() = push(Screen.Settings)
+
+    fun openSearches() {
+        if (stack.last() != Screen.Searches) push(Screen.Searches)
+    }
 
     fun openAgenda() {
         if (stack.last() != Screen.Agenda) push(Screen.Agenda)

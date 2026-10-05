@@ -35,6 +35,35 @@ class QueryTest {
     private fun titles(query: String) = SearchQuery.parse(query).apply(notes, ctx).map { it.title }
 
     @Test
+    fun eventsCreatedAndAgendaDays() {
+        val doc = OrgDocument.parse(
+            """
+            * Meeting
+              Room 4 <2026-10-06 Tue 14:00>
+            * Old idea
+              :PROPERTIES:
+              :CREATED:  [2026-09-01 Tue 10:00]
+              :END:
+            * Plain
+            """.trimIndent() + "\n",
+        )
+        val notes = OrgNote.fromDocument(doc, "u", "n.org")
+        val ctx = ctx.copy(keywords = { doc.keywords }, inheritedTags = { emptyList() })
+        fun titles(query: String) = SearchQuery.parse(query).apply(notes, ctx).map { it.title }
+
+        assertEquals(listOf("Meeting"), titles("e.tomorrow"))
+        assertEquals(listOf("Old idea", "Plain"), titles("e.none"))
+        assertEquals(listOf("Old idea"), titles("cr.le.-1m"))
+        assertEquals(listOf("Old idea", "Meeting", "Plain"), titles("o.cr"))
+        // ad. does not filter, it shows the results as an agenda
+        assertEquals(7, SearchQuery.parse(".it.done ad.7").agendaDays)
+        assertEquals(listOf("Meeting", "Old idea", "Plain"), titles("ad.7"))
+
+        val agenda = Agenda.build(notes, ctx.now.toLocalDate(), 7)
+        assertEquals(listOf(Agenda.Kind.Event), agenda.days[1].entries.map { it.kind })
+    }
+
+    @Test
     fun states() {
         assertEquals(listOf("Write report"), titles("i.todo"))
         assertEquals(listOf("Write report", "Collect numbers", "Call back"), titles("it.todo"))

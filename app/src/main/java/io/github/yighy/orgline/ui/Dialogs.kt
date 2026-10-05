@@ -204,9 +204,11 @@ fun TimestampDialog(
             }
         }
         val shownTime = { LocalTime.of(timeState.hour, timeState.minute) }
+        // An end time must come after the start
+        val endTooEarly = hasEnd && !LocalTime.of(endState.hour, endState.minute).isAfter(shownTime())
         AlertDialog(
-            // Closing keeps the date with the time shown
-            onDismissRequest = { onConfirm(result(shownTime())) },
+            // Closing keeps the date with the time shown (not with an end before the start)
+            onDismissRequest = { if (endTooEarly) onDismiss() else onConfirm(result(shownTime())) },
             title = { Text("Time") },
             text = {
                 Column(Modifier.verticalScroll(rememberScrollState())) {
@@ -220,12 +222,21 @@ fun TimestampDialog(
                         Switch(checked = hasEnd, onCheckedChange = null)
                     }
                     AnimatedVisibility(hasEnd) {
-                        TimeInput(state = endState, modifier = Modifier.padding(top = 8.dp))
+                        Column {
+                            TimeInput(state = endState, modifier = Modifier.padding(top = 8.dp))
+                            if (endTooEarly) {
+                                Text(
+                                    "The end time must be after the start.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.error,
+                                )
+                            }
+                        }
                     }
                     RepeatPicker(repeat) { repeat = it; repeatChanged = true }
                 }
             },
-            confirmButton = { TextButton(onClick = { onConfirm(result(shownTime())) }) { Text("OK") } },
+            confirmButton = { TextButton(enabled = !endTooEarly, onClick = { onConfirm(result(shownTime())) }) { Text("OK") } },
             dismissButton = { TextButton(onClick = { onConfirm(result(null)) }) { Text("No time") } },
         )
     }

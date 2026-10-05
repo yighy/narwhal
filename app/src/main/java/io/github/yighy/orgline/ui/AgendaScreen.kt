@@ -1,5 +1,6 @@
 package io.github.yighy.orgline.ui
 
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -82,30 +83,40 @@ fun AgendaScreen(
                     if (!notificationsAllowed) {
                         item(key = "notifications") { NotificationsCard(onAllowNotifications) }
                     }
-                    if (agenda.overdue.isNotEmpty()) {
-                        item(key = "overdue") { DayHeader("Overdue", MaterialTheme.colorScheme.error) }
-                        items(agenda.overdue, key = { "overdue-" + entryKey(it) }) { entry ->
-                            AgendaRow(viewModel, library, entry, today, overdue = true)
-                        }
-                    }
-                    agenda.days.forEach { day ->
-                        item(key = "day-${day.date}") { DayHeader(dayLabel(day.date, today), MaterialTheme.colorScheme.primary) }
-                        if (day.entries.isEmpty()) {
-                            item(key = "empty-${day.date}") {
-                                Text(
-                                    "Nothing planned",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-                                )
-                            }
-                        }
-                        items(day.entries, key = { "${day.date}-" + entryKey(it) }) { entry ->
-                            AgendaRow(viewModel, library, entry, today, overdue = false)
-                        }
-                    }
+                    agendaItems(viewModel, library, agenda, today)
                 }
             }
+        }
+    }
+}
+
+/** Overdue entries, then each day with its entries (agenda screen, and searches with ad.). */
+fun LazyListScope.agendaItems(
+    viewModel: AppViewModel,
+    library: NoteRepository.Library,
+    agenda: Agenda.Result,
+    today: LocalDate,
+) {
+    if (agenda.overdue.isNotEmpty()) {
+        item(key = "overdue") { DayHeader("Overdue", MaterialTheme.colorScheme.error) }
+        items(agenda.overdue, key = { "overdue-" + entryKey(it) }) { entry ->
+            AgendaRow(viewModel, library, entry, today, overdue = true)
+        }
+    }
+    agenda.days.forEach { day ->
+        item(key = "day-${day.date}") { DayHeader(dayLabel(day.date, today), MaterialTheme.colorScheme.primary) }
+        if (day.entries.isEmpty()) {
+            item(key = "empty-${day.date}") {
+                Text(
+                    "Nothing planned",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                )
+            }
+        }
+        items(day.entries, key = { "${day.date}-" + entryKey(it) }) { entry ->
+            AgendaRow(viewModel, library, entry, today, overdue = false)
         }
     }
 }
@@ -193,7 +204,13 @@ private fun AgendaRow(
                 }
                 val deadline = entry.kind == Agenda.Kind.Deadline
                 val details = buildList {
-                    add(if (deadline) "Deadline" else "Scheduled")
+                    add(
+                        when (entry.kind) {
+                            Agenda.Kind.Scheduled -> "Scheduled"
+                            Agenda.Kind.Deadline -> "Deadline"
+                            Agenda.Kind.Event -> "Event"
+                        },
+                    )
                     if (overdue) {
                         val late = entry.daysLate(today)
                         add(if (late == 1L) "1 day late" else "$late days late")

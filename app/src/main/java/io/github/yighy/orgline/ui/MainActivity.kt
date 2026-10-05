@@ -192,7 +192,7 @@ fun OrglineApp(viewModel: AppViewModel, notificationsAllowed: Boolean, onAllowNo
                 NavigationDrawerItem(
                     label = { Text("Notebooks") },
                     icon = { Icon(Icons.Default.Home, null) },
-                    selected = top != Screen.Agenda,
+                    selected = top != Screen.Agenda && top != Screen.Searches,
                     onClick = { close(viewModel::openHome) },
                     modifier = Modifier.padding(horizontal = 12.dp),
                 )
@@ -203,30 +203,16 @@ fun OrglineApp(viewModel: AppViewModel, notificationsAllowed: Boolean, onAllowNo
                     onClick = { close(viewModel::openAgenda) },
                     modifier = Modifier.padding(horizontal = 12.dp),
                 )
-                // Saved searches, run over all notebooks
+                // Saved searches, shown once there is one
                 val searches by viewModel.savedSearches.collectAsState()
                 if (searches.isNotEmpty()) {
-                    HorizontalDivider(Modifier.padding(vertical = 8.dp, horizontal = 28.dp))
-                    Text(
-                        "Searches",
-                        style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(start = 28.dp, top = 8.dp, bottom = 8.dp),
+                    NavigationDrawerItem(
+                        label = { Text("Searches") },
+                        icon = { Icon(Icons.Default.Search, null) },
+                        selected = top == Screen.Searches,
+                        onClick = { close(viewModel::openSearches) },
+                        modifier = Modifier.padding(horizontal = 12.dp),
                     )
-                    searches.forEachIndexed { index, search ->
-                        NavigationDrawerItem(
-                            label = { Text(search.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                            icon = { Icon(Icons.Default.Search, null) },
-                            selected = false,
-                            onClick = { close { viewModel.runSavedSearch(search) } },
-                            badge = {
-                                IconButton(onClick = { viewModel.editSavedSearch(index) }) {
-                                    Icon(Icons.Default.Edit, "Edit ${search.name}")
-                                }
-                            },
-                            modifier = Modifier.padding(horizontal = 12.dp),
-                        )
-                    }
                 }
                 HorizontalDivider(Modifier.padding(vertical = 8.dp, horizontal = 28.dp))
                 NavigationDrawerItem(
@@ -329,6 +315,8 @@ private fun ScreenContent(
         Screen.Notebooks -> HomeScreen(viewModel, library, snackbar, onOpenDrawer)
 
         is Screen.NewNote -> NoteScreen(viewModel, library, viewModel.draftNote(screen), snackbar, newNote = screen)
+
+        Screen.Searches -> SearchesScreen(viewModel)
 
         Screen.Settings -> SettingsScreen(viewModel, library, onPickFolder, notificationsAllowed, onAllowNotifications)
 

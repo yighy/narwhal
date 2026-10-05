@@ -10,14 +10,22 @@ import java.time.temporal.ChronoUnit
  * - `b.NAME` notebook, `i.STATE` state keyword, `it.todo|done|none` state type
  * - `t.TAG` tag (own or inherited), `tn.TAG` own tag
  * - `p.X` priority (unset counts as B), `ps.X` priority that is set
- * - `s.`, `d.`, `c.` scheduled, deadline, closed: `s.today`, `d.le.3d`, `c.eq.yesterday`, `s.none`;
+ * - `s.`, `d.`, `c.`, `e.`, `cr.` scheduled, deadline, closed, event (an active timestamp in the
+ *   title or content), created (CREATED property): `s.today`, `d.le.3d`, `c.eq.yesterday`, `s.none`;
  *   relations eq ne lt le gt ge (default le, eq for closed); intervals now, today, tomorrow,
  *   yesterday, none, or Nh Nd Nw Nm Ny
+ * - `ad.N` shows the results as an agenda of N days (it does not filter)
  * - `.` before a condition negates it; `and` (default), `or`, parentheses
- * - `o.FIELD` sort (notebook, title, scheduled, deadline, closed, priority, state, position), `.o.` descending
+ * - `o.FIELD` sort (notebook, title, scheduled, deadline, closed, event, created, priority, state,
+ *   position), `.o.` descending
  * - anything else is text searched in titles, content and tags; "quoted text" keeps spaces
  */
-class SearchQuery private constructor(private val condition: Condition?, private val orders: List<Order>) {
+class SearchQuery private constructor(
+    private val condition: Condition?,
+    private val orders: List<Order>,
+    /** Days of agenda to show the results as (`ad.N`), or null for a list. */
+    val agendaDays: Int?,
+) {
 
     /** What a note is matched against, besides the note itself. */
     data class Context(
@@ -105,14 +113,13 @@ class SearchQuery private constructor(private val condition: Condition?, private
     /** A planning time compared to a moment relative to now, as Orgzly does. */
     private data class Time(val field: TimeField, val relation: Relation, val interval: Interval) : Condition {
         override fun matches(note: OrgNote, ctx: Context): Boolean {
-            val timestamp = when (field) {
-                TimeField.Scheduled -> note.scheduled?.takeIf { it.startsWith("<") }
-                TimeField.Deadline -> note.deadline?.takeIf { it.startsWith("<") }
-                TimeField.Closed -> note.closed
-                // Not read from notes yet: these conditions don't filter
-                TimeField.Event, TimeField.Created -> return true
-            }
-            if (interval.none) return timestamp == null
+            val timestamps = timestamps(note, field)
+            if (interval.none) return timestamps.isEmpty()
+            // A note with several events matches if one of them does
+            return timestamps.any { matches(it, ctx) }
+        }
+
+        private fun matches(timestamp: String, ctx: Context): Boolean {
             val parts = OrgTime.parts(timestamp) ?: return false
             val at = parts.date.atTime(parts.time ?: LocalTime.MIDNIGHT)
 
@@ -168,7 +175,7 @@ class SearchQuery private constructor(private val condition: Condition?, private
 
     // ---- Sort orders ----
 
-    enum class OrderField { Notebook, Title, Scheduled, Deadline, Closed, Priority, State, Position }
+    enum class OrderField { Notebook, Title, Scheduled, Deadline, Closed, Event, Created, Priority, State, Position }
 
     private data class Order(val field: OrderField, val descending: Boolean) {
         fun comparator(ctx: Context): Comparator<OrgNote> {
@@ -180,6 +187,9 @@ class SearchQuery private constructor(private val condition: Condition?, private
                 OrderField.Scheduled -> compareBy(nullsLast()) { time(it.scheduled) }
                 OrderField.Deadline -> compareBy(nullsLast()) { time(it.deadline) }
                 OrderField.Closed -> compareBy(nullsLast()) { time(it.closed) }
+                // The earliest event
+                OrderField.Event -> compareBy(nullsLast()) { note -> timestamps(note, TimeField.Event).mapNotNull(::time).minOrNull() }
+                OrderField.Created -> compareBy(nullsLast()) { time(it.property(CREATED_PROPERTY)) }
                 OrderField.Priority -> compareBy { (it.priority ?: DEFAULT_PRIORITY).uppercase() }
                 OrderField.State -> compareBy { note ->
                     val keywords = ctx.keywords(note).all
@@ -195,6 +205,20 @@ class SearchQuery private constructor(private val condition: Condition?, private
         /** Org's default priority, used for notes without one. */
         const val DEFAULT_PRIORITY = "B"
 
+        /** Property holding when a note was created (Orgzly's default). */
+        const val CREATED_PROPERTY = "CREATED"
+
+        private val AGENDA_DAYS = Regex("""^ad\.(\d{1,3})$""")
+
+        /** The note's times for [field]: one planning time, its events, or its CREATED property. */
+        private fun timestamps(note: OrgNote, field: TimeField): List<String> = when (field) {
+            TimeField.Scheduled -> listOfNotNull(note.scheduled?.takeIf { it.startsWith("<") })
+            TimeField.Deadline -> listOfNotNull(note.deadline?.takeIf { it.startsWith("<") })
+            TimeField.Closed -> listOfNotNull(note.closed)
+            TimeField.Event -> OrgTime.events(note)
+            TimeField.Created -> listOfNotNull(note.property(CREATED_PROPERTY))
+        }
+
         private val TOKEN = Regex(""""[^"\\]*(?:\\.[^"\\]*)*"|[^")(\s]*"[^"\\]*(?:\\.[^"\\]*)*"|\(|\)|[^")(\s]+""")
         private val TIME = Regex("""^(e|s|d|c|cr)(?:\.(eq|ne|lt|le|gt|ge))?\.(.+)$""")
         private val ORDERS = listOf(
@@ -203,16 +227,21 @@ class SearchQuery private constructor(private val condition: Condition?, private
             Regex("""^o\.(?:scheduled|sched|s)$""") to OrderField.Scheduled,
             Regex("""^o\.(?:deadline|dead|d)$""") to OrderField.Deadline,
             Regex("""^o\.(?:closed|close|c)$""") to OrderField.Closed,
+            Regex("""^o\.(?:event|e)$""") to OrderField.Event,
+            Regex("""^o\.(?:created|cr)$""") to OrderField.Created,
             Regex("""^o\.(?:priority|prio|pri|p)$""") to OrderField.Priority,
             Regex("""^o\.(?:state|st)$""") to OrderField.State,
             Regex("""^o\.(?:position|pos)$""") to OrderField.Position,
         )
 
         fun parse(query: String): SearchQuery {
-            val tokens = TOKEN.findAll(query).map { it.value }.toList()
+            val all = TOKEN.findAll(query).map { it.value }.toList()
+            // ad.N changes how results are shown, not which ones
+            val agendaDays = all.firstNotNullOfOrNull { AGENDA_DAYS.matchEntire(it)?.groupValues?.get(1)?.toInt() }
+            val tokens = all.filterNot { AGENDA_DAYS.matches(it) }
             val orders = mutableListOf<Order>()
             val parser = Parser(tokens, orders)
-            return SearchQuery(parser.expression(), orders)
+            return SearchQuery(parser.expression(), orders, agendaDays?.coerceIn(1, 366))
         }
 
         private fun unquote(s: String): String =
@@ -265,8 +294,8 @@ class SearchQuery private constructor(private val condition: Condition?, private
                 "le" -> Relation.LE
                 "gt" -> Relation.GT
                 "ge" -> Relation.GE
-                // Orgzly's defaults: on that day for closed and events, by then for the others
-                else -> if (field == TimeField.Closed || field == TimeField.Event) Relation.EQ else Relation.LE
+                // Orgzly's defaults: on that day for closed, by then for the others
+                else -> if (field == TimeField.Closed) Relation.EQ else Relation.LE
             }
             val interval = Interval.parse(unquote(m.groupValues[3])) ?: return null
             return Time(field, relation, interval)

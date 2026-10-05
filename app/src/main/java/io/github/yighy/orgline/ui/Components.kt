@@ -1,5 +1,7 @@
 package io.github.yighy.orgline.ui
 
+import java.time.LocalDate
+import io.github.yighy.orgline.core.Agenda
 import androidx.compose.runtime.MutableState
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.animation.core.CubicBezierEasing
@@ -355,8 +357,14 @@ fun SearchResults(
     // Orgzly-style query; the selected tag chip adds a t. condition
     val queryText = listOfNotNull(viewModel.query, viewModel.tag?.let { "t.\"$it\"" }).joinToString(" ")
     val context = remember(library) { searchContext(library) }
-    val results = remember(queryText, notes, context) {
-        if (idle) emptyList() else SearchQuery.parse(queryText).apply(notes, context)
+    val query = remember(queryText) { SearchQuery.parse(queryText) }
+    val results = remember(query, notes, context) {
+        if (idle) emptyList() else query.apply(notes, context)
+    }
+    // ad.N: the matching notes as an agenda of N days
+    val today = LocalDate.now()
+    val agenda = remember(query, results, today) {
+        query.agendaDays?.takeIf { !idle }?.let { Agenda.build(results, today, it) }
     }
     Column(modifier) {
         if (tags.isNotEmpty()) {
@@ -374,6 +382,10 @@ fun SearchResults(
             }
         }
         LazyColumn(contentPadding = PaddingValues(bottom = 112.dp)) {
+            if (agenda != null) {
+                agendaItems(viewModel, library, agenda, today)
+                return@LazyColumn
+            }
             if (results.isEmpty()) {
                 item {
                     Text(

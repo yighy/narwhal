@@ -6,10 +6,13 @@ import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.temporal.ChronoUnit
 
-/** Agenda and reminders computed from the notes' SCHEDULED and DEADLINE times. */
+/**
+ * Agenda computed from the notes' SCHEDULED and DEADLINE times and their events (active
+ * timestamps in the title or content); reminders from SCHEDULED and DEADLINE.
+ */
 object Agenda {
 
-    enum class Kind { Scheduled, Deadline }
+    enum class Kind { Scheduled, Deadline, Event }
 
     /** One occurrence of a planning time; [time] is null for a date without time of day. */
     /** [endTime]: end of the time range, if the timestamp has one. */
@@ -32,9 +35,10 @@ object Agenda {
 
         for (note in notes) {
             if (note.isDone) continue
-            for ((kind, timestamp) in planning(note)) {
+            for ((kind, timestamp) in planning(note) + OrgTime.events(note).map { Kind.Event to it }) {
                 val planned = Planned.parse(timestamp) ?: continue
-                val isOverdue = planned.start.toLocalDate() < today
+                // An event that has passed is over, not overdue
+                val isOverdue = planned.start.toLocalDate() < today && kind != Kind.Event
                 if (isOverdue) {
                     overdue += Entry(note, kind, planned.start.toLocalDate(), planned.timeOfDay, planned.endTime)
                 }
