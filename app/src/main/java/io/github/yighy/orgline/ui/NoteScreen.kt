@@ -1,5 +1,13 @@
 package io.github.yighy.orgline.ui
 
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.ToggleFloatingActionButtonDefaults.animateIcon
+import androidx.compose.material3.ToggleFloatingActionButton
+import androidx.compose.material3.FloatingActionButtonMenuItem
+import androidx.compose.material3.FloatingActionButtonMenu
+import androidx.compose.material3.animateFloatingActionButton
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.AssistChipDefaults
@@ -92,7 +100,7 @@ private sealed interface MetaDialog {
     data class Property(val name: String, val value: String, val isNew: Boolean) : MetaDialog
 }
 
-@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun NoteScreen(
     viewModel: AppViewModel,
@@ -112,6 +120,7 @@ fun NoteScreen(
     var draft by remember { mutableStateOf(TextFieldValue("")) }
     var dialog by remember { mutableStateOf<MetaDialog?>(null) }
     var moreMenu by remember { mutableStateOf(false) }
+    var fabMenu by remember { mutableStateOf(false) }
     // The note as now loaded, also when saving as the screen goes away
     val currentNote by rememberUpdatedState(note)
 
@@ -147,6 +156,7 @@ fun NoteScreen(
         commit()
         viewModel.back()
     }
+    BackHandler(enabled = fabMenu) { fabMenu = false }
     DisposableEffect(Unit) { onDispose { commit() } }
 
     // "id:" completion while editing the title or the content
@@ -185,7 +195,7 @@ fun NoteScreen(
                     IconButton(onClick = { commit(); viewModel.back() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
                 },
                 actions = {
-                    // Nothing to link to or add next to until the note exists
+                    // Nothing to link to until the note exists
                     if (newNote == null) Box {
                         IconButton(onClick = { moreMenu = true }) { Icon(Icons.Default.MoreVert, "More") }
                         DropdownMenu(expanded = moreMenu, onDismissRequest = { moreMenu = false }) {
@@ -201,21 +211,6 @@ fun NoteScreen(
                                         viewModel.message("Link copied")
                                     }
                                 },
-                            )
-                            DropdownMenuItem(
-                                text = { Text("New note above") },
-                                leadingIcon = { Icon(OrglineIcons.NewAbove, null) },
-                                onClick = { moreMenu = false; viewModel.startNewNote(note.fileUri, note, Placement.Above) },
-                            )
-                            DropdownMenuItem(
-                                text = { Text("New sub-note") },
-                                leadingIcon = { Icon(OrglineIcons.SubNote, null) },
-                                onClick = { moreMenu = false; viewModel.startNewNote(note.fileUri, note, Placement.Under) },
-                            )
-                            DropdownMenuItem(
-                                text = { Text("New note below") },
-                                leadingIcon = { Icon(OrglineIcons.NewBelow, null) },
-                                onClick = { moreMenu = false; viewModel.startNewNote(note.fileUri, note, Placement.Below) },
                             )
                         }
                     }
@@ -238,6 +233,42 @@ fun NoteScreen(
                                 modifier = Modifier.clickable { insertLink(target) },
                             )
                         }
+                    }
+                }
+            }
+        },
+        floatingActionButton = {
+            // New note above, under or below this one; hidden while typing and until the note exists
+            if (newNote == null) {
+                FloatingActionButtonMenu(
+                    expanded = fabMenu,
+                    button = {
+                        ToggleFloatingActionButton(
+                            checked = fabMenu,
+                            onCheckedChange = { commit(); fabMenu = it },
+                            modifier = Modifier.animateFloatingActionButton(
+                                visible = editing == Editing.None || fabMenu,
+                                alignment = Alignment.BottomEnd,
+                            ),
+                        ) {
+                            val icon by remember { derivedStateOf { if (checkedProgress > 0.5f) Icons.Default.Close else Icons.Default.Add } }
+                            Icon(
+                                rememberVectorPainter(icon),
+                                contentDescription = if (fabMenu) "Close" else "New note",
+                                modifier = Modifier.animateIcon({ checkedProgress }),
+                            )
+                        }
+                    },
+                ) {
+                    Placement.entries.forEach { placement ->
+                        FloatingActionButtonMenuItem(
+                            onClick = {
+                                fabMenu = false
+                                viewModel.startNewNote(note.fileUri, note, placement)
+                            },
+                            text = { Text(newNoteTitle(placement)) },
+                            icon = { Icon(placementIcon(placement), null) },
+                        )
                     }
                 }
             }
