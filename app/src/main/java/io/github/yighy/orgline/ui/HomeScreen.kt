@@ -1,5 +1,7 @@
 package io.github.yighy.orgline.ui
 
+import androidx.compose.runtime.collectAsState
+import androidx.compose.material.icons.filled.Face
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -93,6 +95,8 @@ fun HomeScreen(
 ) {
     var newNotebook by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
+    var pickIcon by remember { mutableStateOf<String?>(null) }
+    val icons by viewModel.notebookIcons.collectAsState()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val selected = viewModel.selectedNotebooks
     val selecting = selected.isNotEmpty()
@@ -110,6 +114,10 @@ fun HomeScreen(
                     },
                     title = { Text("${selected.size} selected") },
                     actions = {
+                        // One notebook at a time
+                        if (selected.size == 1) {
+                            IconButton(onClick = { pickIcon = selected.first() }) { Icon(Icons.Default.Face, "Change icon") }
+                        }
                         IconButton(onClick = { confirmDelete = true }) { Icon(Icons.Default.Delete, "Delete") }
                     },
                 )
@@ -170,6 +178,7 @@ fun HomeScreen(
                         items(library.files, key = { it.uri }) { file ->
                             NotebookCard(
                                 file = file,
+                                icon = icons[file.uri],
                                 selected = file.uri in selected,
                                 onClick = {
                                     if (selecting) viewModel.toggleNotebookSelected(file.uri) else viewModel.openNotebook(file.uri)
@@ -197,6 +206,18 @@ fun HomeScreen(
         )
     }
 
+    pickIcon?.let { uri ->
+        IconDialog(
+            current = icons[uri],
+            onDismiss = { pickIcon = null },
+            onSelect = { emoji ->
+                pickIcon = null
+                viewModel.setNotebookIcon(uri, emoji)
+                viewModel.clearNotebookSelection()
+            },
+        )
+    }
+
     if (newNotebook) {
         TextInputDialog(
             title = "New notebook",
@@ -219,6 +240,7 @@ fun notebookTitleKey(fileUri: String) = "notebook-title-$fileUri"
 @Composable
 private fun NotebookCard(
     file: NoteRepository.LoadedFile,
+    icon: String?,
     selected: Boolean,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
@@ -242,7 +264,7 @@ private fun NotebookCard(
                     contentAlignment = Alignment.Center,
                 ) { Icon(Icons.Default.Check, "Selected", tint = MaterialTheme.colorScheme.onPrimary) }
             } else {
-                NotebookAvatar(file.title)
+                NotebookAvatar(file.title, icon)
             }
             Spacer(Modifier.width(16.dp))
             Column(Modifier.weight(1f)) {

@@ -1,5 +1,31 @@
 package io.github.yighy.orgline.ui
 
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.ui.layout.layout
+import androidx.compose.runtime.key
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.core.MutableTransitionState
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.material3.InputChipDefaults
+import androidx.compose.material3.InputChip
+import androidx.compose.material3.FilterChip
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.animation.AnimatedVisibility
+import android.content.Intent
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -81,6 +107,7 @@ import io.github.yighy.orgline.core.OrgNote
 import io.github.yighy.orgline.core.OrgTime
 import io.github.yighy.orgline.core.Placement
 import io.github.yighy.orgline.data.NoteRepository
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.DisposableEffect
@@ -90,15 +117,11 @@ import io.github.yighy.orgline.core.NoteEdit
 /** Which part of the note is being edited. */
 private enum class Editing { None, Title, Content }
 
-/** Metadata dialogs. */
-private sealed interface MetaDialog {
-    data object Tags : MetaDialog
-    data object State : MetaDialog
-    data object Priority : MetaDialog
-    data object Scheduled : MetaDialog
-    data object Deadline : MetaDialog
-    data class Property(val name: String, val value: String, val isNew: Boolean) : MetaDialog
-}
+/** Dates are still picked in dialogs; the rest is edited in place. */
+private enum class DateDialog { Scheduled, Deadline }
+
+/** Metadata being added or picked in place. */
+private enum class MetaEdit { Tags, State, Priority, Property }
 
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -118,8 +141,13 @@ fun NoteScreen(
     // A new note starts with its title being edited
     var editing by remember { mutableStateOf(if (newNote != null) Editing.Title else Editing.None) }
     var draft by remember { mutableStateOf(TextFieldValue("")) }
-    var dialog by remember { mutableStateOf<MetaDialog?>(null) }
+    var dialog by remember { mutableStateOf<DateDialog?>(null) }
+    // Tags being added, choices shown for state or priority, property being added
+    var metaEdit by remember { mutableStateOf<MetaEdit?>(null) }
+    // Name of the property being added, once saved
+    var addedProperty by remember { mutableStateOf<String?>(null) }
     var moreMenu by remember { mutableStateOf(false) }
+    var shareMenu by remember { mutableStateOf(false) }
     var fabMenu by remember { mutableStateOf(false) }
     // The note as now loaded, also when saving as the screen goes away
     val currentNote by rememberUpdatedState(note)
@@ -147,9 +175,14 @@ fun NoteScreen(
         editing = what
     }
 
-    fun openDialog(d: MetaDialog) {
+    fun openDialog(d: DateDialog) {
         commit()
         dialog = d
+    }
+
+    fun share(text: String) {
+        val send = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, text)
+        context.startActivity(Intent.createChooser(send, null))
     }
 
     BackHandler(enabled = editing != Editing.None) {
@@ -158,6 +191,8 @@ fun NoteScreen(
     }
     BackHandler(enabled = fabMenu) { fabMenu = false }
     DisposableEffect(Unit) { onDispose { commit() } }
+    // Closing the keyboard ends the editing (and saves), instead of leaving a cursor behind
+    ClearFocusWhenKeyboardHides()
 
     // "id:" completion while editing the title or the content
     val query = draft.takeIf { editing != Editing.None && it.selection.collapsed }
@@ -198,10 +233,27 @@ fun NoteScreen(
                     // Nothing to link to until the note exists
                     if (newNote == null) Box {
                         IconButton(onClick = { moreMenu = true }) { Icon(Icons.Default.MoreVert, "More") }
-                        DropdownMenu(expanded = moreMenu, onDismissRequest = { moreMenu = false }) {
+                        DropdownMenu(expanded = moreMenu, onDismissRequest = { moreMenu = false; shareMenu = false }) {
+                            if (shareMenu) {
+                                // The note as Org text (heading, planning, properties, content)
+                                DropdownMenuItem(
+                                    text = { Text("Note") },
+                                    onClick = { moreMenu = false; shareMenu = false; share(note.raw.trimEnd()) },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Title") },
+                                    onClick = { moreMenu = false; shareMenu = false; share(displayTitle(note.title)) },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Content") },
+                                    enabled = note.content.isNotBlank(),
+                                    onClick = { moreMenu = false; shareMenu = false; share(IdLinks.plainText(note.content.trimIndent())) },
+                                )
+                                return@DropdownMenu
+                            }
                             DropdownMenuItem(
                                 text = { Text("Copy link to this note") },
-                                leadingIcon = { Icon(Icons.Default.Share, null) },
+                                leadingIcon = { Icon(OrglineIcons.Link, null) },
                                 onClick = {
                                     moreMenu = false
                                     scope.launch {
@@ -211,6 +263,12 @@ fun NoteScreen(
                                         viewModel.message("Link copied")
                                     }
                                 },
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Share") },
+                                leadingIcon = { Icon(Icons.Default.Share, null) },
+                                trailingIcon = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) },
+                                onClick = { shareMenu = true },
                             )
                         }
                     }
@@ -341,39 +399,126 @@ fun NoteScreen(
 
             HorizontalDivider(Modifier.padding(vertical = 8.dp))
 
-            // Metadata: only what is set, tap to change
-            if (note.tags.isNotEmpty()) {
-                MetaRow("Tags", onClick = { openDialog(MetaDialog.Tags) }) {
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        note.tags.forEach { SuggestionChip(onClick = { openDialog(MetaDialog.Tags) }, label = { Text(it) }) }
+            // Metadata: only what is set, edited in place (dates in a dialog); rows unfold
+            // when added and fold away when removed
+            MetaSlot(note.tags.isNotEmpty() || metaEdit == MetaEdit.Tags) {
+                TagsEditor(
+                    tags = note.tags,
+                    allTags = library.tags,
+                    focusOnStart = metaEdit == MetaEdit.Tags,
+                    onAdd = { tag -> viewModel.update(note) { e -> e.copy(tags = e.tags + tag) } },
+                    onRemove = { tag -> viewModel.update(note) { e -> e.copy(tags = e.tags.filterNot { it.equals(tag, ignoreCase = true) }) } },
+                    onFocusLost = { if (metaEdit == MetaEdit.Tags) metaEdit = null },
+                )
+            }
+            val state = lastNonNull(note.state)
+            MetaSlot(note.state != null || metaEdit == MetaEdit.State) {
+                ChoiceRow(
+                    label = "State",
+                    options = keywords.all,
+                    // While folding away, the row keeps showing the state it had
+                    selected = note.state ?: state.takeIf { metaEdit != MetaEdit.State },
+                    expanded = metaEdit == MetaEdit.State,
+                    onExpandedChange = { commit(); metaEdit = if (it) MetaEdit.State else null },
+                    onSelect = { viewModel.setState(note, it) },
+                ) { StateLabel(it, it in keywords.done) }
+            }
+            val priority = lastNonNull(note.priority)
+            MetaSlot(note.priority != null || metaEdit == MetaEdit.Priority) {
+                ChoiceRow(
+                    label = "Priority",
+                    options = listOf("A", "B", "C"),
+                    selected = note.priority ?: priority.takeIf { metaEdit != MetaEdit.Priority },
+                    expanded = metaEdit == MetaEdit.Priority,
+                    onExpandedChange = { commit(); metaEdit = if (it) MetaEdit.Priority else null },
+                    onSelect = { p -> viewModel.update(note) { it.copy(priority = p) } },
+                ) { Text(it, style = MaterialTheme.typography.bodyLarge) }
+            }
+            val scheduled = lastNonNull(note.scheduled)
+            MetaSlot(note.scheduled != null) {
+                MetaRow("Scheduled", OrgTime.display(scheduled).orEmpty(), onClick = { openDialog(DateDialog.Scheduled) })
+            }
+            val deadline = lastNonNull(note.deadline)
+            MetaSlot(note.deadline != null) {
+                MetaRow("Deadline", OrgTime.display(deadline).orEmpty(), onClick = { openDialog(DateDialog.Deadline) })
+            }
+            val closed = lastNonNull(note.closed)
+            MetaSlot(note.closed != null) {
+                MetaRow("Closed", OrgTime.display(closed).orEmpty(), onClick = null)
+            }
+            note.properties.forEach { (name, value) ->
+                key(name.uppercase()) {
+                    // The property just added replaces its new row without unfolding again
+                    Appear(animate = !name.equals(addedProperty, ignoreCase = true)) {
+                        if (name.equals("ID", ignoreCase = true)) {
+                            // Read-only, so links to the note never break by mistake; a tap copies it
+                            MetaRow(name, value, onClick = {
+                                context.getSystemService(ClipboardManager::class.java).setPrimaryClip(ClipData.newPlainText("ID", value))
+                                viewModel.message("ID copied")
+                            })
+                        } else {
+                            PropertyRow(
+                                name = name,
+                                value = value,
+                                focusOnStart = false,
+                                onSave = { n, v ->
+                                    viewModel.update(note) { e ->
+                                        e.copy(properties = e.properties.map { if (it.first.equals(name, ignoreCase = true)) n to v else it })
+                                    }
+                                },
+                                onRemove = {
+                                    viewModel.update(note) { e -> e.copy(properties = e.properties.filterNot { it.first.equals(name, ignoreCase = true) }) }
+                                },
+                            )
+                        }
                     }
                 }
             }
-            note.state?.let { MetaRow("State", onClick = { openDialog(MetaDialog.State) }) { StateLabel(it, note.isDone) } }
-            note.priority?.let { MetaRow("Priority", it, onClick = { openDialog(MetaDialog.Priority) }) }
-            note.scheduled?.let { MetaRow("Scheduled", OrgTime.display(it).orEmpty(), onClick = { openDialog(MetaDialog.Scheduled) }) }
-            note.deadline?.let { MetaRow("Deadline", OrgTime.display(it).orEmpty(), onClick = { openDialog(MetaDialog.Deadline) }) }
-            note.closed?.let { MetaRow("Closed", OrgTime.display(it).orEmpty(), onClick = null) }
-            note.properties.forEach { (name, value) ->
-                MetaRow(name, value, onClick = { openDialog(MetaDialog.Property(name, value, isNew = false)) })
+            // The new property stays until the note has it, so it does not blink when saved
+            val adding = metaEdit == MetaEdit.Property &&
+                note.properties.none { it.first.equals(addedProperty, ignoreCase = true) }
+            if (metaEdit == MetaEdit.Property && !adding) metaEdit = null
+            if (adding) {
+                Appear {
+                    PropertyRow(
+                        name = "",
+                        value = "",
+                        focusOnStart = true,
+                        onSave = { n, v -> addedProperty = n; viewModel.update(note) { e -> e.copy(properties = e.properties + (n to v)) } },
+                        onRemove = { metaEdit = null },
+                    )
+                }
             }
 
-            FlowRow(
+            // What can still be added, on one line that scrolls
+            val addChips = listOfNotNull(
+                ("Tags" to { metaEdit = MetaEdit.Tags }).takeIf { note.tags.isEmpty() && metaEdit != MetaEdit.Tags },
+                ("State" to { metaEdit = MetaEdit.State }).takeIf { note.state == null && metaEdit != MetaEdit.State },
+                ("Priority" to { metaEdit = MetaEdit.Priority }).takeIf { note.priority == null && metaEdit != MetaEdit.Priority },
+                ("Scheduled" to { openDialog(DateDialog.Scheduled) }).takeIf { note.scheduled == null },
+                ("Deadline" to { openDialog(DateDialog.Deadline) }).takeIf { note.deadline == null },
+                ("Property" to { addedProperty = null; metaEdit = MetaEdit.Property }).takeIf { metaEdit != MetaEdit.Property },
+            )
+            val addRow = rememberLazyListState()
+            // A chip coming back at the start is shown, not left scrolled out of sight
+            LaunchedEffect(addChips.firstOrNull()?.first) { addRow.animateScrollToItem(0) }
+            LazyRow(
+                state = addRow,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.padding(vertical = 4.dp),
+                // Up to the screen edges, so chips scroll out of sight there
+                modifier = Modifier.padding(vertical = 4.dp).layout { measurable, constraints ->
+                    val extra = 16.dp.roundToPx() * 2
+                    val placeable = measurable.measure(constraints.copy(maxWidth = constraints.maxWidth + extra))
+                    layout(constraints.maxWidth, placeable.height) { placeable.place(-extra / 2, 0) }
+                },
+                contentPadding = PaddingValues(horizontal = 16.dp),
             ) {
-                listOfNotNull(
-                    ("Tags" to MetaDialog.Tags).takeIf { note.tags.isEmpty() },
-                    ("State" to MetaDialog.State).takeIf { note.state == null },
-                    ("Priority" to MetaDialog.Priority).takeIf { note.priority == null },
-                    ("Scheduled" to MetaDialog.Scheduled).takeIf { note.scheduled == null },
-                    ("Deadline" to MetaDialog.Deadline).takeIf { note.deadline == null },
-                    "Property" to MetaDialog.Property("", "", isNew = true),
-                ).forEach { (label, open) ->
+                items(addChips, key = { it.first }) { (label, onClick) ->
                     AssistChip(
-                        onClick = { openDialog(open) },
+                        onClick = { commit(); onClick() },
                         label = { Text(label) },
                         leadingIcon = { Icon(Icons.Default.Add, null, Modifier.size(AssistChipDefaults.IconSize)) },
+                        modifier = Modifier.animateItem(fadeOutSpec = null),
                     )
                 }
             }
@@ -423,65 +568,19 @@ fun NoteScreen(
         }
     }
 
-    when (val d = dialog) {
+    when (dialog) {
         null -> Unit
-        MetaDialog.Tags -> TagsDialog(
-            initial = note.tags,
-            allTags = library.tags,
-            onDismiss = { dialog = null },
-            onConfirm = { tags -> dialog = null; viewModel.update(note) { it.copy(tags = tags) } },
-        )
-        MetaDialog.State -> ChoiceDialog(
-            title = "State",
-            options = listOf(null) + keywords.all,
-            selected = note.state,
-            onDismiss = { dialog = null },
-            onSelect = { s -> dialog = null; viewModel.setState(note, s) },
-        )
-        MetaDialog.Priority -> ChoiceDialog(
-            title = "Priority",
-            options = listOf(null, "A", "B", "C"),
-            selected = note.priority,
-            onDismiss = { dialog = null },
-            onSelect = { p -> dialog = null; viewModel.update(note) { it.copy(priority = p) } },
-        )
-        MetaDialog.Scheduled -> TimestampDialog(
+        DateDialog.Scheduled -> TimestampDialog(
             initial = note.scheduled,
             onDismiss = { dialog = null },
             onConfirm = { t -> dialog = null; viewModel.update(note) { it.copy(scheduled = t) } },
         )
-        MetaDialog.Deadline -> TimestampDialog(
+        DateDialog.Deadline -> TimestampDialog(
             initial = note.deadline,
             onDismiss = { dialog = null },
             onConfirm = { t -> dialog = null; viewModel.update(note) { it.copy(deadline = t) } },
         )
-        is MetaDialog.Property -> PropertyDialog(
-            name = d.name,
-            value = d.value,
-            isNew = d.isNew,
-            onDismiss = { dialog = null },
-            onConfirm = { name, value ->
-                dialog = null
-                viewModel.update(note) { edit ->
-                    edit.copy(
-                        properties = if (d.isNew) {
-                            edit.properties + (name to value)
-                        } else {
-                            edit.properties.map { if (it.first.equals(d.name, ignoreCase = true)) name to value else it }
-                        },
-                    )
-                }
-            },
-            onRemove = {
-                dialog = null
-                viewModel.update(note) { edit ->
-                    edit.copy(properties = edit.properties.filterNot { it.first.equals(d.name, ignoreCase = true) })
-                }
-            },
-        )
     }
-
-
 }
 
 /** "Label    value" line; [onClick] null makes it read-only. */
@@ -500,13 +599,303 @@ private fun MetaRow(label: String, onClick: (() -> Unit)?, value: @Composable ()
             .padding(vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(
-            label,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Normal,
-            modifier = Modifier.width(130.dp),
-        )
+        Text(label, style = metaLabelStyle(), modifier = Modifier.width(130.dp))
         Box(Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) { value() }
+    }
+}
+
+/** A metadata row that unfolds when shown and folds away when hidden. */
+@Composable
+private fun MetaSlot(visible: Boolean, content: @Composable () -> Unit) {
+    val motion = MaterialTheme.motionScheme
+    AnimatedVisibility(
+        visible = visible,
+        enter = expandVertically(motion.defaultSpatialSpec(), expandFrom = Alignment.Top) + fadeIn(motion.defaultEffectsSpec()),
+        exit = shrinkVertically(motion.defaultSpatialSpec(), shrinkTowards = Alignment.Top) + fadeOut(motion.defaultEffectsSpec()),
+    ) { content() }
+}
+
+/** Unfolds [content] when it first appears (if [animate]). */
+@Composable
+private fun Appear(animate: Boolean = true, content: @Composable () -> Unit) {
+    val visible = remember { MutableTransitionState(!animate).apply { targetState = true } }
+    val motion = MaterialTheme.motionScheme
+    AnimatedVisibility(
+        visibleState = visible,
+        enter = expandVertically(motion.defaultSpatialSpec(), expandFrom = Alignment.Top) + fadeIn(motion.defaultEffectsSpec()),
+    ) { content() }
+}
+
+/** [value], or the last value it had when it becomes null (for rows folding away). */
+@Composable
+private fun <T : Any> lastNonNull(value: T?): T? {
+    val last = remember { arrayOfNulls<Any>(1) }
+    if (value != null) last[0] = value
+    @Suppress("UNCHECKED_CAST")
+    return last[0] as T?
+}
+
+@Composable
+private fun metaLabelStyle() = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Normal)
+
+/** Style of a field typed in place: [style] in the text color, ending on the right if [end]. */
+@Composable
+private fun fieldStyle(style: TextStyle, end: Boolean = false) =
+    style.copy(color = MaterialTheme.colorScheme.onSurface, textAlign = if (end) TextAlign.End else TextAlign.Start)
+
+/**
+ * Tags as chips (a tap removes one) followed by a field adding tags: space, ":" or Done adds
+ * what was typed, and existing tags containing it are suggested below.
+ */
+@Composable
+private fun TagsEditor(
+    tags: List<String>,
+    allTags: List<String>,
+    focusOnStart: Boolean,
+    onAdd: (String) -> Unit,
+    onRemove: (String) -> Unit,
+    onFocusLost: () -> Unit,
+) {
+    var text by remember { mutableStateOf("") }
+    val focus = remember { FocusRequester() }
+    var focused by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { if (focusOnStart) focus.requestFocus() }
+
+    fun add(raw: String) {
+        raw.split(Regex("[\\s:]+"))
+            .filter { it.isNotBlank() }
+            .distinctBy { it.lowercase() }
+            .filter { new -> tags.none { it.equals(new, ignoreCase = true) } }
+            .forEach(onAdd)
+    }
+    val suggestions = remember(text, allTags, tags) {
+        val typed = text.trim()
+        if (typed.isEmpty()) {
+            emptyList()
+        } else {
+            allTags
+                .filter { tag -> tag.contains(typed, ignoreCase = true) && tags.none { it.equals(tag, ignoreCase = true) } }
+                .sortedByDescending { it.startsWith(typed, ignoreCase = true) }
+                .take(8)
+        }
+    }
+
+    val row = rememberLazyListState()
+    // Show the field after the last tag once one is added
+    var tagCount by remember { mutableIntStateOf(tags.size) }
+    LaunchedEffect(tags.size) {
+        if (tags.size > tagCount) row.animateScrollToItem(tags.size)
+        tagCount = tags.size
+    }
+
+    Column(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.heightIn(min = 48.dp)) {
+            Text("Tags", style = metaLabelStyle(), modifier = Modifier.width(130.dp))
+            LazyRow(
+                state = row,
+                modifier = Modifier.weight(1f),
+                horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.End),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                items(tags, key = { it.lowercase() }) { tag ->
+                    InputChip(
+                        selected = false,
+                        onClick = { onRemove(tag) },
+                        label = { Text(tag) },
+                        trailingIcon = { Icon(Icons.Default.Close, "Remove $tag", Modifier.size(InputChipDefaults.IconSize)) },
+                        modifier = Modifier.animateItem(fadeOutSpec = null),
+                    )
+                }
+                item(key = "field") {
+                    BasicTextField(
+                        value = text,
+                        onValueChange = { typed ->
+                            if (typed.any { it.isWhitespace() || it == ':' }) {
+                                add(typed)
+                                text = ""
+                            } else {
+                                text = typed
+                            }
+                        },
+                        singleLine = true,
+                        textStyle = fieldStyle(MaterialTheme.typography.bodyLarge, end = true),
+                        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                        keyboardActions = KeyboardActions(onDone = { add(text); text = "" }),
+                        modifier = Modifier
+                            .animateItem(fadeOutSpec = null)
+                            .width(110.dp)
+                            .focusRequester(focus)
+                            .onFocusChanged {
+                                if (focused && !it.isFocused) {
+                                    add(text)
+                                    text = ""
+                                    onFocusLost()
+                                }
+                                focused = it.isFocused
+                            },
+                        decorationBox = { field ->
+                            Box(contentAlignment = Alignment.CenterEnd) {
+                                if (text.isEmpty()) {
+                                    Text("Add tag", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                                field()
+                            }
+                        },
+                    )
+                }
+            }
+        }
+        AnimatedVisibility(suggestions.isNotEmpty()) {
+            LazyRow(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.End),
+            ) {
+                items(suggestions, key = { it.lowercase() }) { tag ->
+                    SuggestionChip(onClick = { add(tag); text = "" }, label = { Text(tag) }, modifier = Modifier.animateItem(fadeOutSpec = null))
+                }
+            }
+        }
+    }
+}
+
+/**
+ * The value chosen among [options] (or nothing); a tap shows the options as chips, picking one
+ * (or the chosen one again, to remove it) hides them.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ChoiceRow(
+    label: String,
+    options: List<String>,
+    selected: String?,
+    expanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit,
+    onSelect: (String?) -> Unit,
+    shown: @Composable (String) -> Unit,
+) {
+    Column {
+        MetaRow(label, onClick = { onExpandedChange(!expanded) }) {
+            if (selected != null) {
+                shown(selected)
+            } else {
+                Text("None", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+        val motion = MaterialTheme.motionScheme
+        AnimatedVisibility(
+            expanded,
+            enter = expandVertically(motion.defaultSpatialSpec(), expandFrom = Alignment.Top) + fadeIn(motion.defaultEffectsSpec()),
+            exit = shrinkVertically(motion.defaultSpatialSpec(), shrinkTowards = Alignment.Top) + fadeOut(motion.defaultEffectsSpec()),
+        ) {
+            FlowRow(
+                Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+            ) {
+                options.forEach { option ->
+                    FilterChip(
+                        selected = option == selected,
+                        onClick = {
+                            onSelect(if (option == selected) null else option)
+                            onExpandedChange(false)
+                        },
+                        label = { Text(option) },
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * A property edited in place: name on the left, value on the right, saved when the row loses
+ * the focus. Emptying the name removes it.
+ */
+@Composable
+private fun PropertyRow(
+    name: String,
+    value: String,
+    focusOnStart: Boolean,
+    onSave: (String, String) -> Unit,
+    onRemove: () -> Unit,
+) {
+    var n by remember(name) { mutableStateOf(name) }
+    var v by remember(value) { mutableStateOf(value) }
+    var hasFocus by remember { mutableStateOf(false) }
+    // Edited since it last had the focus, and not saved yet
+    var pending by remember { mutableStateOf(false) }
+    val focus = remember { FocusRequester() }
+    val focusManager = LocalFocusManager.current
+    val scope = rememberCoroutineScope()
+    LaunchedEffect(Unit) { if (focusOnStart) focus.requestFocus() }
+
+    fun save() {
+        if (!pending) return
+        pending = false
+        when {
+            n.isBlank() -> onRemove()
+            n != name || v.trim() != value -> onSave(n, v.trim())
+        }
+    }
+    val currentSave by rememberUpdatedState(::save)
+    // Leaving the screen while editing still saves
+    DisposableEffect(Unit) { onDispose { currentSave() } }
+
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .heightIn(min = 48.dp)
+            .padding(vertical = 6.dp)
+            .onFocusChanged {
+                hasFocus = it.hasFocus
+                if (it.hasFocus) {
+                    pending = true
+                } else if (pending) {
+                    // Going from the name to the value, the row loses the focus for a moment:
+                    // save only if it is still without focus afterwards
+                    scope.launch {
+                        delay(150)
+                        if (!hasFocus) save()
+                    }
+                }
+            },
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        BasicTextField(
+            value = n,
+            onValueChange = { typed -> n = typed.filterNot { it.isWhitespace() || it == ':' }.uppercase() },
+            singleLine = true,
+            textStyle = fieldStyle(metaLabelStyle()),
+            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+            modifier = Modifier.width(130.dp).focusRequester(focus),
+            decorationBox = { field ->
+                Box {
+                    if (n.isEmpty()) Text("NAME", style = metaLabelStyle(), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    field()
+                }
+            },
+        )
+        BasicTextField(
+            value = v,
+            onValueChange = { v = it },
+            singleLine = true,
+            textStyle = fieldStyle(MaterialTheme.typography.bodyLarge, end = true),
+            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+            keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
+            modifier = Modifier.weight(1f),
+            decorationBox = { field ->
+                Box(contentAlignment = Alignment.CenterEnd) {
+                    if (v.isEmpty()) Text("Value", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    field()
+                }
+            },
+        )
+        // Removing is offered while the property is being edited
+        if (hasFocus) {
+            IconButton(onClick = { n = ""; focusManager.clearFocus(); save() }) { Icon(Icons.Default.Close, "Remove property") }
+        }
     }
 }
 

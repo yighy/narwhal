@@ -1,5 +1,12 @@
 package io.github.yighy.orgline.ui
 
+import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.clickable
+import java.text.BreakIterator
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.font.FontFamily
@@ -116,103 +123,6 @@ fun ChoiceDialog(
             }
         },
         confirmButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
-    )
-}
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-fun TagsDialog(
-    initial: List<String>,
-    allTags: List<String>,
-    onDismiss: () -> Unit,
-    onConfirm: (List<String>) -> Unit,
-) {
-    var text by remember { mutableStateOf(initial.joinToString(" ")) }
-    val current = text.split(Regex("[\\s:]+")).filter { it.isNotBlank() }
-
-    AlertDialog(
-        // Closing the dialog keeps the tags typed
-        onDismissRequest = { if (current != initial) onConfirm(current) else onDismiss() },
-        title = { Text("Tags") },
-        text = {
-            Column {
-                OutlinedTextField(
-                    value = text,
-                    onValueChange = { text = it },
-                    label = { Text("Space separated") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                if (allTags.isNotEmpty()) {
-                    Spacer(Modifier.height(12.dp))
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        allTags.forEach { tag ->
-                            val on = current.any { it.equals(tag, ignoreCase = true) }
-                            FilterChip(
-                                selected = on,
-                                onClick = {
-                                    text = if (on) {
-                                        current.filterNot { it.equals(tag, ignoreCase = true) }.joinToString(" ")
-                                    } else {
-                                        (current + tag).joinToString(" ")
-                                    }
-                                },
-                                label = { Text(tag) },
-                            )
-                        }
-                    }
-                }
-            }
-        },
-        confirmButton = { TextButton(onClick = { onConfirm(current) }) { Text("OK") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
-    )
-}
-
-@Composable
-fun PropertyDialog(
-    name: String,
-    value: String,
-    isNew: Boolean,
-    onDismiss: () -> Unit,
-    onConfirm: (String, String) -> Unit,
-    onRemove: () -> Unit,
-) {
-    var n by remember { mutableStateOf(name) }
-    var v by remember { mutableStateOf(value) }
-    AlertDialog(
-        // Closing the dialog keeps what was typed
-        onDismissRequest = {
-            if (n.isNotBlank() && (n != name || v.trim() != value)) onConfirm(n, v.trim()) else onDismiss()
-        },
-        title = { Text(if (isNew) "New property" else "Property") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(
-                    value = n,
-                    onValueChange = { n = it.replace(" ", "").uppercase() },
-                    label = { Text("Name") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                OutlinedTextField(
-                    value = v,
-                    onValueChange = { v = it },
-                    label = { Text("Value") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-        },
-        confirmButton = {
-            TextButton(enabled = n.isNotBlank(), onClick = { onConfirm(n, v.trim()) }) { Text("OK") }
-        },
-        dismissButton = {
-            Row {
-                if (!isNew) TextButton(onClick = onRemove) { Text("Remove") }
-                TextButton(onClick = onDismiss) { Text("Cancel") }
-            }
-        },
     )
 }
 
@@ -366,4 +276,65 @@ private fun RepeatPicker(repeat: OrgTime.Repeat?, onChange: (OrgTime.Repeat?) ->
             Text(label, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
         }
     }
+}
+
+private val ICON_SUGGESTIONS = listOf(
+    "📓", "📚", "📝", "✅", "📌", "⭐", "💡", "🎯",
+    "🏠", "🛒", "🍳", "🌱", "🐾", "🚗", "✈️", "🏖️",
+    "💼", "💻", "🛠️", "📈", "💰", "📅", "🎓", "🧪",
+    "❤️", "🏃", "🧘", "🎵", "🎮", "🎨", "📷", "🎁",
+)
+
+/** First character as seen on screen (an emoji can be several code points). */
+private fun firstGrapheme(text: String): String? {
+    val trimmed = text.trim()
+    if (trimmed.isEmpty()) return null
+    val it = BreakIterator.getCharacterInstance().apply { setText(trimmed) }
+    return trimmed.substring(0, it.next())
+}
+
+/** Picks an emoji as a notebook's icon; "Use initial" goes back to its first letter. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun IconDialog(current: String?, onDismiss: () -> Unit, onSelect: (String?) -> Unit) {
+    var typed by remember { mutableStateOf("") }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Notebook icon") },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                FlowRow {
+                    ICON_SUGGESTIONS.forEach { emoji ->
+                        val chosen = emoji == current
+                        Box(
+                            Modifier
+                                .size(48.dp)
+                                .clip(CircleShape)
+                                .background(if (chosen) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent)
+                                .clickable { onSelect(emoji) },
+                            contentAlignment = Alignment.Center,
+                        ) { Text(emoji, fontSize = 26.sp) }
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
+                // Any other emoji, from the keyboard
+                OutlinedTextField(
+                    value = typed,
+                    onValueChange = { typed = it },
+                    label = { Text("Other emoji") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(enabled = firstGrapheme(typed) != null, onClick = { onSelect(firstGrapheme(typed)) }) { Text("OK") }
+        },
+        dismissButton = {
+            Row {
+                if (current != null) TextButton(onClick = { onSelect(null) }) { Text("Use initial") }
+                TextButton(onClick = onDismiss) { Text("Cancel") }
+            }
+        },
+    )
 }

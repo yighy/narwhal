@@ -119,6 +119,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun setLinkRenaming(mode: LinkRenaming) = appSettings.setLinkRenaming(mode)
 
+    val notebookIcons = appSettings.notebookIcons
+
+    fun setNotebookIcon(fileUri: String, emoji: String?) = appSettings.setNotebookIcon(fileUri, emoji)
+
     /** Sets the default state keywords from "TODO NEXT | DONE"; false if there is no keyword. */
     fun setKeywords(spec: String): Boolean {
         val keywords = Keywords.parse(spec) ?: return false
@@ -406,6 +410,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun deleteSelectedNotebooks() {
         val uris = selectedNotebooks
         selectedNotebooks = emptySet()
+        uris.forEach { appSettings.setNotebookIcon(it, null) }
         viewModelScope.launch {
             attempt {
                 repository.deleteFiles(uris)

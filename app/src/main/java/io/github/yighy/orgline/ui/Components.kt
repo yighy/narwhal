@@ -1,5 +1,11 @@
 package io.github.yighy.orgline.ui
 
+import kotlinx.coroutines.delay
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.foundation.layout.isImeVisible
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.input.pointer.pointerInput
@@ -394,10 +400,13 @@ fun StateLabel(state: String, isDone: Boolean) {
     )
 }
 
-/** Notebook initial inside an expressive shape, picked from the notebook's name. */
+/**
+ * Notebook's [icon] (an emoji), or else its initial, inside an expressive shape picked from
+ * the notebook's name.
+ */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun NotebookAvatar(title: String) {
+fun NotebookAvatar(title: String, icon: String? = null) {
     val shapes = listOf(
         MaterialShapes.Cookie9Sided, MaterialShapes.Clover4Leaf, MaterialShapes.Sunny,
         MaterialShapes.Gem, MaterialShapes.Pentagon, MaterialShapes.Cookie6Sided,
@@ -419,12 +428,16 @@ fun NotebookAvatar(title: String) {
             .background(container),
         contentAlignment = Alignment.Center,
     ) {
-        Text(
-            title.firstOrNull()?.uppercase() ?: "?",
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
-            color = content,
-        )
+        if (icon != null) {
+            Text(icon, fontSize = 28.sp)
+        } else {
+            Text(
+                title.firstOrNull()?.uppercase() ?: "?",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = content,
+            )
+        }
     }
 }
 
@@ -555,6 +568,28 @@ fun InPlaceField(
             }
         },
     )
+}
+
+/**
+ * Clears the focus when the keyboard is closed (back, or its own close key), so the field being
+ * edited is saved and no cursor is left behind.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun ClearFocusWhenKeyboardHides() {
+    val imeVisible = WindowInsets.isImeVisible
+    val focusManager = LocalFocusManager.current
+    var wasVisible by remember { mutableStateOf(false) }
+    LaunchedEffect(imeVisible) {
+        if (imeVisible) {
+            wasVisible = true
+        } else if (wasVisible) {
+            // Moving from one field to another can hide the keyboard for a moment
+            delay(300)
+            wasVisible = false
+            focusManager.clearFocus()
+        }
+    }
 }
 
 /** Notebook names, keywords and inherited tags that search queries need. */

@@ -101,6 +101,8 @@ fun NotebookScreen(
     BackHandler(enabled = selecting) { viewModel.clearSelection() }
     BackHandler(enabled = prefaceDraft != null) { commitPreface() }
     DisposableEffect(Unit) { onDispose { commitPreface() } }
+    // Closing the keyboard ends the preface editing (and saves it)
+    ClearFocusWhenKeyboardHides()
 
     Scaffold(
         modifier = Modifier
@@ -132,6 +134,7 @@ fun NotebookScreen(
                         leadingIcon = { Icon(Icons.Default.Edit, null) },
                         onClick = { dismiss(); editPreface() },
                     )
+
                 }
             }
         },

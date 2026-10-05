@@ -54,6 +54,20 @@ class AppSettings(context: Context) {
     )
     val values: StateFlow<Values> = _values
 
+    /** Emoji chosen as a notebook's icon, by file URI; kept in the app, not in the files. */
+    private val _notebookIcons = MutableStateFlow(
+        prefs.all.mapNotNull { (key, value) ->
+            if (key.startsWith(ICON_PREFIX) && value is String) key.removePrefix(ICON_PREFIX) to value else null
+        }.toMap(),
+    )
+    val notebookIcons: StateFlow<Map<String, String>> = _notebookIcons
+
+    /** Sets the notebook's icon, or goes back to its initial with null. */
+    fun setNotebookIcon(fileUri: String, emoji: String?) {
+        prefs.edit().apply { if (emoji == null) remove(ICON_PREFIX + fileUri) else putString(ICON_PREFIX + fileUri, emoji) }.apply()
+        _notebookIcons.update { if (emoji == null) it - fileUri else it + (fileUri to emoji) }
+    }
+
     /** Whether the app already asked for the notification permission once. */
     var askedNotificationPermission: Boolean
         get() = prefs.getBoolean(KEY_ASKED_NOTIFICATIONS, false)
@@ -101,6 +115,7 @@ class AppSettings(context: Context) {
 
     companion object {
         private const val KEY_KEYWORDS = "keywords"
+        private const val ICON_PREFIX = "icon:"
         private const val KEY_ADD_ID = "add_id_to_new_notes"
         private const val KEY_LINK_RENAMING = "link_renaming"
         private const val KEY_SHOW_CONTENT = "show_content_in_notebook"
