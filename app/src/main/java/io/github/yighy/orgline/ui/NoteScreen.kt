@@ -162,6 +162,11 @@ fun NoteScreen(
     var fabMenu by remember { mutableStateOf(false) }
     // The note as now loaded, also when saving as the screen goes away
     val currentNote by rememberUpdatedState(note)
+    // Text just saved, shown until the note is reloaded with it (else the old text flashes)
+    var saved by remember { mutableStateOf<Pair<Editing, String>?>(null) }
+    LaunchedEffect(note) { saved = null }
+    val title = saved?.takeIf { it.first == Editing.Title }?.second ?: note.title
+    val content = saved?.takeIf { it.first == Editing.Content }?.second ?: note.content
 
     fun withText(edit: NoteEdit, what: Editing, text: String) =
         if (what == Editing.Title) edit.copy(title = text) else edit.copy(content = text)
@@ -174,6 +179,7 @@ fun NoteScreen(
         val text = draft.text
         val before = if (what == Editing.Title) currentNote.title else currentNote.content
         if (text == before) return
+        saved = what to text
         // A new title can be offered to the links that still show the old one
         if (what == Editing.Title) viewModel.rename(currentNote, text) else viewModel.update(currentNote) { withText(it, what, text) }
     }
@@ -181,7 +187,7 @@ fun NoteScreen(
     /** Edits the title or content, with the cursor at [cursor] (the end by default). */
     fun startEditing(what: Editing, cursor: Int? = null) {
         commit()
-        val text = if (what == Editing.Title) note.title else note.content
+        val text = if (what == Editing.Title) title else content
         draft = TextFieldValue(text, TextRange((cursor ?: text.length).coerceIn(0, text.length)))
         editing = what
     }
@@ -396,12 +402,12 @@ fun NoteScreen(
                         .clickable(interactionSource = null, indication = null) { startEditing(Editing.Title) }
                         .padding(vertical = 8.dp),
                 ) {
-                    if (note.title.isBlank()) {
+                    if (title.isBlank()) {
                         Text(titlePlaceholder, style = titleStyle, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     } else {
                         // Links in the title open their note
                         LinkedText(
-                            note.title,
+                            title,
                             titleStyle,
                             viewModel::openById,
                             Modifier.sharedText(noteTitleKey(note)),
@@ -561,11 +567,11 @@ fun NoteScreen(
                         .clickable(interactionSource = null, indication = null) { startEditing(Editing.Content) }
                         .padding(vertical = 8.dp),
                 ) {
-                    if (note.content.isBlank()) {
+                    if (content.isBlank()) {
                         Text(contentPlaceholder, style = contentStyle, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     } else {
                         LinkedText(
-                            note.content,
+                            content,
                             contentStyle,
                             viewModel::openById,
                             Modifier.sharedText(noteContentKey(note)),

@@ -1,5 +1,7 @@
 package io.github.yighy.orgline.ui
 
+import androidx.compose.runtime.LaunchedEffect
+import io.github.yighy.orgline.core.Notebooks
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
@@ -80,16 +82,22 @@ fun NotebookScreen(
     // Raw preface being edited in place, or null
     var prefaceDraft by remember { mutableStateOf<TextFieldValue?>(null) }
     val currentFile by rememberUpdatedState(file)
+    // Preface just saved, shown until the file is reloaded with it (else the old text flashes)
+    var savedPreface by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(file.doc.preface) { savedPreface = null }
 
     /** Saves the preface being edited, if it changed (no save button). */
     fun commitPreface() {
         val draft = prefaceDraft ?: return
         prefaceDraft = null
-        if (draft.text != currentFile.doc.preface.trimEnd()) viewModel.setPreface(currentFile, draft.text)
+        if (draft.text != (savedPreface ?: currentFile.doc.preface.trimEnd())) {
+            savedPreface = draft.text
+            viewModel.setPreface(currentFile, draft.text)
+        }
     }
     /** Edits the preface, with the cursor at [cursor] (the end by default). */
     fun editPreface(cursor: Int? = null) {
-        val raw = file.doc.preface.trimEnd()
+        val raw = savedPreface ?: file.doc.preface.trimEnd()
         prefaceDraft = TextFieldValue(raw, TextRange((cursor ?: raw.length).coerceIn(0, raw.length)))
     }
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
@@ -129,6 +137,9 @@ fun NotebookScreen(
                     scrollBehavior = scrollBehavior,
                     extraActions = { FoldAllButton(viewModel, file.notes) },
                     sharedTitleKey = notebookTitleKey(file.uri),
+                    // Saved with a b. condition, so it keeps to this notebook
+                    onSaveSearch = { viewModel.saveCurrentSearch(file.ref.name.removeSuffix(".org")) }
+                        .takeIf { viewModel.query.isNotBlank() || viewModel.tag != null },
                 ) { dismiss ->
                     DropdownMenuItem(
                         text = { Text("Edit preface") },
@@ -153,6 +164,8 @@ fun NotebookScreen(
                 NotebookOutline(
                     viewModel = viewModel,
                     file = file,
+                    preface = savedPreface?.let(Notebooks::prefaceText) ?: file.preface,
+                    prefaceRaw = savedPreface ?: file.doc.preface.trimEnd(),
                     prefaceDraft = prefaceDraft,
                     // Only while editing: the keyboard can still update the field as it goes away
                     onPrefaceDraftChange = { if (prefaceDraft != null) prefaceDraft = it },
@@ -190,6 +203,9 @@ private fun FoldAllButton(viewModel: AppViewModel, notes: List<OrgNote>) {
 private fun NotebookOutline(
     viewModel: AppViewModel,
     file: NoteRepository.LoadedFile,
+    /** Preface as shown, and as written in the file. */
+    preface: String,
+    prefaceRaw: String,
     prefaceDraft: TextFieldValue?,
     onPrefaceDraftChange: (TextFieldValue) -> Unit,
     onCommitPreface: () -> Unit,
@@ -229,12 +245,12 @@ private fun NotebookOutline(
                             .fillMaxWidth()
                             .padding(start = 16.dp, end = 16.dp, bottom = 12.dp),
                     )
-                } else if (file.preface.isNotBlank()) {
+                } else if (preface.isNotBlank()) {
                     // The raw preface (shown as is, without its #+ lines) is edited from the
                     // end, or from where the text was tapped when it is shown the same
-                    val shownAsRaw = file.preface == file.doc.preface.trimEnd()
+                    val shownAsRaw = preface == prefaceRaw
                     LinkedText(
-                        file.preface,
+                        preface,
                         prefaceStyle,
                         viewModel::openById,
                         Modifier

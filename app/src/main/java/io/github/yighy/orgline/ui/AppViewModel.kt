@@ -1,5 +1,6 @@
 package io.github.yighy.orgline.ui
 
+import io.github.yighy.orgline.data.SavedSearch
 import android.app.Application
 import android.net.Uri
 import androidx.compose.runtime.getValue
@@ -82,6 +83,56 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         this.query = query
         tag = null
         searchActive = true
+    }
+
+    // ---- Saved searches ----
+
+    val savedSearches = appSettings.savedSearches
+
+    /** Saved search being named or edited (index null: a new one), shown in a dialog. */
+    data class SearchDraft(val index: Int?, val name: String, val query: String)
+
+    var searchDraft by mutableStateOf<SearchDraft?>(null)
+        private set
+
+    /**
+     * Offers to save the search being made (with its tag chip); in a notebook, the search keeps
+     * to it with a b. condition.
+     */
+    fun saveCurrentSearch(notebookName: String?) {
+        var text = listOfNotNull(query.trim().takeIf { it.isNotEmpty() }, tag?.let { "t.\"$it\"" }).joinToString(" ")
+        if (notebookName != null && !Regex("""(^|\s)\.?b\.""").containsMatchIn(text)) text = "b.\"$notebookName\" $text"
+        if (text.isNotBlank()) searchDraft = SearchDraft(null, query.trim().ifEmpty { text }, text)
+    }
+
+    fun editSavedSearch(index: Int) {
+        val search = savedSearches.value.getOrNull(index) ?: return
+        searchDraft = SearchDraft(index, search.name, search.query)
+    }
+
+    fun confirmSearchDraft(name: String, query: String) {
+        val draft = searchDraft ?: return
+        searchDraft = null
+        val search = SavedSearch(name.trim(), query.trim())
+        val list = savedSearches.value
+        appSettings.setSavedSearches(if (draft.index == null) list + search else list.mapIndexed { i, s -> if (i == draft.index) search else s })
+        if (draft.index == null) message("Search saved")
+    }
+
+    fun deleteSearchDraft() {
+        val index = searchDraft?.index
+        searchDraft = null
+        if (index != null) appSettings.setSavedSearches(savedSearches.value.filterIndexed { i, _ -> i != index })
+    }
+
+    fun dismissSearchDraft() {
+        searchDraft = null
+    }
+
+    /** Runs a saved search over all notebooks. */
+    fun runSavedSearch(search: SavedSearch) {
+        openHome()
+        searchFor(search.query)
     }
 
     fun setSearch(active: Boolean) {

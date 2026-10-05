@@ -72,6 +72,9 @@ object Notebooks {
             ?: fileName.removeSuffix(".org").removeSuffix(".ORG")
 
     /** Preface text without #+KEYWORD lines. */
-    fun prefaceText(doc: OrgDocument): String =
-        doc.preface.lines().filterNot { KEYWORD_LINE.matches(it) }.joinToString("\n").trim()
+    fun prefaceText(doc: OrgDocument): String = prefaceText(doc.preface)
+
+    /** [preface] without its #+ lines, as shown. */
+    fun prefaceText(preface: String): String =
+        preface.lines().filterNot { KEYWORD_LINE.matches(it) }.joinToString("\n").trim()
 }

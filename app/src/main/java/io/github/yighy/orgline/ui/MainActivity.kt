@@ -1,5 +1,9 @@
 package io.github.yighy.orgline.ui
 
+import androidx.compose.material3.IconButton
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import io.github.yighy.orgline.core.IdLinks
 import androidx.compose.material3.TextButton
@@ -199,6 +203,31 @@ fun OrglineApp(viewModel: AppViewModel, notificationsAllowed: Boolean, onAllowNo
                     onClick = { close(viewModel::openAgenda) },
                     modifier = Modifier.padding(horizontal = 12.dp),
                 )
+                // Saved searches, run over all notebooks
+                val searches by viewModel.savedSearches.collectAsState()
+                if (searches.isNotEmpty()) {
+                    HorizontalDivider(Modifier.padding(vertical = 8.dp, horizontal = 28.dp))
+                    Text(
+                        "Searches",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(start = 28.dp, top = 8.dp, bottom = 8.dp),
+                    )
+                    searches.forEachIndexed { index, search ->
+                        NavigationDrawerItem(
+                            label = { Text(search.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                            icon = { Icon(Icons.Default.Search, null) },
+                            selected = false,
+                            onClick = { close { viewModel.runSavedSearch(search) } },
+                            badge = {
+                                IconButton(onClick = { viewModel.editSavedSearch(index) }) {
+                                    Icon(Icons.Default.Edit, "Edit ${search.name}")
+                                }
+                            },
+                            modifier = Modifier.padding(horizontal = 12.dp),
+                        )
+                    }
+                }
                 HorizontalDivider(Modifier.padding(vertical = 8.dp, horizontal = 28.dp))
                 NavigationDrawerItem(
                     label = { Text("Settings") },
@@ -256,6 +285,16 @@ fun OrglineApp(viewModel: AppViewModel, notificationsAllowed: Boolean, onAllowNo
                 }
             }
         }
+    }
+
+    viewModel.searchDraft?.let { draft ->
+        SavedSearchDialog(
+            name = draft.name,
+            query = draft.query,
+            onDismiss = viewModel::dismissSearchDraft,
+            onSave = viewModel::confirmSearchDraft,
+            onDelete = viewModel::deleteSearchDraft.takeIf { draft.index != null },
+        )
     }
 
     // A note was renamed: links to it that still show the old title can follow

@@ -1,5 +1,7 @@
 package io.github.yighy.orgline.data
 
+import org.json.JSONObject
+import org.json.JSONArray
 import android.content.Context
 import io.github.yighy.orgline.core.Agenda
 import io.github.yighy.orgline.core.Keywords
@@ -14,6 +16,9 @@ enum class LinkRenaming(val label: String) {
     Always("Update them"),
     Never("Leave them as they are"),
 }
+
+/** A search kept under a name, run from the drawer (as Orgzly's saved searches). */
+data class SavedSearch(val name: String, val query: String)
 
 /** User preferences, stored in SharedPreferences. */
 class AppSettings(context: Context) {
@@ -68,6 +73,21 @@ class AppSettings(context: Context) {
         _notebookIcons.update { if (emoji == null) it - fileUri else it + (fileUri to emoji) }
     }
 
+    private val _savedSearches = MutableStateFlow(readSearches())
+    val savedSearches: StateFlow<List<SavedSearch>> = _savedSearches
+
+    fun setSavedSearches(searches: List<SavedSearch>) {
+        val json = JSONArray()
+        searches.forEach { json.put(JSONObject().put("name", it.name).put("query", it.query)) }
+        prefs.edit().putString(KEY_SEARCHES, json.toString()).apply()
+        _savedSearches.value = searches
+    }
+
+    private fun readSearches(): List<SavedSearch> = runCatching {
+        val json = JSONArray(prefs.getString(KEY_SEARCHES, null) ?: return emptyList())
+        List(json.length()) { i -> json.getJSONObject(i).let { SavedSearch(it.getString("name"), it.getString("query")) } }
+    }.getOrDefault(emptyList())
+
     /** Whether the app already asked for the notification permission once. */
     var askedNotificationPermission: Boolean
         get() = prefs.getBoolean(KEY_ASKED_NOTIFICATIONS, false)
@@ -115,6 +135,7 @@ class AppSettings(context: Context) {
 
     companion object {
         private const val KEY_KEYWORDS = "keywords"
+        private const val KEY_SEARCHES = "saved_searches"
         private const val ICON_PREFIX = "icon:"
         private const val KEY_ADD_ID = "add_id_to_new_notes"
         private const val KEY_LINK_RENAMING = "link_renaming"

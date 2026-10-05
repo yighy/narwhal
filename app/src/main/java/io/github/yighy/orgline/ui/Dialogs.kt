@@ -366,3 +366,48 @@ fun IconDialog(current: String?, onDismiss: () -> Unit, onSelect: (String?) -> U
         },
     )
 }
+
+/** Name and query of a saved search; [onDelete] is offered for one already saved. */
+@Composable
+fun SavedSearchDialog(
+    name: String,
+    query: String,
+    onDismiss: () -> Unit,
+    onSave: (String, String) -> Unit,
+    onDelete: (() -> Unit)?,
+) {
+    var n by remember { mutableStateOf(name) }
+    var q by remember { mutableStateOf(query) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(if (onDelete == null) "Save search" else "Saved search") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = n,
+                    onValueChange = { n = it },
+                    label = { Text("Name") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                OutlinedTextField(
+                    value = q,
+                    onValueChange = { q = it },
+                    label = { Text("Query") },
+                    supportingText = { Text("Like  i.todo t.work s.today  o.p") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(enabled = n.isNotBlank() && q.isNotBlank(), onClick = { onSave(n, q) }) { Text("Save") }
+        },
+        dismissButton = {
+            Row {
+                onDelete?.let { TextButton(onClick = it) { Text("Delete") } }
+                TextButton(onClick = onDismiss) { Text("Cancel") }
+            }
+        },
+    )
+}

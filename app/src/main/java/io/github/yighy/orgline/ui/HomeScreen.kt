@@ -163,6 +163,8 @@ fun HomeScreen(
                 onQueryChange = { viewModel.query = it },
                 searchPlaceholder = "Search all notes",
                 scrollBehavior = scrollBehavior,
+                onSaveSearch = { viewModel.saveCurrentSearch(null) }
+                    .takeIf { viewModel.query.isNotBlank() || viewModel.tag != null },
             )
         },
         floatingActionButton = {

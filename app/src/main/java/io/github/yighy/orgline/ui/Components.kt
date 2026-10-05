@@ -142,6 +142,8 @@ fun SearchableTopBar(
     extraActions: @Composable RowScope.() -> Unit = {},
     /** Key of the element the title moves from when the screen opens (see [sharedText]). */
     sharedTitleKey: String? = null,
+    /** Saves the search being made; the button shows only when there is something to save. */
+    onSaveSearch: (() -> Unit)? = null,
     menu: (@Composable (dismiss: () -> Unit) -> Unit)? = null,
 ) {
     var menuOpen by remember { mutableStateOf(false) }
@@ -178,6 +180,9 @@ fun SearchableTopBar(
                 }
             },
             actions = {
+                if (onSaveSearch != null) {
+                    IconButton(onClick = onSaveSearch) { Icon(OrglineIcons.BookmarkAdd, "Save search") }
+                }
                 if (query.isNotEmpty()) {
                     IconButton(onClick = { onQueryChange("") }) { Icon(Icons.Default.Clear, "Clear search") }
                 }
