@@ -1,5 +1,8 @@
 package io.github.yighy.orgline.ui
 
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.material3.Switch
 import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.shape.CircleShape
@@ -181,11 +184,25 @@ fun TimestampDialog(
             initialMinute = start.minute,
             is24Hour = DateFormat.is24HourFormat(LocalContext.current),
         )
+        // Optional end of a time range ("09:00-10:30"), an hour after the start at first
+        var hasEnd by remember { mutableStateOf(parts?.endTime != null) }
+        val end = parts?.endTime ?: start.plusHours(1)
+        val endState = rememberTimePickerState(
+            initialHour = end.hour,
+            initialMinute = end.minute,
+            is24Hour = DateFormat.is24HourFormat(LocalContext.current),
+        )
         // Until changed here, the timestamp keeps its repeater as written (even one not offered)
         var repeat by remember { mutableStateOf(OrgTime.Repeat.parse(parts?.repeater)) }
         var repeatChanged by remember { mutableStateOf(false) }
-        fun result(time: LocalTime?) =
-            if (repeatChanged) OrgTime.build(date, time, initial, repeat?.toString()) else OrgTime.build(date, time, initial)
+        fun result(time: LocalTime?): String {
+            val endTime = LocalTime.of(endState.hour, endState.minute).takeIf { hasEnd && time != null }
+            return if (repeatChanged) {
+                OrgTime.build(date, time, initial, repeat?.toString(), endTime)
+            } else {
+                OrgTime.build(date, time, initial, endTime = endTime)
+            }
+        }
         val shownTime = { LocalTime.of(timeState.hour, timeState.minute) }
         AlertDialog(
             // Closing keeps the date with the time shown
@@ -194,6 +211,17 @@ fun TimestampDialog(
             text = {
                 Column(Modifier.verticalScroll(rememberScrollState())) {
                     TimeInput(state = timeState)
+                    // End time, as in Orgzly
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.toggleable(value = hasEnd, onValueChange = { hasEnd = it }),
+                    ) {
+                        Text("End time", style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+                        Switch(checked = hasEnd, onCheckedChange = null)
+                    }
+                    AnimatedVisibility(hasEnd) {
+                        TimeInput(state = endState, modifier = Modifier.padding(top = 8.dp))
+                    }
                     RepeatPicker(repeat) { repeat = it; repeatChanged = true }
                 }
             },

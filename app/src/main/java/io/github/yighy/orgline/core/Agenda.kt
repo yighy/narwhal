@@ -12,7 +12,8 @@ object Agenda {
     enum class Kind { Scheduled, Deadline }
 
     /** One occurrence of a planning time; [time] is null for a date without time of day. */
-    data class Entry(val note: OrgNote, val kind: Kind, val date: LocalDate, val time: LocalTime?) {
+    /** [endTime]: end of the time range, if the timestamp has one. */
+    data class Entry(val note: OrgNote, val kind: Kind, val date: LocalDate, val time: LocalTime?, val endTime: LocalTime? = null) {
         fun daysLate(today: LocalDate): Long = ChronoUnit.DAYS.between(date, today)
     }
 
@@ -35,13 +36,13 @@ object Agenda {
                 val planned = Planned.parse(timestamp) ?: continue
                 val isOverdue = planned.start.toLocalDate() < today
                 if (isOverdue) {
-                    overdue += Entry(note, kind, planned.start.toLocalDate(), planned.timeOfDay)
+                    overdue += Entry(note, kind, planned.start.toLocalDate(), planned.timeOfDay, planned.endTime)
                 }
                 // An overdue repeating task shows once, as overdue, not again today
                 val from = if (isOverdue) today.plusDays(1) else today
                 planned.occurrences(from.atStartOfDay(), end.atStartOfDay()).forEach { at ->
                     byDay.getOrPut(at.toLocalDate()) { mutableListOf() } +=
-                        Entry(note, kind, at.toLocalDate(), planned.timeOfDay?.let { at.toLocalTime() })
+                        Entry(note, kind, at.toLocalDate(), planned.timeOfDay?.let { at.toLocalTime() }, planned.endTime)
                 }
             }
         }
@@ -101,7 +102,13 @@ object Agenda {
     )
 
     /** A planning timestamp: its start, time of day, and repeater interval if any. */
-    private class Planned(val start: LocalDateTime, val timeOfDay: LocalTime?, val step: Long, val unit: ChronoUnit?) {
+    private class Planned(
+        val start: LocalDateTime,
+        val timeOfDay: LocalTime?,
+        val step: Long,
+        val unit: ChronoUnit?,
+        val endTime: LocalTime? = null,
+    ) {
 
         /** Occurrences in [from, before). */
         fun occurrences(from: LocalDateTime, before: LocalDateTime): Sequence<LocalDateTime> {
@@ -132,7 +139,7 @@ object Agenda {
                     OrgInterval.Unit.YEAR -> ChronoUnit.YEARS
                     null -> null
                 }
-                return Planned(start, timeOfDay, repeater?.value?.toLong() ?: 0, unit)
+                return Planned(start, timeOfDay, repeater?.value?.toLong() ?: 0, unit, parts.endTime)
             }
         }
     }

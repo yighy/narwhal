@@ -59,6 +59,17 @@ class NoteTreeTest {
     }
 
     @Test
+    fun endTimes() {
+        val day = LocalDate.of(2026, 10, 5)
+        val range = OrgTime.build(day, LocalTime.of(9, 0), endTime = LocalTime.of(10, 30))
+        assertEquals("<2026-10-05 Mon 09:00-10:30>", range)
+        assertEquals(LocalTime.of(10, 30), OrgTime.parts(range)!!.endTime)
+        // Kept when the date moves, dropped without a time
+        assertEquals("<2026-10-06 Tue 09:00-10:30 +1w>", OrgTime.build(day.plusDays(1), LocalTime.of(9, 0), "<2026-10-05 Mon 09:00-10:30 +1w>"))
+        assertEquals("<2026-10-06 Tue>", OrgTime.build(day.plusDays(1), null, range))
+    }
+
+    @Test
     fun repeaters() {
         val day = LocalDate.of(2026, 10, 5)
         assertEquals("<2026-10-05 Mon .+2w>", OrgTime.build(day, null, "<2026-10-05 Mon +1d>", ".+2w"))

@@ -12,7 +12,8 @@ import java.util.Calendar
 /** Org timestamps for planning times (SCHEDULED, DEADLINE). */
 object OrgTime {
 
-    data class Parts(val date: LocalDate, val time: LocalTime?, val repeater: String?)
+    /** [endTime] is the end of a time range such as "09:00-10:30", only with a [time]. */
+    data class Parts(val date: LocalDate, val time: LocalTime?, val repeater: String?, val endTime: LocalTime? = null)
 
     /** OrgRange.parseOrNull still throws on text that is not a timestamp. */
     fun range(timestamp: String): OrgRange? = runCatching { OrgRange.parse(timestamp) }.getOrNull()
@@ -22,19 +23,22 @@ object OrgTime {
         val cal = start.calendar
         val date = LocalDate.of(cal.get(Calendar.YEAR), cal.get(Calendar.MONTH) + 1, cal.get(Calendar.DAY_OF_MONTH))
         val time = if (start.hasTime()) LocalTime.of(cal.get(Calendar.HOUR_OF_DAY), cal.get(Calendar.MINUTE)) else null
-        return Parts(date, time, if (start.hasRepeater()) start.repeater.toString() else null)
+        val end = start.endCalendar?.takeIf { time != null && start.hasEndTime() }
+            ?.let { LocalTime.of(it.get(Calendar.HOUR_OF_DAY), it.get(Calendar.MINUTE)) }
+        return Parts(date, time, if (start.hasRepeater()) start.repeater.toString() else null, end)
     }
 
     /**
-     * Builds an active timestamp such as "<2026-10-05 Mon 09:00 +1w>", keeping the warning
-     * delay of [previous] if there was one. The [repeater] ("+1w", ".+2d", null for none)
-     * is the previous one unless given.
+     * Builds an active timestamp such as "<2026-10-05 Mon 09:00-10:30 +1w>", keeping the warning
+     * delay of [previous] if there was one. The [repeater] ("+1w", ".+2d", null for none) and
+     * the [endTime] (only with a [time]) are the previous ones unless given.
      */
     fun build(
         date: LocalDate,
         time: LocalTime?,
         previous: String? = null,
         repeater: String? = parts(previous)?.repeater,
+        endTime: LocalTime? = parts(previous)?.endTime,
     ): String {
         val old = previous?.let(::range)?.startTime
         val builder = (if (old != null) OrgDateTime.Builder(old) else OrgDateTime.Builder())
@@ -43,9 +47,10 @@ object OrgTime {
             .setMonth(date.monthValue - 1)
             .setDay(date.dayOfMonth)
             .setHasTime(time != null)
-            .setHasEndTime(false)
+            .setHasEndTime(time != null && endTime != null)
             .setRepeater(repeater?.let { runCatching { OrgRepeater.parse(it) }.getOrNull() })
         if (time != null) builder.setHour(time.hour).setMinute(time.minute)
+        if (time != null && endTime != null) builder.setEndHour(endTime.hour).setEndMinute(endTime.minute)
         return OrgRange(builder.build()).toString()
     }
 
@@ -80,7 +85,7 @@ object OrgTime {
         val p = parts(timestamp) ?: return timestamp
         return buildList {
             add(p.date.dayOfWeek.getDisplayName(java.time.format.TextStyle.SHORT, java.util.Locale.getDefault()) + ", " + p.date.format(dateFormat))
-            p.time?.let { add(it.format(timeFormat)) }
+            p.time?.let { add(it.format(timeFormat) + (p.endTime?.let { end -> " – " + end.format(timeFormat) } ?: "")) }
             p.repeater?.let { add(Repeat.parse(it)?.describe() ?: "repeats $it") }
         }.joinToString(" · ")
     }

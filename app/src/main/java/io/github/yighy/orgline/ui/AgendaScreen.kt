@@ -161,12 +161,17 @@ private fun AgendaRow(
                 .padding(horizontal = 16.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                entry.time?.format(timeFormat) ?: "",
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.width(72.dp),
-            )
+            // Start, and the end of a time range under it
+            Column(Modifier.width(72.dp)) {
+                Text(
+                    entry.time?.format(timeFormat) ?: "",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                entry.endTime?.let {
+                    Text(it.format(timeFormat), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
+                }
+            }
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     note.state?.let {
