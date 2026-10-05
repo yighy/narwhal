@@ -1,5 +1,6 @@
 package io.github.yighy.orgline.ui
 
+import io.github.yighy.orgline.data.ThemeMode
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.net.Uri
@@ -60,6 +61,7 @@ fun SettingsScreen(
     var pickAllDayTime by remember { mutableStateOf(false) }
     var editKeywords by remember { mutableStateOf(false) }
     var pickLinkRenaming by remember { mutableStateOf(false) }
+    var pickTheme by remember { mutableStateOf(false) }
 
     // System settings can change while the app is in the background
     var resumes by remember { mutableIntStateOf(0) }
@@ -84,6 +86,22 @@ fun SettingsScreen(
         },
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState())) {
+            SectionHeader("Appearance")
+            ListItem(
+                onClick = { pickTheme = true },
+                supportingContent = { Text(settings.themeMode.label) },
+            ) { Text("Theme") }
+            // Wallpaper colors exist from Android 12
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                SwitchItem(
+                    title = "Dynamic color",
+                    summary = "Use the colors of your wallpaper",
+                    checked = settings.dynamicColor,
+                    onCheckedChange = viewModel::setDynamicColor,
+                )
+            }
+
+            SectionHeader("Notes")
             ListItem(
                 onClick = onPickFolder,
                 supportingContent = { Text(library.folderUri?.let(::folderLabel) ?: "None") },
@@ -185,6 +203,18 @@ fun SettingsScreen(
         }
     }
 
+    if (pickTheme) {
+        ChoiceDialog(
+            title = "Theme",
+            options = ThemeMode.entries.map { it.label },
+            selected = settings.themeMode.label,
+            onDismiss = { pickTheme = false },
+            onSelect = { label ->
+                pickTheme = false
+                ThemeMode.entries.firstOrNull { it.label == label }?.let(viewModel::setThemeMode)
+            },
+        )
+    }
     if (pickLinkRenaming) {
         ChoiceDialog(
             title = "Links to a renamed note",

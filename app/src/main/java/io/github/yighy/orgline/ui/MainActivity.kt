@@ -1,5 +1,9 @@
 package io.github.yighy.orgline.ui
 
+import androidx.compose.ui.graphics.toArgb
+import android.graphics.drawable.ColorDrawable
+import androidx.activity.SystemBarStyle
+import io.github.yighy.orgline.data.ThemeMode
 import kotlinx.coroutines.delay
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.repeatOnLifecycle
@@ -95,7 +99,8 @@ class MainActivity : ComponentActivity() {
         }
         handleNotificationIntent(intent)
         setContent {
-            OrglineTheme {
+            val settings by viewModel.settings.collectAsState()
+            OrglineTheme(settings.themeMode, settings.dynamicColor) {
                 OrglineApp(viewModel, notificationsAllowed, ::askForNotifications)
             }
         }
@@ -138,16 +143,37 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+/**
+ * Light or dark as set ([mode]), with the wallpaper's colors when [dynamicColor] (Android 12+);
+ * the system bars and the window behind the screens follow.
+ */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun OrglineTheme(content: @Composable () -> Unit) {
-    val dark = isSystemInDarkTheme()
+fun OrglineTheme(mode: ThemeMode, dynamicColor: Boolean, content: @Composable () -> Unit) {
+    val dark = when (mode) {
+        ThemeMode.System -> isSystemInDarkTheme()
+        ThemeMode.Light -> false
+        ThemeMode.Dark -> true
+    }
     val context = LocalContext.current
     val colors = when {
-        Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ->
+        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ->
             if (dark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         dark -> darkColorScheme()
         else -> lightColorScheme()
+    }
+    val activity = context as? ComponentActivity
+    val background = colors.surface.toArgb()
+    LaunchedEffect(dark, background) {
+        activity ?: return@LaunchedEffect
+        // Bar icons light on dark, dark on light, even when the theme differs from the system's
+        val bars = if (dark) {
+            SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
+        } else {
+            SystemBarStyle.light(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT)
+        }
+        activity.enableEdgeToEdge(statusBarStyle = bars, navigationBarStyle = bars)
+        activity.window.setBackgroundDrawable(ColorDrawable(background))
     }
     MaterialExpressiveTheme(colorScheme = colors, motionScheme = MotionScheme.expressive(), content = content)
 }

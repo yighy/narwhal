@@ -11,6 +11,13 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import java.time.LocalTime
 
+/** Light or dark appearance: as the system, or always one of them. */
+enum class ThemeMode(val label: String) {
+    System("System default"),
+    Light("Light"),
+    Dark("Dark"),
+}
+
 /** When a note is renamed, links to it that still show its old title can follow. */
 enum class LinkRenaming(val label: String) {
     Ask("Ask each time"),
@@ -42,6 +49,9 @@ class AppSettings(context: Context) {
         val useAlarmClock: Boolean = false,
         /** What happens to links still showing a note's old title when it is renamed. */
         val linkRenaming: LinkRenaming = LinkRenaming.Ask,
+        val themeMode: ThemeMode = ThemeMode.System,
+        /** Colors taken from the wallpaper (Android 12+). */
+        val dynamicColor: Boolean = true,
     ) {
         val reminderOptions: Agenda.ReminderOptions
             get() = Agenda.ReminderOptions(remindScheduled, remindDeadline, allDayTime.takeIf { remindAllDay })
@@ -62,6 +72,8 @@ class AppSettings(context: Context) {
             useAlarmClock = prefs.getBoolean(KEY_ALARM_CLOCK, false),
             linkRenaming = LinkRenaming.entries.firstOrNull { it.name == prefs.getString(KEY_LINK_RENAMING, null) }
                 ?: LinkRenaming.Ask,
+            themeMode = ThemeMode.entries.firstOrNull { it.name == prefs.getString(KEY_THEME, null) } ?: ThemeMode.System,
+            dynamicColor = prefs.getBoolean(KEY_DYNAMIC_COLOR, true),
         ),
     )
     val values: StateFlow<Values> = _values
@@ -126,6 +138,10 @@ class AppSettings(context: Context) {
 
     fun setLinkRenaming(mode: LinkRenaming) = save({ putString(KEY_LINK_RENAMING, mode.name) }) { it.copy(linkRenaming = mode) }
 
+    fun setThemeMode(mode: ThemeMode) = save({ putString(KEY_THEME, mode.name) }) { it.copy(themeMode = mode) }
+
+    fun setDynamicColor(on: Boolean) = save({ putBoolean(KEY_DYNAMIC_COLOR, on) }) { it.copy(dynamicColor = on) }
+
     fun setKeywords(keywords: Keywords) = save({ putString(KEY_KEYWORDS, keywords.toSpec()) }) { it.copy(keywords = keywords) }
 
     companion object {
@@ -136,6 +152,8 @@ class AppSettings(context: Context) {
         private const val KEY_ADD_CREATED = "add_created_to_new_notes"
         private const val KEY_ALARM_CLOCK = "use_alarm_clock"
         private const val KEY_LINK_RENAMING = "link_renaming"
+        private const val KEY_THEME = "theme_mode"
+        private const val KEY_DYNAMIC_COLOR = "dynamic_color"
         private const val KEY_SHOW_CONTENT = "show_content_in_notebook"
         private const val KEY_REMIND_SCHEDULED = "remind_scheduled"
         private const val KEY_REMIND_DEADLINE = "remind_deadline"

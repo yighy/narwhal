@@ -1,5 +1,6 @@
 package io.github.yighy.orgline.ui
 
+import io.github.yighy.orgline.data.ThemeMode
 import java.time.LocalDateTime
 import io.github.yighy.orgline.core.SearchQuery
 import android.content.ActivityNotFoundException
@@ -205,6 +206,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun setUseAlarmClock(on: Boolean) = appSettings.setUseAlarmClock(on)
 
     fun setLinkRenaming(mode: LinkRenaming) = appSettings.setLinkRenaming(mode)
+
+    fun setThemeMode(mode: ThemeMode) = appSettings.setThemeMode(mode)
+
+    fun setDynamicColor(on: Boolean) = appSettings.setDynamicColor(on)
 
     val notebookIcons = appSettings.notebookIcons
 
