@@ -43,6 +43,16 @@ class IdLinksTest {
     }
 
     @Test
+    fun checkboxes() {
+        val text = "Shopping:\n- [ ] milk\n  + [X] bread\n1. [-] eggs\nnot [ ] a box"
+        assertEquals(listOf(false, true, false), Checkboxes.find(text).map { it.checked })
+        assertEquals("Shopping:\n- [X] milk\n  + [X] bread\n1. [-] eggs\nnot [ ] a box", Checkboxes.toggle(text, 0))
+        assertEquals("Shopping:\n- [ ] milk\n  + [ ] bread\n1. [-] eggs\nnot [ ] a box", Checkboxes.toggle(text, 1))
+        assertEquals(text, Checkboxes.toggle(text, 5))
+        assertEquals(IdLinks.Query(4, 12, "gtd"), IdLinks.queryAt("See file:gtd", 12, "file:"))
+    }
+
+    @Test
     fun findsAllKindsOfLinks() {
         val text = "See https://www.orgzly.com. Mail mailto:me@x.org, call tel:+33123 or " +
             "[[https://example.com][the site]] (file:gtd.org) and [[id:u1][a note]] geo:48.8,2.3"

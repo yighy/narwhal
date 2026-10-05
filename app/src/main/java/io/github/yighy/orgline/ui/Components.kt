@@ -1,5 +1,12 @@
 package io.github.yighy.orgline.ui
 
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.unit.em
+import androidx.compose.ui.text.PlaceholderVerticalAlign
+import androidx.compose.ui.text.Placeholder
+import androidx.compose.foundation.text.appendInlineContent
+import androidx.compose.foundation.text.InlineTextContent
+import io.github.yighy.orgline.core.Checkboxes
 import io.github.yighy.orgline.core.Links
 import java.time.LocalDate
 import io.github.yighy.orgline.core.Agenda
@@ -514,33 +521,59 @@ fun LinkedText(
     modifier: Modifier = Modifier,
     maxLines: Int = Int.MAX_VALUE,
     onTextTap: ((Int) -> Unit)? = null,
+    /** Given, Org checkboxes ("- [ ] item") show as boxes; a tap toggles the nth one. */
+    onToggleCheckbox: ((Int) -> Unit)? = null,
 ) {
     val linkStyle = TextLinkStyles(
         SpanStyle(color = MaterialTheme.colorScheme.primary, textDecoration = TextDecoration.Underline),
     )
-    // The text as shown, and the shown and raw range of each link
-    val (annotated, links) = remember(text, linkStyle) {
+    val toggle by rememberUpdatedState(onToggleCheckbox)
+    val showBoxes = onToggleCheckbox != null
+    // The text as shown, and the shown and raw range of each link and checkbox
+    val (annotated, ranges, boxes) = remember(text, linkStyle, showBoxes) {
         val ranges = mutableListOf<Pair<IntRange, IntRange>>()
+        val links = Links.find(text)
+        val boxes = if (showBoxes) Checkboxes.find(text).filter { b -> links.none { b.box in it.range } } else emptyList()
+        val segments = (links.map { it.range to it } + boxes.map { it.range to it }).sortedBy { it.first.first }
         val shown = buildAnnotatedString {
             var last = 0
-            Links.find(text).forEach { link ->
-                append(text.substring(last, link.range.first))
+            segments.forEach { (range, segment) ->
+                if (range.first < last) return@forEach
+                append(text.substring(last, range.first))
                 val start = length
-                withLink(LinkAnnotation.Clickable(link.target, linkStyle) { onOpenLink(link.target) }) {
-                    append(link.shown)
+                when (segment) {
+                    is Links.Link -> withLink(LinkAnnotation.Clickable(segment.target, linkStyle) { onOpenLink(segment.target) }) {
+                        append(segment.shown)
+                    }
+                    is Checkboxes.Box -> appendInlineContent("box${boxes.indexOf(segment)}", if (segment.checked) "[X]" else "[ ]")
                 }
-                ranges += (start until length) to link.range
-                last = link.range.last + 1
+                ranges += (start until length) to range
+                last = range.last + 1
             }
             append(text.substring(last))
         }
-        shown to ranges
+        Triple(shown, ranges, boxes)
+    }
+    val boxColor = MaterialTheme.colorScheme.primary
+    val inlineContent = boxes.withIndex().associate { (i, box) ->
+        "box$i" to InlineTextContent(Placeholder(1.4.em, 1.2.em, PlaceholderVerticalAlign.TextCenter)) {
+            Icon(
+                when {
+                    box.checked -> OrglineIcons.CheckBox
+                    box.partial -> OrglineIcons.CheckBoxPartial
+                    else -> OrglineIcons.CheckBoxBlank
+                },
+                if (box.checked) "Checked" else "Not checked",
+                tint = boxColor,
+                modifier = Modifier.fillMaxSize().clickable { toggle?.invoke(i) },
+            )
+        }
     }
     var layout by remember { mutableStateOf<TextLayoutResult?>(null) }
     val tap = if (onTextTap == null) Modifier else Modifier.pointerInput(annotated) {
         detectTapGestures { position ->
             val shown = layout?.getOffsetForPosition(position) ?: annotated.length
-            rawOffset(shown, links)?.let(onTextTap)
+            rawOffset(shown, ranges)?.let(onTextTap)
         }
     }
     Text(
@@ -549,11 +582,12 @@ fun LinkedText(
         modifier = modifier.then(tap),
         maxLines = maxLines,
         overflow = TextOverflow.Ellipsis,
+        inlineContent = inlineContent,
         onTextLayout = { layout = it },
     )
 }
 
-/** Position in the raw text of position [shown] in the text as displayed; null on a link. */
+/** Position in the raw text of position [shown] in the text as displayed; null on a link or box. */
 private fun rawOffset(shown: Int, links: List<Pair<IntRange, IntRange>>): Int? {
     var shift = 0
     for ((displayed, raw) in links) {

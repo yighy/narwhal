@@ -13,19 +13,19 @@ object IdLinks {
     private val LINK = Regex("""\[\[id:([^\]]+)](?:\[([^\]]*)])?]""")
 
     /**
-     * Returns the "id:" query being typed just before [cursor], or null.
-     * Ignores "id:" inside an existing link ("[[id:...") or in the middle of a word.
+     * Returns the "id:" query (or another [prefix], such as "file:") being typed just before
+     * [cursor], or null. Ignores one inside an existing link ("[[id:...") or in the middle of a word.
      */
-    fun queryAt(text: String, cursor: Int): Query? {
-        if (cursor < 3 || cursor > text.length) return null
+    fun queryAt(text: String, cursor: Int, prefix: String = "id:"): Query? {
+        if (cursor < prefix.length || cursor > text.length) return null
         val before = text.substring(0, cursor)
-        val start = before.lastIndexOf("id:")
+        val start = before.lastIndexOf(prefix)
         if (start < 0) return null
 
         val prev = before.getOrNull(start - 1)
         if (prev != null && !prev.isWhitespace() && prev != '(') return null
 
-        val query = before.substring(start + 3)
+        val query = before.substring(start + prefix.length)
         if (query.length > MAX_QUERY_LENGTH || query.any { it == '\n' || it == '[' || it == ']' }) return null
 
         return Query(start, cursor, query)

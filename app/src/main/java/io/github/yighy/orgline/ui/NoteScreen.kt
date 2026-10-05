@@ -1,5 +1,6 @@
 package io.github.yighy.orgline.ui
 
+import io.github.yighy.orgline.core.Checkboxes
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.runtime.mutableStateListOf
@@ -211,11 +212,28 @@ fun NoteScreen(
     // Closing the keyboard ends the editing (and saves), instead of leaving a cursor behind
     ClearFocusWhenKeyboardHides()
 
-    // "id:" completion while editing the title or the content
-    val query = draft.takeIf { editing != Editing.None && it.selection.collapsed }
-        ?.let { IdLinks.queryAt(it.text, it.selection.start) }
+    // "id:" and "file:" completion while editing the title or the content
+    val typing = draft.takeIf { editing != Editing.None && it.selection.collapsed }
+    val query = typing?.let { IdLinks.queryAt(it.text, it.selection.start) }
     val suggestions = remember(query?.text, library) {
         query?.let { IdLinks.suggestions(library.notes, it.text) }.orEmpty()
+    }
+    val fileQuery = typing?.takeIf { query == null }?.let { IdLinks.queryAt(it.text, it.selection.start, "file:") }
+    val fileSuggestions = remember(fileQuery?.text, library) {
+        fileQuery?.let { q ->
+            val words = q.text.trim().split(Regex("\\s+")).filter { it.isNotEmpty() }
+            library.files
+                .filter { f -> words.all { w -> f.ref.path.contains(w, ignoreCase = true) || f.title.contains(w, ignoreCase = true) } }
+                .sortedBy { it.title.lowercase() }
+                .take(20)
+        }.orEmpty()
+    }
+
+    /** Puts a link to the notebook in place of the "file:" being typed. */
+    fun insertFileLink(file: NoteRepository.LoadedFile) {
+        val q = fileQuery ?: return
+        val link = "[[file:${file.ref.path}][${file.title.replace('[', '(').replace(']', ')')}]]"
+        draft = TextFieldValue(draft.text.replaceRange(q.start, q.end, link), TextRange(q.start + link.length))
     }
 
     fun insertLink(target: OrgNote) {
@@ -293,6 +311,19 @@ fun NoteScreen(
             )
         },
         bottomBar = {
+            if (fileSuggestions.isNotEmpty()) {
+                Surface(tonalElevation = 3.dp, shadowElevation = 8.dp) {
+                    LazyColumn(Modifier.heightIn(max = 240.dp)) {
+                        items(fileSuggestions, key = { it.uri }) { target ->
+                            ListItem(
+                                headlineContent = { Text(target.title) },
+                                supportingContent = { Text(target.ref.path, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                                modifier = Modifier.clickable { insertFileLink(target) },
+                            )
+                        }
+                    }
+                }
+            }
             if (suggestions.isNotEmpty()) {
                 Surface(tonalElevation = 3.dp, shadowElevation = 8.dp) {
                     LazyColumn(Modifier.heightIn(max = 240.dp)) {
@@ -550,7 +581,7 @@ fun NoteScreen(
 
             // Content: edited where it is shown, looking the same
             val contentStyle = MaterialTheme.typography.bodyLarge
-            val contentPlaceholder = "Add content (type id: to link to another note)"
+            val contentPlaceholder = "Add content (type id: or file: to link to a note or notebook)"
             if (editing == Editing.Content) {
                 InPlaceField(
                     value = draft,
@@ -576,6 +607,10 @@ fun NoteScreen(
                             viewModel::openLink,
                             Modifier.sharedText(noteContentKey(note)),
                             onTextTap = { startEditing(Editing.Content, it) },
+                            onToggleCheckbox = { n ->
+                                saved = Editing.Content to Checkboxes.toggle(content, n)
+                                viewModel.update(note) { it.copy(content = Checkboxes.toggle(it.content, n)) }
+                            },
                         )
                     }
                 }

@@ -1,5 +1,6 @@
 package io.github.yighy.orgline.ui
 
+import io.github.yighy.orgline.core.Checkboxes
 import androidx.compose.runtime.LaunchedEffect
 import io.github.yighy.orgline.core.Notebooks
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -309,6 +310,7 @@ private fun NotebookOutline(
                         },
                         onOpenLink = viewModel::openLink,
                         onAddNear = { placement -> onAddNear(note, placement) },
+                        onToggleCheckbox = { n -> viewModel.update(note) { it.copy(content = Checkboxes.toggle(it.content, n)) } },
                     )
                 }
             }
@@ -338,6 +340,7 @@ private fun OutlineRow(
     onLongClick: () -> Unit,
     onOpenLink: (String) -> Unit,
     onAddNear: (Placement) -> Unit,
+    onToggleCheckbox: (Int) -> Unit,
 ) {
     val chevronRotation by animateFloatAsState(
         targetValue = if (folded) -90f else 0f,
@@ -414,6 +417,7 @@ private fun OutlineRow(
                         MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
                         onOpenLink,
                         Modifier.padding(top = 4.dp).sharedText(noteContentKey(note)),
+                        onToggleCheckbox = onToggleCheckbox,
                     )
                 }
             }

@@ -220,6 +220,18 @@ object OrglineIcons {
         )
     }
 
+    val CheckBox: ImageVector by lazy {
+        icon("CheckBox", "M19,3H5c-1.11,0 -2,0.9 -2,2v14c0,1.1 0.89,2 2,2h14c1.11,0 2,-0.9 2,-2V5c0,-1.1 -0.89,-2 -2,-2zM10,17l-5,-5 1.41,-1.41L10,14.17l7.59,-7.59L19,8l-9,9z")
+    }
+
+    val CheckBoxBlank: ImageVector by lazy {
+        icon("CheckBoxBlank", "M19,5v14H5V5h14m0,-2H5c-1.1,0 -2,0.9 -2,2v14c0,1.1 0.9,2 2,2h14c1.1,0 2,-0.9 2,-2V5c0,-1.1 -0.9,-2 -2,-2z")
+    }
+
+    val CheckBoxPartial: ImageVector by lazy {
+        icon("CheckBoxPartial", "M19,3H5c-1.1,0 -2,0.9 -2,2v14c0,1.1 0.9,2 2,2h14c1.1,0 2,-0.9 2,-2V5c0,-1.1 -0.9,-2 -2,-2zM17,13H7v-2h10v2z")
+    }
+
     val BookmarkAdd: ImageVector by lazy {
         icon("BookmarkAdd", "M17,11v6.97l-5,-2.14l-5,2.14V5h6V3H7c-1.1,0 -2,0.9 -2,2v16l7,-3l7,3V11H17zM21,7h-2v2h-2V7h-2V5h2V3h2v2h2V7z")
     }
