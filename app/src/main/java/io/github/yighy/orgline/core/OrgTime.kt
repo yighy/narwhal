@@ -62,6 +62,19 @@ object OrgTime {
     /** Events of a note: active timestamps in its title and content (not its planning line). */
     fun events(note: OrgNote): List<String> = events(note.title + "\n" + note.content)
 
+    /** An inactive timestamp such as "[2026-10-06 Tue 14:03]" (for CREATED). */
+    fun inactive(at: java.time.LocalDateTime): String = OrgRange(
+        OrgDateTime.Builder()
+            .setIsActive(false)
+            .setYear(at.year)
+            .setMonth(at.monthValue - 1)
+            .setDay(at.dayOfMonth)
+            .setHasTime(true)
+            .setHour(at.hour)
+            .setMinute(at.minute)
+            .build(),
+    ).toString()
+
     /** A repeater split into its parts: "++2w" is ("++", 2, 'w'), "/4d" habit part kept in [rest]. */
     data class Repeat(val type: String, val every: Int, val unit: Char, val rest: String = "") {
         override fun toString() = "$type$every$unit$rest"

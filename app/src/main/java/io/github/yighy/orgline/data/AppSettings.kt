@@ -35,6 +35,10 @@ class AppSettings(context: Context) {
         val keywords: Keywords = Keywords.DEFAULT,
         /** Give every new note an ID property, so it can be linked to with id:. */
         val addIdToNewNotes: Boolean = false,
+        /** Give every new note a CREATED property with when it was created. */
+        val addCreatedToNewNotes: Boolean = false,
+        /** Set reminders as alarm clock alarms (the most reliable; an alarm icon shows). */
+        val useAlarmClock: Boolean = false,
         /** What happens to links still showing a note's old title when it is renamed. */
         val linkRenaming: LinkRenaming = LinkRenaming.Ask,
     ) {
@@ -53,6 +57,8 @@ class AppSettings(context: Context) {
             allDayTime = LocalTime.ofSecondOfDay(prefs.getInt(KEY_ALL_DAY_MINUTES, 9 * 60) * 60L),
             keywords = prefs.getString(KEY_KEYWORDS, null)?.let(Keywords::parse) ?: Keywords.DEFAULT,
             addIdToNewNotes = prefs.getBoolean(KEY_ADD_ID, false),
+            addCreatedToNewNotes = prefs.getBoolean(KEY_ADD_CREATED, false),
+            useAlarmClock = prefs.getBoolean(KEY_ALARM_CLOCK, false),
             linkRenaming = LinkRenaming.entries.firstOrNull { it.name == prefs.getString(KEY_LINK_RENAMING, null) }
                 ?: LinkRenaming.Ask,
         ),
@@ -103,6 +109,16 @@ class AppSettings(context: Context) {
         _values.update { it.copy(remindScheduled = on) }
     }
 
+    fun setAddCreatedToNewNotes(on: Boolean) {
+        prefs.edit().putBoolean(KEY_ADD_CREATED, on).apply()
+        _values.update { it.copy(addCreatedToNewNotes = on) }
+    }
+
+    fun setUseAlarmClock(on: Boolean) {
+        prefs.edit().putBoolean(KEY_ALARM_CLOCK, on).apply()
+        _values.update { it.copy(useAlarmClock = on) }
+    }
+
     fun setRemindDeadline(on: Boolean) {
         prefs.edit().putBoolean(KEY_REMIND_DEADLINE, on).apply()
         _values.update { it.copy(remindDeadline = on) }
@@ -138,6 +154,8 @@ class AppSettings(context: Context) {
         private const val KEY_SEARCHES = "saved_searches"
         private const val ICON_PREFIX = "icon:"
         private const val KEY_ADD_ID = "add_id_to_new_notes"
+        private const val KEY_ADD_CREATED = "add_created_to_new_notes"
+        private const val KEY_ALARM_CLOCK = "use_alarm_clock"
         private const val KEY_LINK_RENAMING = "link_renaming"
         private const val KEY_SHOW_CONTENT = "show_content_in_notebook"
         private const val KEY_REMIND_SCHEDULED = "remind_scheduled"

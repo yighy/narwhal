@@ -1,5 +1,9 @@
 package io.github.yighy.orgline.ui
 
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.withStyle
+import io.github.yighy.orgline.core.Markup
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.text.PlaceholderVerticalAlign
@@ -529,12 +533,16 @@ fun LinkedText(
     )
     val toggle by rememberUpdatedState(onToggleCheckbox)
     val showBoxes = onToggleCheckbox != null
-    // The text as shown, and the shown and raw range of each link and checkbox
-    val (annotated, ranges, boxes) = remember(text, linkStyle, showBoxes) {
-        val ranges = mutableListOf<Pair<IntRange, IntRange>>()
+    val codeBackground = MaterialTheme.colorScheme.surfaceContainerHighest
+    // The text as shown, and how its parts map to the raw text (links, checkboxes, emphasis)
+    val (annotated, ranges, boxes) = remember(text, linkStyle, showBoxes, codeBackground) {
+        val ranges = mutableListOf<ShownPart>()
         val links = Links.find(text)
         val boxes = if (showBoxes) Checkboxes.find(text).filter { b -> links.none { b.box in it.range } } else emptyList()
-        val segments = (links.map { it.range to it } + boxes.map { it.range to it }).sortedBy { it.first.first }
+        // Emphasis around a link is left as written
+        val emphasis = Markup.find(text).filter { e -> links.none { it.range.first <= e.range.last && e.range.first <= it.range.last } }
+        val segments = (links.map { it.range to it } + boxes.map { it.range to it } + emphasis.map { it.range to it })
+            .sortedBy { it.first.first }
         val shown = buildAnnotatedString {
             var last = 0
             segments.forEach { (range, segment) ->
@@ -546,8 +554,9 @@ fun LinkedText(
                         append(segment.shown)
                     }
                     is Checkboxes.Box -> appendInlineContent("box${boxes.indexOf(segment)}", if (segment.checked) "[X]" else "[ ]")
+                    is Markup.Emphasis -> withStyle(emphasisStyle(segment.style, codeBackground)) { append(segment.content) }
                 }
-                ranges += (start until length) to range
+                ranges += ShownPart(start until length, range, editable = segment is Markup.Emphasis)
                 last = range.last + 1
             }
             append(text.substring(last))
@@ -588,15 +597,30 @@ fun LinkedText(
 }
 
 /** Position in the raw text of position [shown] in the text as displayed; null on a link or box. */
-private fun rawOffset(shown: Int, links: List<Pair<IntRange, IntRange>>): Int? {
+private fun rawOffset(shown: Int, parts: List<ShownPart>): Int? {
     var shift = 0
-    for ((displayed, raw) in links) {
-        if (shown < displayed.first) break
-        // A tap on a link opens it (the link handles that)
-        if (shown <= displayed.last) return null
-        shift = raw.last - displayed.last
+    for (part in parts) {
+        if (shown < part.shown.first) break
+        if (shown <= part.shown.last) {
+            // In emphasis, the text is the raw one without its first marker; a tap on a link
+            // or a box opens or toggles it (they handle that)
+            return if (part.editable) part.raw.first + 1 + (shown - part.shown.first) else null
+        }
+        shift = part.raw.last - part.shown.last
     }
     return shown + shift
+}
+
+/** A part of the text shown otherwise than written: a link, a checkbox, emphasis. */
+private data class ShownPart(val shown: IntRange, val raw: IntRange, val editable: Boolean)
+
+/** How Org emphasis shows. */
+private fun emphasisStyle(style: Markup.Style, codeBackground: Color): SpanStyle = when (style) {
+    Markup.Style.Bold -> SpanStyle(fontWeight = FontWeight.Bold)
+    Markup.Style.Italic -> SpanStyle(fontStyle = FontStyle.Italic)
+    Markup.Style.Underline -> SpanStyle(textDecoration = TextDecoration.Underline)
+    Markup.Style.Strike -> SpanStyle(textDecoration = TextDecoration.LineThrough)
+    Markup.Style.Verbatim, Markup.Style.Code -> SpanStyle(fontFamily = FontFamily.Monospace, background = codeBackground)
 }
 
 /** Pull down to reload the files from the folder. */

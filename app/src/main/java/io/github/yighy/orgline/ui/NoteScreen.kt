@@ -630,6 +630,33 @@ fun NoteScreen(
                     }
                 }
             }
+            // Notes that link here with id: (as Obsidian's backlinks)
+            val id = note.id
+            val backlinks = remember(id, library) {
+                id?.let { target ->
+                    library.notes.filter { other ->
+                        (other.fileUri != note.fileUri || other.index != note.index) &&
+                            IdLinks.find(other.raw).any { it.id.equals(target, ignoreCase = true) }
+                    }
+                }.orEmpty()
+            }
+            if (backlinks.isNotEmpty() && newNote == null) {
+                HorizontalDivider(Modifier.padding(vertical = 8.dp))
+                Text(
+                    "Linked from",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(vertical = 4.dp),
+                )
+                backlinks.forEach { other ->
+                    NoteLine(
+                        note = other,
+                        subtitle = library.file(other.fileUri)?.title,
+                        onClick = { commit(); viewModel.openNote(other) },
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                    )
+                }
+            }
             Spacer(
                 Modifier
                     .fillMaxWidth()

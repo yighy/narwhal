@@ -25,6 +25,8 @@ object ReminderNotifications {
     const val EXTRA_INDEX = "index"
     const val EXTRA_TITLE = "title"
     const val EXTRA_NOTIFICATION_ID = "notification_id"
+    const val EXTRA_KIND = "kind"
+    const val EXTRA_SNOOZE_MINUTES = "snooze_minutes"
 
     fun createChannel(context: Context) {
         val channel = NotificationChannel(CHANNEL_ID, "Reminders", NotificationManager.IMPORTANCE_HIGH).apply {
@@ -60,6 +62,19 @@ object ReminderNotifications {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
 
+        /** Snoozes for [minutes]; each its own request code, so both buttons work. */
+        fun snooze(minutes: Long, code: Int) = PendingIntent.getBroadcast(
+            context,
+            code,
+            Intent(context, ReminderReceiver::class.java)
+                .setAction(ReminderReceiver.ACTION_SNOOZE)
+                .putNoteExtras(note.fileUri, note.index, note.title)
+                .putExtra(EXTRA_KIND, reminder.kind.name)
+                .putExtra(EXTRA_SNOOZE_MINUTES, minutes)
+                .putExtra(EXTRA_NOTIFICATION_ID, id),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
+
         val kind = if (reminder.kind == Agenda.Kind.Deadline) "Deadline" else "Scheduled"
         val time = reminder.at.toLocalTime().format(DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT))
 
@@ -74,6 +89,8 @@ object ReminderNotifications {
             .setAutoCancel(true)
             .setContentIntent(open)
             .addAction(0, "Done", done)
+            .addAction(0, "In 1 hour", snooze(60, id + 1))
+            .addAction(0, "Tomorrow", snooze(24 * 60, id + 2))
             .build()
 
         try {

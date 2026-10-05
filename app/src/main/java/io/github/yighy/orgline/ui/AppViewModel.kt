@@ -1,5 +1,7 @@
 package io.github.yighy.orgline.ui
 
+import java.time.LocalDateTime
+import io.github.yighy.orgline.core.SearchQuery
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import io.github.yighy.orgline.data.SavedSearch
@@ -171,6 +173,18 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch { repository.refresh() }
     }
 
+    private var checking = false
+
+    /** Reloads files changed by other apps (Syncthing, editors…), without showing it. */
+    fun checkForChanges() {
+        if (checking) return
+        checking = true
+        viewModelScope.launch {
+            runCatching { repository.refresh(quiet = true) }
+            checking = false
+        }
+    }
+
     fun pullToRefresh() {
         refreshing = true
         viewModelScope.launch {
@@ -185,6 +199,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun setRemindAllDay(on: Boolean) = appSettings.setRemindAllDay(on)
     fun setAllDayTime(time: LocalTime) = appSettings.setAllDayTime(time)
     fun setAddIdToNewNotes(on: Boolean) = appSettings.setAddIdToNewNotes(on)
+
+    fun setAddCreatedToNewNotes(on: Boolean) = appSettings.setAddCreatedToNewNotes(on)
+
+    fun setUseAlarmClock(on: Boolean) = appSettings.setUseAlarmClock(on)
 
     fun setLinkRenaming(mode: LinkRenaming) = appSettings.setLinkRenaming(mode)
 
@@ -485,12 +503,16 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (edit.title.isBlank()) {
             return draftNote(screen)
         }
-        // With the setting on, the new note gets an ID property right away
-        val full = if (settings.value.addIdToNewNotes && edit.properties.none { it.first.equals("ID", true) }) {
-            edit.copy(properties = edit.properties + ("ID" to UUID.randomUUID().toString().uppercase()))
-        } else {
-            edit
+        // With the settings on, the new note gets an ID and a CREATED property right away
+        val added = buildList {
+            if (settings.value.addIdToNewNotes && edit.properties.none { it.first.equals("ID", true) }) {
+                add("ID" to UUID.randomUUID().toString().uppercase())
+            }
+            if (settings.value.addCreatedToNewNotes && edit.properties.none { it.first.equals(SearchQuery.CREATED_PROPERTY, true) }) {
+                add(SearchQuery.CREATED_PROPERTY to OrgTime.inactive(LocalDateTime.now()))
+            }
         }
+        val full = if (added.isEmpty()) edit else edit.copy(properties = edit.properties + added)
         val note = attempt {
             val created = if (screen.anchor != null && screen.placement != null) {
                 repository.createNoteNear(screen.anchor, screen.placement, edit.title)

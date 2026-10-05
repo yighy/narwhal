@@ -1,5 +1,9 @@
 package io.github.yighy.orgline.ui
 
+import kotlinx.coroutines.delay
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.repeatOnLifecycle
+import androidx.lifecycle.lifecycleScope
 import androidx.compose.material3.IconButton
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.material.icons.filled.Edit
@@ -83,6 +87,15 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        // While shown, files changed by other apps (Syncthing…) are picked up within seconds
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.RESUMED) {
+                while (true) {
+                    delay(CHANGES_CHECK_MS)
+                    viewModel.checkForChanges()
+                }
+            }
+        }
         handleNotificationIntent(intent)
         setContent {
             OrglineTheme {
@@ -350,3 +363,6 @@ private fun isContainerTransform(a: Screen, b: Screen): Boolean {
             (x is Screen.NewNote && y is Screen.Note)
     return pair(a, b) || pair(b, a)
 }
+
+/** How often files are checked for changes made by other apps while the app is shown. */
+private const val CHANGES_CHECK_MS = 4000L

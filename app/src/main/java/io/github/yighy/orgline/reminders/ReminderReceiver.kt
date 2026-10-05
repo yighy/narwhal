@@ -1,5 +1,7 @@
 package io.github.yighy.orgline.reminders
 
+import java.time.LocalDateTime
+import io.github.yighy.orgline.core.Agenda
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -32,6 +34,7 @@ class ReminderReceiver : BroadcastReceiver() {
         val library = repository.library.value
         if (!library.loaded) return
         val options = app.settings.values.value.reminderOptions
+        val alarmClock = app.settings.values.value.useAlarmClock
 
         when (intent.action) {
             ACTION_DONE -> {
@@ -46,6 +49,17 @@ class ReminderReceiver : BroadcastReceiver() {
                 runCatching { repository.saveNote(note, NoteStates.apply(note.toEdit(), target, keywords).edit) }
             }
 
+            // Shown again later: in an hour, or tomorrow at the same time
+            ACTION_SNOOZE -> {
+                val uri = intent.getStringExtra(ReminderNotifications.EXTRA_FILE_URI) ?: return
+                val title = intent.getStringExtra(ReminderNotifications.EXTRA_TITLE) ?: return
+                val kind = intent.getStringExtra(ReminderNotifications.EXTRA_KIND)?.let(Agenda.Kind::valueOf) ?: Agenda.Kind.Scheduled
+                val minutes = intent.getLongExtra(ReminderNotifications.EXTRA_SNOOZE_MINUTES, 60)
+                ReminderNotifications.cancel(app, intent.getIntExtra(ReminderNotifications.EXTRA_NOTIFICATION_ID, 0))
+                val at = LocalDateTime.now().withSecond(0).withNano(0).plusMinutes(minutes)
+                app.scheduler.snooze(ReminderScheduler.Snooze(uri, title, kind, at))
+            }
+
             // Alarm, or boot / update / clock change: also shows reminders missed meanwhile
             else -> {
                 app.scheduler.takeDue(library.notes, options).forEach { reminder ->
@@ -56,11 +70,12 @@ class ReminderReceiver : BroadcastReceiver() {
         }
 
         // Boot, update, clock change, or after showing: set the next alarm
-        app.scheduler.reschedule(repository.library.value.notes, options)
+        app.scheduler.reschedule(repository.library.value.notes, options, alarmClock)
     }
 
     companion object {
         const val ACTION_REMIND = "io.github.yighy.orgline.action.REMIND"
         const val ACTION_DONE = "io.github.yighy.orgline.action.DONE"
+        const val ACTION_SNOOZE = "io.github.yighy.orgline.action.SNOOZE"
     }
 }

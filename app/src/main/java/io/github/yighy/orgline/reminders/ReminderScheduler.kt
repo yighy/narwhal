@@ -1,5 +1,8 @@
 package io.github.yighy.orgline.reminders
 
+import io.github.yighy.orgline.ui.MainActivity
+import org.json.JSONObject
+import org.json.JSONArray
 import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Context
@@ -29,20 +32,58 @@ class ReminderScheduler(private val context: Context) {
     fun canScheduleExact(): Boolean =
         Build.VERSION.SDK_INT < Build.VERSION_CODES.S || alarms.canScheduleExactAlarms()
 
+    /**
+     * Sets the alarm for the next reminder or snoozed one; as an alarm clock alarm with
+     * [alarmClock] (the system then never delays it, and shows an alarm icon).
+     */
     @Synchronized
-    fun reschedule(notes: List<OrgNote>, options: Agenda.ReminderOptions) {
+    fun reschedule(notes: List<OrgNote>, options: Agenda.ReminderOptions, alarmClock: Boolean) {
         val intent = alarmIntent()
         alarms.cancel(intent)
         // Never schedule before the last check, so nothing is shown twice
         val after = maxOf(now(), lastCheck)
-        val next = Agenda.nextReminder(notes, after, options) ?: return
+        val next = listOfNotNull(
+            Agenda.nextReminder(notes, after, options),
+            snoozes().map { it.at }.filter { it > after }.minOrNull(),
+        ).minOrNull() ?: return
         val at = toMillis(next)
-        if (canScheduleExact()) {
-            alarms.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, intent)
-        } else {
-            alarms.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, intent)
+        when {
+            alarmClock && canScheduleExact() -> alarms.setAlarmClock(AlarmManager.AlarmClockInfo(at, openAppIntent()), intent)
+            canScheduleExact() -> alarms.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, intent)
+            else -> alarms.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, intent)
         }
     }
+
+    /** A reminder put off by the notification's snooze: shown again at [at]. */
+    data class Snooze(val fileUri: String, val title: String, val kind: Agenda.Kind, val at: LocalDateTime)
+
+    @Synchronized
+    fun snooze(snooze: Snooze) = saveSnoozes(snoozes() + snooze)
+
+    private fun snoozes(): List<Snooze> = runCatching {
+        val json = JSONArray(prefs.getString(KEY_SNOOZES, null) ?: return emptyList())
+        List(json.length()) { i ->
+            json.getJSONObject(i).let {
+                Snooze(it.getString("uri"), it.getString("title"), Agenda.Kind.valueOf(it.getString("kind")), toLocal(it.getLong("at")))
+            }
+        }
+    }.getOrDefault(emptyList())
+
+    private fun saveSnoozes(snoozes: List<Snooze>) {
+        val json = JSONArray()
+        snoozes.forEach {
+            json.put(JSONObject().put("uri", it.fileUri).put("title", it.title).put("kind", it.kind.name).put("at", toMillis(it.at)))
+        }
+        prefs.edit().putString(KEY_SNOOZES, json.toString()).apply()
+    }
+
+    /** Opens the app from the alarm icon of the status bar. */
+    private fun openAppIntent(): PendingIntent = PendingIntent.getActivity(
+        context,
+        0,
+        Intent(context, MainActivity::class.java),
+        PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+    )
 
     /**
      * Reminders due since the last check (at most a day back, e.g. after the phone was off),
@@ -53,7 +94,13 @@ class ReminderScheduler(private val context: Context) {
         val now = now()
         val from = maxOf(lastCheck, now.minusDays(1))
         lastCheck = now
-        return Agenda.reminders(notes, from, now, options)
+        // Snoozed reminders now due, for notes still there and not done
+        val (due, later) = snoozes().partition { it.at <= now }
+        if (due.isNotEmpty()) saveSnoozes(later)
+        val snoozed = due.mapNotNull { s ->
+            notes.firstOrNull { it.fileUri == s.fileUri && it.title == s.title && !it.isDone }?.let { Agenda.Reminder(it, s.kind, s.at) }
+        }
+        return Agenda.reminders(notes, from, now, options) + snoozed
     }
 
     private fun alarmIntent(): PendingIntent = PendingIntent.getBroadcast(
@@ -71,5 +118,6 @@ class ReminderScheduler(private val context: Context) {
 
     companion object {
         private const val KEY_LAST_CHECK = "last_check"
+        private const val KEY_SNOOZES = "snoozes"
     }
 }

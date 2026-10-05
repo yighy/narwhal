@@ -109,6 +109,12 @@ fun SettingsScreen(
                 checked = settings.addIdToNewNotes,
                 onCheckedChange = viewModel::setAddIdToNewNotes,
             )
+            SwitchItem(
+                title = "Add a creation date to new notes",
+                summary = "Fill the CREATED property when a note is created (searched with cr., sorted with o.cr)",
+                checked = settings.addCreatedToNewNotes,
+                onCheckedChange = viewModel::setAddCreatedToNewNotes,
+            )
 
             ListItem(
                 headlineContent = { Text("Links to a renamed note") },
@@ -128,6 +134,12 @@ fun SettingsScreen(
                 summary = "Notify at the time of DEADLINE",
                 checked = settings.remindDeadline,
                 onCheckedChange = viewModel::setRemindDeadline,
+            )
+            SwitchItem(
+                title = "Use alarm clock alarms",
+                summary = "Most reliable, even with battery saving; an alarm icon shows in the status bar until the next reminder",
+                checked = settings.useAlarmClock,
+                onCheckedChange = viewModel::setUseAlarmClock,
             )
             SwitchItem(
                 title = "For dates without a time",

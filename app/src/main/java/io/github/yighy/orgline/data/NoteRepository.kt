@@ -88,8 +88,27 @@ class NoteRepository(context: Context) {
     }
 
     /** Re-reads files that are new or were modified since the last load. */
-    suspend fun refresh() = withContext(Dispatchers.IO) {
+    /**
+     * Reloads the files changed since they were read. [quiet]: a background check, which shows
+     * no loading, keeps errors to itself and leaves the files alone while one is being written.
+     */
+    suspend fun refresh(quiet: Boolean = false) = withContext(Dispatchers.IO) {
         val folder = folder() ?: return@withContext
+        if (quiet) {
+            if (!writeLock.tryLock()) return@withContext
+            try {
+                val cached = _library.value.files.associateBy { it.ref.uri }
+                val refs = folder.listOrgFiles()
+                if (refs.size == cached.size && refs.all { cached[it.uri]?.ref?.lastModified == it.lastModified }) return@withContext
+                val files = refs.map { ref -> cached[ref.uri]?.takeIf { it.ref.lastModified == ref.lastModified } ?: load(folder, ref) }
+                _library.update { it.copy(files = files, loaded = true) }
+            } catch (_: Exception) {
+                // Next check, or the next visible refresh, will tell
+            } finally {
+                writeLock.unlock()
+            }
+            return@withContext
+        }
         _library.update { it.copy(loading = true, error = null) }
         try {
             val cached = _library.value.files.associateBy { it.ref.uri }
