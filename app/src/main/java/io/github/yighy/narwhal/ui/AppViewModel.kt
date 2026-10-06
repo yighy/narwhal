@@ -1,5 +1,6 @@
 package io.github.yighy.narwhal.ui
 
+import io.github.yighy.narwhal.data.NoteSpacing
 import io.github.yighy.narwhal.data.ThemeMode
 import java.time.LocalDateTime
 import io.github.yighy.narwhal.core.SearchQuery
@@ -195,6 +196,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun setShowContentInNotebook(show: Boolean) = appSettings.setShowContentInNotebook(show)
+
+    fun setNoteSpacing(spacing: NoteSpacing) = appSettings.setNoteSpacing(spacing)
     fun setRemindScheduled(on: Boolean) = appSettings.setRemindScheduled(on)
     fun setRemindDeadline(on: Boolean) = appSettings.setRemindDeadline(on)
     fun setRemindAllDay(on: Boolean) = appSettings.setRemindAllDay(on)

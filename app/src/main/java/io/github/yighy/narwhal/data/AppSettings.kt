@@ -18,6 +18,13 @@ enum class ThemeMode(val label: String) {
     Dark("Dark"),
 }
 
+/** Room around each note of a notebook's outline: [padding] above and below its title. */
+enum class NoteSpacing(val label: String, val padding: Int) {
+    Comfortable("Comfortable", 12),
+    Compact("Compact", 7),
+    Dense("Dense", 3),
+}
+
 /** When a note is renamed, links to it that still show its old title can follow. */
 enum class LinkRenaming(val label: String) {
     Ask("Ask each time"),
@@ -34,6 +41,7 @@ class AppSettings(context: Context) {
     data class Values(
         /** Show each note's content under its title in the notebook outline. */
         val showContentInNotebook: Boolean = false,
+        val noteSpacing: NoteSpacing = NoteSpacing.Comfortable,
         val remindScheduled: Boolean = true,
         val remindDeadline: Boolean = true,
         /** Also remind for dates without a time of day, at [allDayTime]. */
@@ -64,6 +72,7 @@ class AppSettings(context: Context) {
     private val _values = MutableStateFlow(
         Values(
             showContentInNotebook = prefs.getBoolean(KEY_SHOW_CONTENT, false),
+            noteSpacing = NoteSpacing.entries.firstOrNull { it.name == prefs.getString(KEY_NOTE_SPACING, null) } ?: NoteSpacing.Comfortable,
             remindScheduled = prefs.getBoolean(KEY_REMIND_SCHEDULED, true),
             remindDeadline = prefs.getBoolean(KEY_REMIND_DEADLINE, true),
             remindAllDay = prefs.getBoolean(KEY_REMIND_ALL_DAY, false),
@@ -124,6 +133,8 @@ class AppSettings(context: Context) {
     fun setShowContentInNotebook(show: Boolean) =
         save({ putBoolean(KEY_SHOW_CONTENT, show) }) { it.copy(showContentInNotebook = show) }
 
+    fun setNoteSpacing(spacing: NoteSpacing) = save({ putString(KEY_NOTE_SPACING, spacing.name) }) { it.copy(noteSpacing = spacing) }
+
     fun setRemindScheduled(on: Boolean) = save({ putBoolean(KEY_REMIND_SCHEDULED, on) }) { it.copy(remindScheduled = on) }
 
     fun setRemindDeadline(on: Boolean) = save({ putBoolean(KEY_REMIND_DEADLINE, on) }) { it.copy(remindDeadline = on) }
@@ -172,6 +183,7 @@ class AppSettings(context: Context) {
         private const val KEY_THEME = "theme_mode"
         private const val KEY_DYNAMIC_COLOR = "dynamic_color"
         private const val KEY_SHOW_CONTENT = "show_content_in_notebook"
+        private const val KEY_NOTE_SPACING = "note_spacing"
         private const val KEY_REMIND_SCHEDULED = "remind_scheduled"
         private const val KEY_REMIND_DEADLINE = "remind_deadline"
         private const val KEY_REMIND_ALL_DAY = "remind_all_day"

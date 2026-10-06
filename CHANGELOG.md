@@ -10,10 +10,12 @@ All notable changes to Narwhal. Versions follow [Semantic Versioning](https://se
   the date at the cursor when there is one
 - Snooze length setting for the reminder notification's button
 - About section in the settings: version, source code, license, credits
+- Space between notes setting for the notebook outline: comfortable, compact or dense
 
 ### Changed
 - Undo and redo stay in view at the end of the keyboard toolbar
 - The drawer shows the app name without the icon
+- Folding and unfolding notes takes half the time
 
 ## [0.3.0] - 2026-10-06
 

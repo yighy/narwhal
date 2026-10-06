@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import io.github.yighy.narwhal.data.AppSettings
 import io.github.yighy.narwhal.data.LinkRenaming
+import io.github.yighy.narwhal.data.NoteSpacing
 import io.github.yighy.narwhal.data.NoteRepository
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -64,6 +65,7 @@ fun SettingsScreen(
     var pickLinkRenaming by remember { mutableStateOf(false) }
     var pickTheme by remember { mutableStateOf(false) }
     var pickSnooze by remember { mutableStateOf(false) }
+    var pickSpacing by remember { mutableStateOf(false) }
 
     // System settings can change while the app is in the background
     var resumes by remember { mutableIntStateOf(0) }
@@ -114,6 +116,10 @@ fun SettingsScreen(
                 checked = settings.showContentInNotebook,
                 onCheckedChange = viewModel::setShowContentInNotebook,
             )
+            ListItem(
+                onClick = { pickSpacing = true },
+                supportingContent = { Text(settings.noteSpacing.label) },
+            ) { Text("Space between notes") }
 
             ListItem(
                 onClick = { editKeywords = true },
@@ -237,6 +243,18 @@ fun SettingsScreen(
             onSelect = { label ->
                 pickTheme = false
                 ThemeMode.entries.firstOrNull { it.label == label }?.let(viewModel::setThemeMode)
+            },
+        )
+    }
+    if (pickSpacing) {
+        ChoiceDialog(
+            title = "Space between notes",
+            options = NoteSpacing.entries.map { it.label },
+            selected = settings.noteSpacing.label,
+            onDismiss = { pickSpacing = false },
+            onSelect = { label ->
+                pickSpacing = false
+                NoteSpacing.entries.firstOrNull { it.label == label }?.let(viewModel::setNoteSpacing)
             },
         )
     }

@@ -6,7 +6,9 @@ import io.github.yighy.narwhal.core.Notebooks
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.VisibilityThreshold
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -64,6 +66,8 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import io.github.yighy.narwhal.core.NoteTree
 import io.github.yighy.narwhal.core.OrgNote
@@ -180,6 +184,7 @@ fun NotebookScreen(
                     onEditPreface = { editPreface(it) },
                     selected = selection?.indices.orEmpty(),
                     showContent = settings.showContentInNotebook,
+                    spacing = settings.noteSpacing.padding.dp,
                     scrollConnection = scrollBehavior.nestedScrollConnection,
                     onAddNear = { note, placement -> viewModel.startNewNote(file.uri, note, placement) },
                 )
@@ -219,6 +224,7 @@ private fun NotebookOutline(
     onEditPreface: (cursor: Int?) -> Unit,
     selected: Set<Int>,
     showContent: Boolean,
+    spacing: Dp,
     scrollConnection: androidx.compose.ui.input.nestedscroll.NestedScrollConnection,
     onAddNear: (OrgNote, Placement) -> Unit,
 ) {
@@ -282,10 +288,8 @@ private fun NotebookOutline(
             items(file.notes, key = { it.fileUri + "#" + it.index }) { note ->
                 AnimatedVisibility(
                     visible = note.index in shown,
-                    enter = expandVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) +
-                        fadeIn(MaterialTheme.motionScheme.defaultEffectsSpec()),
-                    exit = shrinkVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) +
-                        fadeOut(MaterialTheme.motionScheme.defaultEffectsSpec()),
+                    enter = expandVertically(FoldSpatialSpec) + fadeIn(FoldEffectsSpec),
+                    exit = shrinkVertically(FoldSpatialSpec) + fadeOut(FoldEffectsSpec),
                 ) {
                     val rowKey = note.fileUri + "#" + note.index
                     OutlineRow(
@@ -294,6 +298,7 @@ private fun NotebookOutline(
                         hasChildren = NoteTree.hasChildren(file.notes, note.index),
                         folded = viewModel.isFolded(note),
                         showContent = showContent,
+                        spacing = spacing,
                         selected = note.index in selected,
                         selecting = selecting,
                         swipeOpen = viewModel.openSwipeRow,
@@ -336,6 +341,7 @@ private fun OutlineRow(
     hasChildren: Boolean,
     folded: Boolean,
     showContent: Boolean,
+    spacing: Dp,
     selected: Boolean,
     selecting: Boolean,
     swipeOpen: String?,
@@ -350,10 +356,12 @@ private fun OutlineRow(
 ) {
     val chevronRotation by animateFloatAsState(
         targetValue = if (folded) -90f else 0f,
-        animationSpec = MaterialTheme.motionScheme.defaultSpatialSpec(),
+        animationSpec = spring(FOLD_SPATIAL_DAMPING, FOLD_SPATIAL_STIFFNESS),
         label = "chevron",
     )
 
+    // The chevron or bullet, as tall as the title's first line with the spacing around it
+    val iconHeight = spacing * 2 + 24.dp
     val key = note.fileUri + "#" + note.index
     val guideColor = MaterialTheme.colorScheme.outlineVariant
     SwipeRow(
@@ -382,16 +390,16 @@ private fun OutlineRow(
                     }
                     if (hasChildren && !folded) {
                         val x = guideX(note.level).toPx()
-                        drawLine(guideColor, Offset(x, 40.dp.toPx()), Offset(x, size.height), stroke)
+                        drawLine(guideColor, Offset(x, (iconHeight / 2 + 16.dp).toPx()), Offset(x, size.height), stroke)
                     }
                 }
                 .combinedClickable(onClick = onClick, onLongClick = onLongClick)
-                .heightIn(min = 52.dp)
+                .heightIn(min = spacing * 2 + 28.dp)
                 .padding(start = indent(note.level), end = 16.dp),
             verticalAlignment = Alignment.Top,
         ) {
             if (hasChildren) {
-                IconButton(onClick = onToggleFold) {
+                IconButton(onClick = onToggleFold, modifier = Modifier.size(48.dp, iconHeight)) {
                     Icon(
                         Icons.Default.KeyboardArrowDown,
                         if (folded) "Expand" else "Collapse",
@@ -399,7 +407,7 @@ private fun OutlineRow(
                     )
                 }
             } else {
-                Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) {
+                Box(Modifier.size(48.dp, iconHeight), contentAlignment = Alignment.Center) {
                     Box(
                         Modifier
                             .size(6.dp)
@@ -408,7 +416,7 @@ private fun OutlineRow(
                     )
                 }
             }
-            Column(Modifier.weight(1f).padding(vertical = 12.dp)) {
+            Column(Modifier.weight(1f).padding(vertical = spacing)) {
                 // Title and content move into the note screen when the note opens
                 NoteLine(
                     note,
@@ -430,6 +438,12 @@ private fun OutlineRow(
         }
     }
 }
+
+// Folding and unfolding: the expressive default springs, four times as stiff to take half the time
+private const val FOLD_SPATIAL_DAMPING = 0.8f
+private const val FOLD_SPATIAL_STIFFNESS = 380f * 4
+private val FoldSpatialSpec = spring(FOLD_SPATIAL_DAMPING, FOLD_SPATIAL_STIFFNESS, IntSize.VisibilityThreshold)
+private val FoldEffectsSpec = spring<Float>(1f, 1600f * 4)
 
 /** Start padding of a note at [level] in the outline. */
 private fun indent(level: Int) = 4.dp + 24.dp * (level - 1).coerceIn(0, 6)
