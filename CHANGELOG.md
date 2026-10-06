@@ -11,10 +11,14 @@ All notable changes to Narwhal. Versions follow [Semantic Versioning](https://se
 - Snooze length setting for the reminder notification's button
 - About section in the settings: version, source code, license, credits
 - Space between notes setting for the notebook outline: comfortable, compact or dense
+- Setting to show the ID property on the note screen
 
 ### Changed
 - Undo and redo stay in view at the end of the keyboard toolbar
 - The drawer shows the app name without the icon
+- The ID property is hidden on the note screen by default
+- New notes get an ID by default, so they can be linked to right away
+- Notebooks show each note's content under its title by default
 - Folding and unfolding notes takes half the time, the notes coming one after the other
 
 ## [0.3.0] - 2026-10-06

@@ -198,6 +198,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun setShowContentInNotebook(show: Boolean) = appSettings.setShowContentInNotebook(show)
 
     fun setNoteSpacing(spacing: NoteSpacing) = appSettings.setNoteSpacing(spacing)
+
+    fun setShowIdProperty(show: Boolean) = appSettings.setShowIdProperty(show)
     fun setRemindScheduled(on: Boolean) = appSettings.setRemindScheduled(on)
     fun setRemindDeadline(on: Boolean) = appSettings.setRemindDeadline(on)
     fun setRemindAllDay(on: Boolean) = appSettings.setRemindAllDay(on)

@@ -93,6 +93,7 @@ import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -142,6 +143,7 @@ fun NoteScreen(
 ) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    val settings by viewModel.settings.collectAsState()
     val file = library.file(note.fileUri)
     val keywords = file?.doc?.keywords ?: Keywords.DEFAULT
 
@@ -508,7 +510,8 @@ fun NoteScreen(
             MetaSlot(note.closed != null) {
                 MetaRow("Closed", OrgTime.display(closed).orEmpty(), onClick = null)
             }
-            note.properties.forEach { (name, value) ->
+            // The ID only when asked for: links need it, but it means nothing to read
+            note.properties.filter { settings.showIdProperty || !it.first.equals("ID", ignoreCase = true) }.forEach { (name, value) ->
                 key(name.uppercase()) {
                     // The property just added replaces its new row without unfolding again
                     Appear(animate = !name.equals(addedProperty, ignoreCase = true)) {

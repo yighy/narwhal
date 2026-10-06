@@ -40,7 +40,7 @@ class AppSettings(context: Context) {
 
     data class Values(
         /** Show each note's content under its title in the notebook outline. */
-        val showContentInNotebook: Boolean = false,
+        val showContentInNotebook: Boolean = true,
         val noteSpacing: NoteSpacing = NoteSpacing.Comfortable,
         val remindScheduled: Boolean = true,
         val remindDeadline: Boolean = true,
@@ -50,7 +50,9 @@ class AppSettings(context: Context) {
         /** State keywords for files without a #+TODO line. */
         val keywords: Keywords = Keywords.DEFAULT,
         /** Give every new note an ID property, so it can be linked to with id:. */
-        val addIdToNewNotes: Boolean = false,
+        val addIdToNewNotes: Boolean = true,
+        /** Show the ID property on the note screen (it is kept in the file either way). */
+        val showIdProperty: Boolean = false,
         /** Give every new note a CREATED property with when it was created. */
         val addCreatedToNewNotes: Boolean = false,
         /** Set reminders as alarm clock alarms (the most reliable; an alarm icon shows). */
@@ -71,14 +73,15 @@ class AppSettings(context: Context) {
 
     private val _values = MutableStateFlow(
         Values(
-            showContentInNotebook = prefs.getBoolean(KEY_SHOW_CONTENT, false),
+            showContentInNotebook = prefs.getBoolean(KEY_SHOW_CONTENT, true),
             noteSpacing = NoteSpacing.entries.firstOrNull { it.name == prefs.getString(KEY_NOTE_SPACING, null) } ?: NoteSpacing.Comfortable,
             remindScheduled = prefs.getBoolean(KEY_REMIND_SCHEDULED, true),
             remindDeadline = prefs.getBoolean(KEY_REMIND_DEADLINE, true),
             remindAllDay = prefs.getBoolean(KEY_REMIND_ALL_DAY, false),
             allDayTime = LocalTime.ofSecondOfDay(prefs.getInt(KEY_ALL_DAY_MINUTES, 9 * 60) * 60L),
             keywords = prefs.getString(KEY_KEYWORDS, null)?.let(Keywords::parse) ?: Keywords.DEFAULT,
-            addIdToNewNotes = prefs.getBoolean(KEY_ADD_ID, false),
+            addIdToNewNotes = prefs.getBoolean(KEY_ADD_ID, true),
+            showIdProperty = prefs.getBoolean(KEY_SHOW_ID, false),
             addCreatedToNewNotes = prefs.getBoolean(KEY_ADD_CREATED, false),
             useAlarmClock = prefs.getBoolean(KEY_ALARM_CLOCK, false),
             snoozeMinutes = prefs.getInt(KEY_SNOOZE_MINUTES, 60),
@@ -146,6 +149,8 @@ class AppSettings(context: Context) {
 
     fun setAddIdToNewNotes(on: Boolean) = save({ putBoolean(KEY_ADD_ID, on) }) { it.copy(addIdToNewNotes = on) }
 
+    fun setShowIdProperty(show: Boolean) = save({ putBoolean(KEY_SHOW_ID, show) }) { it.copy(showIdProperty = show) }
+
     fun setAddCreatedToNewNotes(on: Boolean) = save({ putBoolean(KEY_ADD_CREATED, on) }) { it.copy(addCreatedToNewNotes = on) }
 
     fun setUseAlarmClock(on: Boolean) = save({ putBoolean(KEY_ALARM_CLOCK, on) }) { it.copy(useAlarmClock = on) }
@@ -176,6 +181,7 @@ class AppSettings(context: Context) {
         private const val KEY_SEARCHES = "saved_searches"
         private const val ICON_PREFIX = "icon:"
         private const val KEY_ADD_ID = "add_id_to_new_notes"
+        private const val KEY_SHOW_ID = "show_id_property"
         private const val KEY_ADD_CREATED = "add_created_to_new_notes"
         private const val KEY_ALARM_CLOCK = "use_alarm_clock"
         private const val KEY_SNOOZE_MINUTES = "snooze_minutes"

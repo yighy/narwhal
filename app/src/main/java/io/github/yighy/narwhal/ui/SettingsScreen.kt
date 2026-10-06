@@ -133,6 +133,12 @@ fun SettingsScreen(
                 onCheckedChange = viewModel::setAddIdToNewNotes,
             )
             SwitchItem(
+                title = "Show the ID property",
+                summary = "Display a note's ID on its screen; links to the note work either way",
+                checked = settings.showIdProperty,
+                onCheckedChange = viewModel::setShowIdProperty,
+            )
+            SwitchItem(
                 title = "Add a creation date to new notes",
                 summary = "Fill the CREATED property when a note is created (searched with cr., sorted with o.cr)",
                 checked = settings.addCreatedToNewNotes,
