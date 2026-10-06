@@ -64,4 +64,22 @@ class TextEditingTest {
         assertEquals(e("- |a"), TextEditing.outdent(e("  - |a")))
         assertEquals(e("see id:|"), TextEditing.insert(e("see |"), "id:"))
     }
+
+    @Test
+    fun emphasis() {
+        // A selection, without its edge spaces
+        assertEquals(e("a *|big|* deal"), TextEditing.toggleEmphasis(e("a| big |deal"), '*'))
+        // The word at the cursor; at its end, the cursor goes on after it
+        assertEquals(e("a /bi|g/ deal"), TextEditing.toggleEmphasis(e("a bi|g deal"), '/'))
+        assertEquals(e("a _big_| deal"), TextEditing.toggleEmphasis(e("a big| deal"), '_'))
+        // Nowhere to put it: an empty pair, removed when toggled again
+        assertEquals(e("a ~|~"), TextEditing.toggleEmphasis(e("a |"), '~'))
+        assertEquals(e("a |"), TextEditing.toggleEmphasis(e("a ~|~"), '~'))
+        // Already there: the markers go
+        assertEquals(e("a bi|g deal"), TextEditing.toggleEmphasis(e("a *bi|g* deal"), '*'))
+        assertEquals(e("a |big| deal"), TextEditing.toggleEmphasis(e("a *|big|* deal"), '*'))
+        assertEquals(e("a |big| deal"), TextEditing.toggleEmphasis(e("a |*big*| deal"), '*'))
+        // Another kind of emphasis is kept, the new one goes inside it
+        assertEquals(e("a */bi|g/* deal"), TextEditing.toggleEmphasis(e("a *bi|g* deal"), '/'))
+    }
 }

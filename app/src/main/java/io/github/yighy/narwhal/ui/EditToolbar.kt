@@ -3,12 +3,14 @@ package io.github.yighy.narwhal.ui
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -111,8 +113,9 @@ fun typedText(old: TextFieldValue, new: TextFieldValue, history: EditHistory, li
 }
 
 /**
- * Bar over the keyboard while a note's text is edited: list, checkbox, indent, outdent,
- * link (id: then its suggestions), today's date, undo, redo.
+ * Bar over the keyboard while a note's text is edited: bold, italic, underline, strike-through,
+ * code, list, checkbox, indent, outdent, link (id: then its suggestions), today's date; undo and
+ * redo stay at the end.
  */
 @Composable
 fun EditToolbar(value: TextFieldValue, onChange: (TextFieldValue) -> Unit, history: EditHistory) {
@@ -127,15 +130,24 @@ fun EditToolbar(value: TextFieldValue, onChange: (TextFieldValue) -> Unit, histo
         val before = e.text.getOrNull(e.start - 1)
         TextEditing.insert(e, if (before == null || before.isWhitespace()) text else " $text")
     }
+    fun emphasis(marker: Char) = apply { TextEditing.toggleEmphasis(it, marker) }
     Surface(tonalElevation = 3.dp, modifier = Modifier.fillMaxWidth()) {
         // Buttons don't take the focus: the text keeps it, and the keyboard stays
-        Row(Modifier.horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = { apply(TextEditing::toggleList) }) { Icon(NarwhalIcons.ListBulleted, "List") }
-            IconButton(onClick = { apply(TextEditing::toggleCheckbox) }) { Icon(NarwhalIcons.CheckBox, "Checkbox") }
-            IconButton(onClick = { apply(TextEditing::indent) }) { Icon(NarwhalIcons.Indent, "Indent") }
-            IconButton(onClick = { apply(TextEditing::outdent) }) { Icon(NarwhalIcons.Outdent, "Outdent") }
-            IconButton(onClick = { insertWord("id:") }) { Icon(NarwhalIcons.Link, "Link to a note") }
-            IconButton(onClick = { insertWord(OrgTime.build(LocalDate.now(), null)) }) { Icon(Icons.Default.DateRange, "Today's date") }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.weight(1f).horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = { emphasis('*') }) { Icon(NarwhalIcons.Bold, "Bold") }
+                IconButton(onClick = { emphasis('/') }) { Icon(NarwhalIcons.Italic, "Italic") }
+                IconButton(onClick = { emphasis('_') }) { Icon(NarwhalIcons.Underline, "Underline") }
+                IconButton(onClick = { emphasis('+') }) { Icon(NarwhalIcons.Strike, "Strike-through") }
+                IconButton(onClick = { emphasis('~') }) { Icon(NarwhalIcons.Code, "Code") }
+                IconButton(onClick = { apply(TextEditing::toggleList) }) { Icon(NarwhalIcons.ListBulleted, "List") }
+                IconButton(onClick = { apply(TextEditing::toggleCheckbox) }) { Icon(NarwhalIcons.CheckBox, "Checkbox") }
+                IconButton(onClick = { apply(TextEditing::indent) }) { Icon(NarwhalIcons.Indent, "Indent") }
+                IconButton(onClick = { apply(TextEditing::outdent) }) { Icon(NarwhalIcons.Outdent, "Outdent") }
+                IconButton(onClick = { insertWord("id:") }) { Icon(NarwhalIcons.Link, "Link to a note") }
+                IconButton(onClick = { insertWord(OrgTime.build(LocalDate.now(), null)) }) { Icon(Icons.Default.DateRange, "Today's date") }
+            }
+            VerticalDivider(Modifier.height(24.dp))
             IconButton(enabled = history.canUndo, onClick = { history.undo(value)?.let(onChange) }) { Icon(NarwhalIcons.Undo, "Undo") }
             IconButton(enabled = history.canRedo, onClick = { history.redo(value)?.let(onChange) }) { Icon(NarwhalIcons.Redo, "Redo") }
         }

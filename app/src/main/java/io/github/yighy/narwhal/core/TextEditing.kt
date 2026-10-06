@@ -108,6 +108,47 @@ object TextEditing {
         }
     }
 
+    /**
+     * Toggles Org emphasis with [marker] (`*`, `/`, `_`, `+`, `=` or `~`):
+     * - an emphasis of that kind around the selection or the cursor loses its markers
+     * - else the selection (without the spaces at its edges) or the word at the cursor gets them
+     * - else an empty pair goes in, the cursor between; toggled again at once, it goes away
+     */
+    fun toggleEmphasis(edit: Edit, marker: Char): Edit {
+        val text = edit.text
+        Markup.find(text)
+            .firstOrNull { text[it.range.first] == marker && edit.start >= it.range.first && edit.end <= it.range.last + 1 }
+            ?.let { return unwrap(edit, it.range.first, it.range.last) }
+        if (edit.collapsed && edit.start >= 1 && text.getOrNull(edit.start) == marker && text[edit.start - 1] == marker) {
+            return Edit(text.removeRange(edit.start - 1, edit.start + 1), edit.start - 1)
+        }
+        var start = edit.start
+        var end = edit.end
+        if (edit.collapsed) {
+            while (start > 0 && text[start - 1].isLetterOrDigit()) start--
+            while (end < text.length && text[end].isLetterOrDigit()) end++
+            if (start == end) return Edit(text.replaceRange(start, start, "$marker$marker"), start + 1)
+        } else {
+            while (start < end && text[start].isWhitespace()) start++
+            while (end > start && text[end - 1].isWhitespace()) end--
+            if (start == end) return Edit(text.replaceRange(edit.start, edit.end, "$marker$marker"), edit.start + 1)
+        }
+        val wrapped = text.substring(0, start) + marker + text.substring(start, end) + marker + text.substring(end)
+        return when {
+            !edit.collapsed -> Edit(wrapped, start + 1, end + 1)
+            // At the end of the word, the cursor goes on after it
+            edit.start == end -> Edit(wrapped, end + 2)
+            else -> Edit(wrapped, edit.start + 1)
+        }
+    }
+
+    /** Removes the markers at [first] and [last]; the selection follows the text. */
+    private fun unwrap(edit: Edit, first: Int, last: Int): Edit {
+        fun move(pos: Int) = pos - (if (pos > first) 1 else 0) - (if (pos > last) 1 else 0)
+        val text = edit.text.removeRange(last, last + 1).removeRange(first, first + 1)
+        return Edit(text, move(edit.start), move(edit.end))
+    }
+
     /** Puts [insert] in place of the selection, the cursor after it. */
     fun insert(edit: Edit, insert: String): Edit =
         Edit(edit.text.replaceRange(edit.start, edit.end, insert), edit.start + insert.length)
