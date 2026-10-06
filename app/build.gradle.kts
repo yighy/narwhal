@@ -53,6 +53,12 @@ android {
     }
 }
 
+// Names the APK for the app and its version - narwhal-0.3.0-release.apk - so it can be
+// attached to a release as it comes out of the build, without renaming.
+base {
+    archivesName.set("narwhal-${android.defaultConfig.versionName}")
+}
+
 dependencies {
     implementation(project(":org-java"))
 
