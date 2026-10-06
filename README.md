@@ -21,11 +21,13 @@ byte, so other apps (Emacs, Orgzly, Orgro…) see clean changes.
 - Note screen: title, content and metadata edited in place, without dialogs (tags, state and
   priority as chips); scheduled and deadline times with end times and repeaters (`+`, `++`,
   `.+`); properties; a menu to add notes above, under or below; share a note
-- Optional `ID` and `CREATED` properties on new notes
+- `ID` (on by default, hidden on the note screen unless asked) and optional `CREATED` properties
+  on new notes
 
 ### Writing
 - Typing help: lists and checkboxes continue on Enter, brackets are paired
-- A toolbar over the keyboard: list, checkbox, indent, outdent, link, date, undo, redo
+- A toolbar over the keyboard: bold, italic, underline, strike-through, code, list, checkbox,
+  indent, outdent, link, date (with time, end time and repeater), undo, redo
 - Org markup (`*bold*`, `/italic/`, `=code=`…) rendered, checkboxes ticked with a tap
 - Org links of any kind open as in Orgzly (`http`, `mailto`, `tel`, `geo`, `file:`…), with
   `file:` suggestions from the notes folder
@@ -42,7 +44,7 @@ byte, so other apps (Emacs, Orgzly, Orgro…) see clean changes.
 
 ### Reminders
 - At scheduled and deadline times, optionally for dates without a time
-- Notification actions: Done, in 1 hour, tomorrow
+- Notification actions: Done, snooze (5 minutes to 3 hours, set in the settings), tomorrow
 - Exact alarms, optionally as alarm clock alarms (most reliable with battery saving),
   rescheduled after a reboot, an update or a clock change; missed reminders shown after the
   phone was off
@@ -55,6 +57,7 @@ byte, so other apps (Emacs, Orgzly, Orgro…) see clean changes.
 ### Look
 - Material 3 Expressive design (uses the material3 1.5 alpha), shared element transitions
 - Light, dark or system theme, dynamic color from the wallpaper (Android 12+)
+- Comfortable, compact or dense spacing between notes
 
 ## Download
 
