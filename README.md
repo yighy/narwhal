@@ -28,6 +28,10 @@ byte, so other apps (Emacs, Orgzly, Orgro…) see clean changes.
   reminders shown after the phone was off
 - Material 3 Expressive design (uses the material3 1.5 alpha)
 
+## Download
+
+Signed APKs are attached to each [release](https://github.com/yighy/narwhal/releases); see
+[CHANGELOG.md](CHANGELOG.md) for what changed.
 
 ## Build
 
