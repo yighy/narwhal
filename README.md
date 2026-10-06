@@ -1,6 +1,6 @@
-<img src="docs/icon.svg" alt="" width="96" align="right">
-
 # Narwhal
+
+<img src="docs/icon.svg" alt="" width="96">
 
 An Android app for [Org mode](https://orgmode.org) notes, inspired by
 [Orgzly](https://github.com/orgzly/orgzly-android).
