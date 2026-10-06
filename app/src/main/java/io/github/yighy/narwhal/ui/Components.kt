@@ -1,5 +1,11 @@
 package io.github.yighy.narwhal.ui
 
+import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.colorResource
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.requiredSize
+import io.github.yighy.narwhal.R
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.withStyle
@@ -468,6 +474,21 @@ fun StateLabel(state: String, isDone: Boolean) {
             .background(container)
             .padding(horizontal = 8.dp, vertical = 2.dp),
     )
+}
+
+/** The launcher icon, drawn at [size] in the app's own screens. */
+@Composable
+fun AppIcon(size: Dp = 56.dp) {
+    Box(
+        Modifier
+            .size(size)
+            .clip(RoundedCornerShape(percent = 25))
+            .background(colorResource(R.color.ic_launcher_background)),
+        contentAlignment = Alignment.Center,
+    ) {
+        // The adaptive icon canvas is 108dp for a 72dp visible area
+        Image(painterResource(R.drawable.ic_launcher_foreground), null, Modifier.requiredSize(size * 1.5f))
+    }
 }
 
 /**

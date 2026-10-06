@@ -1,5 +1,9 @@
 package io.github.yighy.narwhal.ui
 
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.toArgb
 import android.graphics.drawable.ColorDrawable
 import androidx.activity.SystemBarStyle
@@ -216,11 +220,14 @@ fun NarwhalApp(viewModel: AppViewModel, notificationsAllowed: Boolean, onAllowNo
         gesturesEnabled = top == Screen.Notebooks,
         drawerContent = {
             ModalDrawerSheet {
-                Text(
-                    "Narwhal",
-                    style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.padding(start = 28.dp, top = 24.dp, bottom = 16.dp),
-                )
+                Row(
+                    Modifier.padding(start = 28.dp, top = 24.dp, bottom = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    AppIcon(36.dp)
+                    Spacer(Modifier.width(16.dp))
+                    Text("Narwhal", style = MaterialTheme.typography.titleLarge)
+                }
                 fun close(action: () -> Unit) {
                     scope.launch { drawer.close() }
                     action()

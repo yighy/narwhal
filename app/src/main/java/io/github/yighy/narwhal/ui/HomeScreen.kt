@@ -73,7 +73,7 @@ fun WelcomeScreen(onPickFolder: () -> Unit) {
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            NotebookAvatar("Narwhal")
+            AppIcon(96.dp)
             Spacer(Modifier.height(24.dp))
             Text("Narwhal", style = MaterialTheme.typography.displaySmall)
             Spacer(Modifier.height(12.dp))
