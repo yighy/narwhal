@@ -15,7 +15,7 @@ All notable changes to Narwhal. Versions follow [Semantic Versioning](https://se
 ### Changed
 - Undo and redo stay in view at the end of the keyboard toolbar
 - The drawer shows the app name without the icon
-- Folding and unfolding notes takes half the time
+- Folding and unfolding notes takes half the time, the notes coming one after the other
 
 ## [0.3.0] - 2026-10-06
 

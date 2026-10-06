@@ -1,7 +1,10 @@
 package io.github.yighy.narwhal.ui
 
+import androidx.compose.ui.platform.LocalContext
+import android.provider.Settings
 import io.github.yighy.narwhal.core.Checkboxes
 import androidx.compose.runtime.LaunchedEffect
+import kotlinx.coroutines.delay
 import io.github.yighy.narwhal.core.Notebooks
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.activity.compose.BackHandler
@@ -229,6 +232,13 @@ private fun NotebookOutline(
     onAddNear: (OrgNote, Placement) -> Unit,
 ) {
     val shown = NoteTree.visible(file.notes, viewModel::isFolded).map { it.index }.toSet()
+    val stagger = remember { FoldStagger() }
+    val delays = stagger.delays(shown)
+    // The cascade follows the system's animation speed (none when animations are off)
+    val context = LocalContext.current
+    val animationScale = remember {
+        Settings.Global.getFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f)
+    }
     val ancestorLevels = remember(file.notes) { NoteTree.ancestorLevels(file.notes) }
     val selecting = selected.isNotEmpty()
 
@@ -286,8 +296,15 @@ private fun NotebookOutline(
             // Every note stays in the list; folded ones collapse to zero height so
             // that folding and unfolding animate like an outline
             items(file.notes, key = { it.fileUri + "#" + it.index }) { note ->
+                // Shown or hidden after its turn in the cascade
+                val target = note.index in shown
+                var visible by remember { mutableStateOf(target) }
+                LaunchedEffect(target) {
+                    delay(((delays[note.index] ?: 0L) * animationScale).toLong())
+                    visible = target
+                }
                 AnimatedVisibility(
-                    visible = note.index in shown,
+                    visible = visible,
                     enter = expandVertically(FoldSpatialSpec) + fadeIn(FoldEffectsSpec),
                     exit = shrinkVertically(FoldSpatialSpec) + fadeOut(FoldEffectsSpec),
                 ) {
@@ -436,6 +453,38 @@ private fun OutlineRow(
                 }
             }
         }
+    }
+}
+
+/**
+ * Notes shown or hidden by a fold come one after the other, like cards: from the top when they
+ * appear, from the bottom when they go, the whole cascade within [TOTAL_MS].
+ */
+private class FoldStagger {
+    private var last: Set<Int>? = null
+    private var lastDelays = emptyMap<Int, Long>()
+
+    /** Delay of each note that changes since the last [shown] set (the first one: none). */
+    fun delays(shown: Set<Int>): Map<Int, Long> {
+        val before = last
+        if (shown == before) return lastDelays
+        last = shown
+        if (before == null) return emptyMap<Int, Long>().also { lastDelays = it }
+        val appearing = (shown - before).sorted()
+        val going = (before - shown).sortedDescending()
+        lastDelays = cascade(appearing) + cascade(going)
+        return lastDelays
+    }
+
+    private fun cascade(notes: List<Int>): Map<Int, Long> {
+        if (notes.size < 2) return emptyMap()
+        val step = minOf(STEP_MS, TOTAL_MS / (notes.size - 1))
+        return notes.withIndex().associate { (i, index) -> index to i * step }
+    }
+
+    private companion object {
+        const val STEP_MS = 30L
+        const val TOTAL_MS = 200L
     }
 }
 
