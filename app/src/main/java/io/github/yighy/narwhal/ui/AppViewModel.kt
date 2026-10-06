@@ -205,6 +205,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun setUseAlarmClock(on: Boolean) = appSettings.setUseAlarmClock(on)
 
+    fun setSnoozeMinutes(minutes: Int) = appSettings.setSnoozeMinutes(minutes)
+
     fun setLinkRenaming(mode: LinkRenaming) = appSettings.setLinkRenaming(mode)
 
     fun setThemeMode(mode: ThemeMode) = appSettings.setThemeMode(mode)

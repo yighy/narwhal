@@ -49,7 +49,7 @@ class ReminderReceiver : BroadcastReceiver() {
                 runCatching { repository.saveNote(note, NoteStates.apply(note.toEdit(), target, keywords).edit) }
             }
 
-            // Shown again later: in an hour, or tomorrow at the same time
+            // Shown again later: after the snooze set in the settings, or tomorrow at the same time
             ACTION_SNOOZE -> {
                 val uri = intent.getStringExtra(ReminderNotifications.EXTRA_FILE_URI) ?: return
                 val title = intent.getStringExtra(ReminderNotifications.EXTRA_TITLE) ?: return

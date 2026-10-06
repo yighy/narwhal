@@ -2,6 +2,19 @@
 
 All notable changes to Narwhal. Versions follow [Semantic Versioning](https://semver.org).
 
+## [Unreleased]
+
+### Added
+- Formatting buttons in the keyboard toolbar: bold, italic, underline, strike-through, code
+- The toolbar's date button opens the full date dialog (time, end time, repeater), and changes
+  the date at the cursor when there is one
+- Snooze length setting for the reminder notification's button
+- About section in the settings: version, source code, license, credits
+
+### Changed
+- Undo and redo stay in view at the end of the keyboard toolbar
+- The drawer shows the app name without the icon
+
 ## [0.3.0] - 2026-10-06
 
 ### Added
@@ -47,6 +60,7 @@ All notable changes to Narwhal. Versions follow [Semantic Versioning](https://se
 - First prototype: notebooks from a folder of `.org` files, outline, note editing, search, tags,
   and `id:` links to other notes
 
+[Unreleased]: https://github.com/yighy/narwhal/compare/v0.3.0...HEAD
 [0.3.0]: https://github.com/yighy/narwhal/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/yighy/narwhal/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/yighy/narwhal/releases/tag/v0.1.0

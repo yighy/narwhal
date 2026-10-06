@@ -47,6 +47,8 @@ class AppSettings(context: Context) {
         val addCreatedToNewNotes: Boolean = false,
         /** Set reminders as alarm clock alarms (the most reliable; an alarm icon shows). */
         val useAlarmClock: Boolean = false,
+        /** How long the notification's snooze button puts a reminder off. */
+        val snoozeMinutes: Int = 60,
         /** What happens to links still showing a note's old title when it is renamed. */
         val linkRenaming: LinkRenaming = LinkRenaming.Ask,
         val themeMode: ThemeMode = ThemeMode.System,
@@ -70,6 +72,7 @@ class AppSettings(context: Context) {
             addIdToNewNotes = prefs.getBoolean(KEY_ADD_ID, false),
             addCreatedToNewNotes = prefs.getBoolean(KEY_ADD_CREATED, false),
             useAlarmClock = prefs.getBoolean(KEY_ALARM_CLOCK, false),
+            snoozeMinutes = prefs.getInt(KEY_SNOOZE_MINUTES, 60),
             linkRenaming = LinkRenaming.entries.firstOrNull { it.name == prefs.getString(KEY_LINK_RENAMING, null) }
                 ?: LinkRenaming.Ask,
             themeMode = ThemeMode.entries.firstOrNull { it.name == prefs.getString(KEY_THEME, null) } ?: ThemeMode.System,
@@ -136,6 +139,8 @@ class AppSettings(context: Context) {
 
     fun setUseAlarmClock(on: Boolean) = save({ putBoolean(KEY_ALARM_CLOCK, on) }) { it.copy(useAlarmClock = on) }
 
+    fun setSnoozeMinutes(minutes: Int) = save({ putInt(KEY_SNOOZE_MINUTES, minutes) }) { it.copy(snoozeMinutes = minutes) }
+
     fun setLinkRenaming(mode: LinkRenaming) = save({ putString(KEY_LINK_RENAMING, mode.name) }) { it.copy(linkRenaming = mode) }
 
     fun setThemeMode(mode: ThemeMode) = save({ putString(KEY_THEME, mode.name) }) { it.copy(themeMode = mode) }
@@ -145,12 +150,24 @@ class AppSettings(context: Context) {
     fun setKeywords(keywords: Keywords) = save({ putString(KEY_KEYWORDS, keywords.toSpec()) }) { it.copy(keywords = keywords) }
 
     companion object {
+        /** Snooze lengths offered in the settings, in minutes. */
+        val SNOOZE_CHOICES = listOf(5, 10, 15, 30, 60, 120, 180)
+
+        /** "In 15 min", "In 1 hour", "In 1 h 30" for a snooze of [minutes]. */
+        fun snoozeLabel(minutes: Int): String = when {
+            minutes < 60 -> "In $minutes min"
+            minutes == 60 -> "In 1 hour"
+            minutes % 60 == 0 -> "In ${minutes / 60} hours"
+            else -> "In ${minutes / 60} h ${minutes % 60}"
+        }
+
         private const val KEY_KEYWORDS = "keywords"
         private const val KEY_SEARCHES = "saved_searches"
         private const val ICON_PREFIX = "icon:"
         private const val KEY_ADD_ID = "add_id_to_new_notes"
         private const val KEY_ADD_CREATED = "add_created_to_new_notes"
         private const val KEY_ALARM_CLOCK = "use_alarm_clock"
+        private const val KEY_SNOOZE_MINUTES = "snooze_minutes"
         private const val KEY_LINK_RENAMING = "link_renaming"
         private const val KEY_THEME = "theme_mode"
         private const val KEY_DYNAMIC_COLOR = "dynamic_color"

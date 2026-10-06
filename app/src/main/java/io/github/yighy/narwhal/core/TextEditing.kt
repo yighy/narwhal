@@ -149,6 +149,12 @@ object TextEditing {
         return Edit(text, move(edit.start), move(edit.end))
     }
 
+    private val TIMESTAMP = Regex("""<\d{4}-\d{2}-\d{2}[^>\n]*>|\[\d{4}-\d{2}-\d{2}[^]\n]*]""")
+
+    /** Where the Org timestamp around the cursor or the selection is (just after it counts too). */
+    fun timestampAt(edit: Edit): IntRange? =
+        TIMESTAMP.findAll(edit.text).firstOrNull { edit.start >= it.range.first && edit.end <= it.range.last + 1 }?.range
+
     /** Puts [insert] in place of the selection, the cursor after it. */
     fun insert(edit: Edit, insert: String): Edit =
         Edit(edit.text.replaceRange(edit.start, edit.end, insert), edit.start + insert.length)

@@ -82,4 +82,13 @@ class TextEditingTest {
         // Another kind of emphasis is kept, the new one goes inside it
         assertEquals(e("a */bi|g/* deal"), TextEditing.toggleEmphasis(e("a *bi|g* deal"), '/'))
     }
+
+    @Test
+    fun timestampAtCursor() {
+        assertEquals(4..19, TextEditing.timestampAt(e("see <2026-10-|06 Tue> or")))
+        assertEquals(4..19, TextEditing.timestampAt(e("see <2026-10-06 Tue>| or")))
+        assertEquals(4..19, TextEditing.timestampAt(e("see [2026-10-06 |Tue] or")))
+        assertNull(TextEditing.timestampAt(e("see| <2026-10-06 Tue> or")))
+        assertNull(TextEditing.timestampAt(e("a [[link|]]")))
+    }
 }

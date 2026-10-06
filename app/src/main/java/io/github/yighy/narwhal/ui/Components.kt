@@ -751,9 +751,17 @@ fun ClearFocusWhenKeyboardHides() {
             // Moving from one field to another can hide the keyboard for a moment
             delay(300)
             wasVisible = false
-            focusManager.clearFocus()
+            if (!EditingDialog.open) focusManager.clearFocus()
         }
     }
+}
+
+/**
+ * A dialog opened from the keyboard toolbar: the keyboard goes away while it is open, but the
+ * text stays in edit mode, to come back to it after.
+ */
+object EditingDialog {
+    var open by mutableStateOf(false)
 }
 
 /** Notebook names, keywords and inherited tags that search queries need. */

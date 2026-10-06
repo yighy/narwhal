@@ -40,6 +40,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
+import io.github.yighy.narwhal.data.AppSettings
 import io.github.yighy.narwhal.data.LinkRenaming
 import io.github.yighy.narwhal.data.NoteRepository
 import java.time.LocalTime
@@ -62,6 +63,7 @@ fun SettingsScreen(
     var editKeywords by remember { mutableStateOf(false) }
     var pickLinkRenaming by remember { mutableStateOf(false) }
     var pickTheme by remember { mutableStateOf(false) }
+    var pickSnooze by remember { mutableStateOf(false) }
 
     // System settings can change while the app is in the background
     var resumes by remember { mutableIntStateOf(0) }
@@ -155,6 +157,10 @@ fun SettingsScreen(
                 checked = settings.useAlarmClock,
                 onCheckedChange = viewModel::setUseAlarmClock,
             )
+            ListItem(
+                onClick = { pickSnooze = true },
+                supportingContent = { Text(AppSettings.snoozeLabel(settings.snoozeMinutes) + "\nThe notification's snooze button") },
+            ) { Text("Snooze") }
             SwitchItem(
                 title = "For dates without a time",
                 summary = "Notify at ${settings.allDayTime.format(DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT))}",
@@ -200,6 +206,25 @@ fun SettingsScreen(
                     )
                 },
             )
+
+            SectionHeader("About")
+            val version = remember { runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull() }
+            ListItem(
+                supportingContent = { Text("Version ${version ?: "?"}") },
+            ) { Text("Narwhal") }
+            fun open(url: String) = runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
+            ListItem(
+                onClick = { open(SOURCE_URL) },
+                supportingContent = { Text(SOURCE_URL.removePrefix("https://")) },
+            ) { Text("Source code") }
+            ListItem(
+                onClick = { open(LICENSE_URL) },
+                supportingContent = { Text("GNU General Public License v3") },
+            ) { Text("License") }
+            ListItem(
+                onClick = { open(ORG_JAVA_URL) },
+                supportingContent = { Text("Inspired by Orgzly; Org files read and written with its org-java library") },
+            ) { Text("Credits") }
         }
     }
 
@@ -212,6 +237,18 @@ fun SettingsScreen(
             onSelect = { label ->
                 pickTheme = false
                 ThemeMode.entries.firstOrNull { it.label == label }?.let(viewModel::setThemeMode)
+            },
+        )
+    }
+    if (pickSnooze) {
+        ChoiceDialog(
+            title = "Snooze",
+            options = AppSettings.SNOOZE_CHOICES.map(AppSettings::snoozeLabel),
+            selected = AppSettings.snoozeLabel(settings.snoozeMinutes),
+            onDismiss = { pickSnooze = false },
+            onSelect = { label ->
+                pickSnooze = false
+                AppSettings.SNOOZE_CHOICES.firstOrNull { AppSettings.snoozeLabel(it) == label }?.let(viewModel::setSnoozeMinutes)
             },
         )
     }
@@ -293,6 +330,10 @@ private fun StatusItem(title: String, ok: Boolean, okText: String, problemText: 
         ListItem(onClick = onFix, supportingContent = status) { Text(title) }
     }
 }
+
+private const val SOURCE_URL = "https://github.com/yighy/narwhal"
+private const val LICENSE_URL = "https://www.gnu.org/licenses/gpl-3.0.html"
+private const val ORG_JAVA_URL = "https://github.com/orgzly/org-java"
 
 /** "primary:Documents/org" → "Documents/org". */
 private fun folderLabel(treeUri: Uri): String =

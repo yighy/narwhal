@@ -10,7 +10,9 @@ import android.content.pm.PackageManager
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import io.github.yighy.narwhal.NarwhalApplication
 import io.github.yighy.narwhal.R
+import io.github.yighy.narwhal.data.AppSettings
 import io.github.yighy.narwhal.core.Agenda
 import io.github.yighy.narwhal.ui.MainActivity
 import io.github.yighy.narwhal.ui.displayTitle
@@ -75,6 +77,7 @@ object ReminderNotifications {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
 
+        val snoozeMinutes = (context.applicationContext as NarwhalApplication).settings.values.value.snoozeMinutes
         val kind = if (reminder.kind == Agenda.Kind.Deadline) "Deadline" else "Scheduled"
         val time = reminder.at.toLocalTime().format(DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT))
 
@@ -89,7 +92,7 @@ object ReminderNotifications {
             .setAutoCancel(true)
             .setContentIntent(open)
             .addAction(0, "Done", done)
-            .addAction(0, "In 1 hour", snooze(60, id + 1))
+            .addAction(0, AppSettings.snoozeLabel(snoozeMinutes), snooze(snoozeMinutes.toLong(), id + 1))
             .addAction(0, "Tomorrow", snooze(24 * 60, id + 2))
             .build()
 

@@ -12,17 +12,19 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
-import io.github.yighy.narwhal.core.OrgTime
 import io.github.yighy.narwhal.core.TextEditing
-import java.time.LocalDate
 
 /** Undo and redo of a text being edited; typing a word in a row counts as one step. */
 class EditHistory {
@@ -114,8 +116,8 @@ fun typedText(old: TextFieldValue, new: TextFieldValue, history: EditHistory, li
 
 /**
  * Bar over the keyboard while a note's text is edited: bold, italic, underline, strike-through,
- * code, list, checkbox, indent, outdent, link (id: then its suggestions), today's date; undo and
- * redo stay at the end.
+ * code, list, checkbox, indent, outdent, link (id: then its suggestions), date (as for scheduled
+ * times, or changing the one at the cursor); undo and redo stay at the end.
  */
 @Composable
 fun EditToolbar(value: TextFieldValue, onChange: (TextFieldValue) -> Unit, history: EditHistory) {
@@ -131,6 +133,9 @@ fun EditToolbar(value: TextFieldValue, onChange: (TextFieldValue) -> Unit, histo
         TextEditing.insert(e, if (before == null || before.isWhitespace()) text else " $text")
     }
     fun emphasis(marker: Char) = apply { TextEditing.toggleEmphasis(it, marker) }
+    // The timestamp being changed (null for a new one), while the date dialog is open
+    var datePicking by remember { mutableStateOf<IntRange?>(null) }
+    var dateOpen by remember { mutableStateOf(false) }
     Surface(tonalElevation = 3.dp, modifier = Modifier.fillMaxWidth()) {
         // Buttons don't take the focus: the text keeps it, and the keyboard stays
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -145,11 +150,40 @@ fun EditToolbar(value: TextFieldValue, onChange: (TextFieldValue) -> Unit, histo
                 IconButton(onClick = { apply(TextEditing::indent) }) { Icon(NarwhalIcons.Indent, "Indent") }
                 IconButton(onClick = { apply(TextEditing::outdent) }) { Icon(NarwhalIcons.Outdent, "Outdent") }
                 IconButton(onClick = { insertWord("id:") }) { Icon(NarwhalIcons.Link, "Link to a note") }
-                IconButton(onClick = { insertWord(OrgTime.build(LocalDate.now(), null)) }) { Icon(Icons.Default.DateRange, "Today's date") }
+                IconButton(onClick = {
+                    datePicking = TextEditing.timestampAt(value.toEdit())
+                    dateOpen = true
+                }) { Icon(Icons.Default.DateRange, "Date") }
             }
             VerticalDivider(Modifier.height(24.dp))
             IconButton(enabled = history.canUndo, onClick = { history.undo(value)?.let(onChange) }) { Icon(NarwhalIcons.Undo, "Undo") }
             IconButton(enabled = history.canRedo, onClick = { history.redo(value)?.let(onChange) }) { Icon(NarwhalIcons.Redo, "Redo") }
         }
+    }
+
+    val keyboard = LocalSoftwareKeyboardController.current
+    DisposableEffect(dateOpen) {
+        EditingDialog.open = dateOpen
+        onDispose {
+            // Back to the text, with its keyboard
+            if (EditingDialog.open) {
+                EditingDialog.open = false
+                keyboard?.show()
+            }
+        }
+    }
+    if (dateOpen) {
+        val range = datePicking
+        TimestampDialog(
+            initial = range?.let { value.text.substring(it) },
+            onDismiss = { dateOpen = false },
+            onConfirm = { timestamp ->
+                dateOpen = false
+                when {
+                    range != null -> apply { TextEditing.insert(TextEditing.Edit(it.text, range.first, range.last + 1), timestamp.orEmpty()) }
+                    timestamp != null -> insertWord(timestamp)
+                }
+            },
+        )
     }
 }
