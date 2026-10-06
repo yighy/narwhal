@@ -6,11 +6,11 @@ plugins {
 }
 
 android {
-    namespace = "io.github.yighy.orgline"
+    namespace = "io.github.yighy.narwhal"
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "io.github.yighy.orgline"
+        applicationId = "io.github.yighy.narwhal"
         minSdk = 26
         targetSdk = 36
         versionCode = 1

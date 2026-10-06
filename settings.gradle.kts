@@ -14,7 +14,7 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "orgline"
+rootProject.name = "narwhal"
 
 include(":app")
 include(":org-java")
