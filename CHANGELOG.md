@@ -4,6 +4,9 @@ All notable changes to Narwhal. Versions follow [Semantic Versioning](https://se
 
 ## [Unreleased]
 
+### Changed
+- Themed icon (Android 13+): the narwhal is centered
+
 ## [0.5.0] - 2026-10-07
 
 ### Added
