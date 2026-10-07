@@ -4,6 +4,8 @@ All notable changes to Narwhal. Versions follow [Semantic Versioning](https://se
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-10-07
+
 ### Changed
 - Themed icon (Android 13+): the narwhal is centered
 
@@ -86,7 +88,8 @@ All notable changes to Narwhal. Versions follow [Semantic Versioning](https://se
 - First prototype: notebooks from a folder of `.org` files, outline, note editing, search, tags,
   and `id:` links to other notes
 
-[Unreleased]: https://github.com/yighy/narwhal/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/yighy/narwhal/compare/v0.5.1...HEAD
+[0.5.1]: https://github.com/yighy/narwhal/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/yighy/narwhal/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/yighy/narwhal/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/yighy/narwhal/compare/v0.2.0...v0.3.0
