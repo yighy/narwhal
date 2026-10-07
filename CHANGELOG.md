@@ -5,9 +5,12 @@ All notable changes to Narwhal. Versions follow [Semantic Versioning](https://se
 ## [Unreleased]
 
 ### Changed
-- Themed icon (Android 13+): the app icon's drawing, with the tail and the sea in a lighter shade
-- App icon: the sea without its foam line
+- New icon: a round narwhal head with its tusk, without the sea; the themed icon has the same drawing
 - Swiping a note left shows plain icons, as swiping right does
+
+### Fixed
+- A save can no longer leave the end of a longer previous version at the end of the file; each
+  file is read back after it is written
 
 ## [0.5.2] - 2026-10-07
 

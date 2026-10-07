@@ -2,6 +2,7 @@ package io.github.yighy.narwhal.data
 
 import android.content.ContentResolver
 import android.net.Uri
+import android.os.ParcelFileDescriptor
 import android.provider.DocumentsContract
 import android.provider.DocumentsContract.Document
 
@@ -45,14 +46,40 @@ class OrgFolder(private val resolver: ContentResolver, val treeUri: Uri) {
             if (c.moveToFirst()) c.getLong(0) else 0L
         } ?: 0L
 
-    fun read(uri: Uri): String =
-        resolver.openInputStream(uri)?.use { it.readBytes().toString(Charsets.UTF_8) }
-            ?: error("Cannot open $uri")
+    /** The file just written and checked, so reading it right after needs no second read. */
+    private var justWritten: Pair<Uri, String>? = null
 
+    fun read(uri: Uri): String {
+        justWritten?.let { (writtenUri, text) ->
+            justWritten = null
+            if (writtenUri == uri) return text
+        }
+        return resolver.openInputStream(uri)?.use { it.readBytes().toString(Charsets.UTF_8) }
+            ?: error("Cannot open $uri")
+    }
+
+    /**
+     * Replaces the file's content with [text], then reads it back: what is on disk must be
+     * exactly what was written, or the save fails.
+     */
     fun write(uri: Uri, text: String) {
-        // "wt" truncates the file before writing
-        resolver.openOutputStream(uri, "wt")?.use { it.write(text.toByteArray(Charsets.UTF_8)) }
-            ?: error("Cannot write $uri")
+        val bytes = text.toByteArray(Charsets.UTF_8)
+        // The file is also cut to the new length after writing: emptying it on opening is up to
+        // the provider, and if it did not, the end of a longer previous version would stay behind
+        val descriptor = runCatching { resolver.openFileDescriptor(uri, "rwt") }.getOrNull()
+        if (descriptor != null) {
+            ParcelFileDescriptor.AutoCloseOutputStream(descriptor).use { out ->
+                out.write(bytes)
+                // A provider may hand out a pipe, which cannot be cut (nor left longer)
+                runCatching { out.channel.truncate(bytes.size.toLong()) }
+                runCatching { out.fd.sync() }
+            }
+        } else {
+            resolver.openOutputStream(uri, "wt")?.use { it.write(bytes) } ?: error("Cannot write $uri")
+        }
+        val written = resolver.openInputStream(uri)?.use { it.readBytes() }
+        if (written == null || !written.contentEquals(bytes)) error("The file was not saved correctly")
+        justWritten = uri to text
     }
 
     /** Deletes the file from the folder. */
