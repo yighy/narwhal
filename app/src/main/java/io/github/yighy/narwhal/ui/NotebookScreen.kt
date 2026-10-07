@@ -126,9 +126,7 @@ fun NotebookScreen(
             .sharedContainer("notebook-${file.uri}", NotebookCardShape)
             .imePadding(),
         topBar = {
-            if (selecting) {
-                SelectionTopBar(viewModel, library, file)
-            } else {
+            TopBarWithSelection(selecting, selectionBar = { SelectionTopBar(viewModel, library, file) }) {
                 SearchableTopBar(
                     title = file.title,
                     subtitle = {
@@ -165,7 +163,7 @@ fun NotebookScreen(
         },
         bottomBar = {
             // List, checkbox, indent… over the keyboard while the preface is edited
-            prefaceDraft?.let { draft ->
+            prefaceDraft?.takeIf { editToolbarShown() }?.let { draft ->
                 EditToolbar(draft, onChange = { if (prefaceDraft != null) prefaceDraft = it }, history = prefaceHistory)
             }
         },

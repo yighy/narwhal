@@ -147,9 +147,14 @@ fun NoteScreen(
     val file = library.file(note.fileUri)
     val keywords = file?.doc?.keywords ?: Keywords.DEFAULT
 
-    // A new note starts with its title being edited
-    var editing by remember { mutableStateOf(if (newNote != null) Editing.Title else Editing.None) }
-    var draft by remember { mutableStateOf(TextFieldValue("")) }
+    // A new note starts with its title being edited; its content edit goes on once it is created
+    val resumeContent = remember { newNote == null && viewModel.takeResumedContentEditing(note) }
+    var editing by remember {
+        mutableStateOf(if (newNote != null) Editing.Title else if (resumeContent) Editing.Content else Editing.None)
+    }
+    var draft by remember {
+        mutableStateOf(if (resumeContent) TextFieldValue(note.content, TextRange(note.content.length)) else TextFieldValue(""))
+    }
     // Undo / redo while editing the content
     val history = remember { EditHistory() }
     // Typing help in the title (brackets), without undo
@@ -188,6 +193,8 @@ fun NoteScreen(
 
     /** Edits the title or content, with the cursor at [cursor] (the end by default). */
     fun startEditing(what: Editing, cursor: Int? = null) {
+        // Saving the title creates the note, whose own screen then takes over the content edit
+        if (newNote != null) viewModel.newNoteEditingContent = newNote.takeIf { what == Editing.Content }
         commit()
         val text = if (what == Editing.Title) title else content
         draft = TextFieldValue(text, TextRange((cursor ?: text.length).coerceIn(0, text.length)))
@@ -344,7 +351,7 @@ fun NoteScreen(
                     }
                 }
                 // List, checkbox, indent… over the keyboard while the content is edited
-                if (editing == Editing.Content) {
+                if (editing == Editing.Content && editToolbarShown()) {
                     EditToolbar(draft, onChange = { if (editing == Editing.Content) draft = it }, history = history)
                 }
             }
@@ -510,8 +517,8 @@ fun NoteScreen(
             MetaSlot(note.closed != null) {
                 MetaRow("Closed", OrgTime.display(closed).orEmpty(), onClick = null)
             }
-            // The ID only when asked for: links need it, but it means nothing to read
-            note.properties.filter { settings.showIdProperty || !it.first.equals("ID", ignoreCase = true) }.forEach { (name, value) ->
+            // Hidden properties (the ID by default: links need it, but it means nothing to read)
+            note.properties.filter { it.first.uppercase() !in settings.hiddenProperties }.forEach { (name, value) ->
                 key(name.uppercase()) {
                     // The property just added replaces its new row without unfolding again
                     Appear(animate = !name.equals(addedProperty, ignoreCase = true)) {

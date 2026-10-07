@@ -113,7 +113,7 @@ fun HomeScreen(
 
     Scaffold(
         topBar = {
-            if (selecting) {
+            val selectionBar: @Composable () -> Unit = {
                 TopAppBar(
                     colors = blendedTopBarColors(),
                     navigationIcon = {
@@ -144,28 +144,29 @@ fun HomeScreen(
                         }
                     },
                 )
-                return@Scaffold
             }
             val tasks = library.files.sumOf { it.openTasks }
-            SearchableTopBar(
-                title = "Notebooks",
-                subtitle = if (tasks > 0) {
-                    { CountsSubtitle(notes = null, todo = tasks, onTodoClick = { viewModel.searchFor("it.todo") }) }
-                } else {
-                    null
-                },
-                navigationIcon = Icons.Default.Menu,
-                navigationDescription = "Menu",
-                onNavigation = onOpenDrawer,
-                searchActive = viewModel.searchActive,
-                onSearchActiveChange = viewModel::setSearch,
-                query = viewModel.query,
-                onQueryChange = { viewModel.query = it },
-                searchPlaceholder = "Search all notes",
-                scrollBehavior = scrollBehavior,
-                onSaveSearch = { viewModel.saveCurrentSearch(null) }
-                    .takeIf { viewModel.query.isNotBlank() || viewModel.tag != null },
-            )
+            TopBarWithSelection(selecting, selectionBar) {
+                SearchableTopBar(
+                    title = "Notebooks",
+                    subtitle = if (tasks > 0) {
+                        { CountsSubtitle(notes = null, todo = tasks, onTodoClick = { viewModel.searchFor("it.todo") }) }
+                    } else {
+                        null
+                    },
+                    navigationIcon = Icons.Default.Menu,
+                    navigationDescription = "Menu",
+                    onNavigation = onOpenDrawer,
+                    searchActive = viewModel.searchActive,
+                    onSearchActiveChange = viewModel::setSearch,
+                    query = viewModel.query,
+                    onQueryChange = { viewModel.query = it },
+                    searchPlaceholder = "Search all notes",
+                    scrollBehavior = scrollBehavior,
+                    onSaveSearch = { viewModel.saveCurrentSearch(null) }
+                        .takeIf { viewModel.query.isNotBlank() || viewModel.tag != null },
+                )
+            }
         },
         floatingActionButton = {
             if (!selecting) {

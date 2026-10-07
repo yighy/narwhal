@@ -2,7 +2,9 @@ package io.github.yighy.narwhal.ui
 
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
@@ -20,6 +22,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
@@ -113,6 +116,13 @@ fun typedText(old: TextFieldValue, new: TextFieldValue, history: EditHistory, li
     history.adjusted(new.text, adjusted)
     return adjusted
 }
+
+/**
+ * Whether the bar over the keyboard shows: while the keyboard takes room on screen, so it goes
+ * away with it (the system says it is hidden only later), or while its own dialog is open.
+ */
+@Composable
+fun editToolbarShown(): Boolean = WindowInsets.ime.getBottom(LocalDensity.current) > 0 || EditingDialog.open
 
 /**
  * Bar over the keyboard while a note's text is edited: bold, italic, underline, strike-through,

@@ -66,6 +66,7 @@ fun SettingsScreen(
     var pickTheme by remember { mutableStateOf(false) }
     var pickSnooze by remember { mutableStateOf(false) }
     var pickSpacing by remember { mutableStateOf(false) }
+    var editHiddenProperties by remember { mutableStateOf(false) }
 
     // System settings can change while the app is in the background
     var resumes by remember { mutableIntStateOf(0) }
@@ -128,16 +129,16 @@ fun SettingsScreen(
 
             SwitchItem(
                 title = "Add an ID to new notes",
-                summary = "Fill the ID property when a note is created, so other notes can link to it",
+                summary = "Fill the ID property when a note is created; a note also gets one when an id: link to it is made",
                 checked = settings.addIdToNewNotes,
                 onCheckedChange = viewModel::setAddIdToNewNotes,
             )
-            SwitchItem(
-                title = "Show the ID property",
-                summary = "Display a note's ID on its screen; links to the note work either way",
-                checked = settings.showIdProperty,
-                onCheckedChange = viewModel::setShowIdProperty,
-            )
+            ListItem(
+                onClick = { editHiddenProperties = true },
+                supportingContent = {
+                    Text(settings.hiddenProperties.sorted().joinToString(" ").ifEmpty { "None" } + "\nNot shown on the note screen; kept in the file")
+                },
+            ) { Text("Hidden properties") }
             SwitchItem(
                 title = "Add a creation date to new notes",
                 summary = "Fill the CREATED property when a note is created (searched with cr., sorted with o.cr)",
@@ -249,6 +250,20 @@ fun SettingsScreen(
             onSelect = { label ->
                 pickTheme = false
                 ThemeMode.entries.firstOrNull { it.label == label }?.let(viewModel::setThemeMode)
+            },
+        )
+    }
+    if (editHiddenProperties) {
+        TextInputDialog(
+            title = "Hidden properties",
+            label = "Names, separated by spaces",
+            confirmLabel = "Save",
+            initial = settings.hiddenProperties.sorted().joinToString(" "),
+            allowEmpty = true,
+            onDismiss = { editHiddenProperties = false },
+            onConfirm = { text ->
+                editHiddenProperties = false
+                viewModel.setHiddenProperties(AppSettings.parseProperties(text))
             },
         )
     }

@@ -1,5 +1,6 @@
 package io.github.yighy.narwhal.ui
 
+import androidx.compose.material3.Surface
 import androidx.compose.foundation.Image
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.colorResource
@@ -137,6 +138,23 @@ fun blendedTopBarColors() = TopAppBarDefaults.topAppBarColors(
     containerColor = MaterialTheme.colorScheme.surface,
     scrolledContainerColor = MaterialTheme.colorScheme.surface,
 )
+
+/**
+ * The screen's own top [bar], with [selectionBar] laid over it while [selecting]: the bar keeps
+ * its height, so the list under it does not jump.
+ */
+@Composable
+fun TopBarWithSelection(selecting: Boolean, selectionBar: @Composable () -> Unit, bar: @Composable () -> Unit) {
+    Box {
+        bar()
+        if (selecting) {
+            // A surface also keeps taps from reaching the bar under it
+            Surface(color = MaterialTheme.colorScheme.surface, modifier = Modifier.matchParentSize()) {
+                Box(contentAlignment = Alignment.TopStart) { selectionBar() }
+            }
+        }
+    }
+}
 
 /**
  * Large app bar that collapses on scroll; the search icon turns it into a search field.

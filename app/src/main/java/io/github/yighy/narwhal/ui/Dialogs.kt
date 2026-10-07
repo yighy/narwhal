@@ -70,6 +70,7 @@ fun TextInputDialog(
     onConfirm: (String) -> Unit,
     initial: String = "",
     suffix: String? = null,
+    allowEmpty: Boolean = false,
 ) {
     var text by remember { mutableStateOf(initial) }
     AlertDialog(
@@ -86,7 +87,7 @@ fun TextInputDialog(
             )
         },
         confirmButton = {
-            TextButton(enabled = text.isNotBlank(), onClick = { onConfirm(text.trim()) }) { Text(confirmLabel) }
+            TextButton(enabled = allowEmpty || text.isNotBlank(), onClick = { onConfirm(text.trim()) }) { Text(confirmLabel) }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
     )

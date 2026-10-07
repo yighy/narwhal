@@ -199,7 +199,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun setNoteSpacing(spacing: NoteSpacing) = appSettings.setNoteSpacing(spacing)
 
-    fun setShowIdProperty(show: Boolean) = appSettings.setShowIdProperty(show)
+    fun setHiddenProperties(names: Set<String>) = appSettings.setHiddenProperties(names)
     fun setRemindScheduled(on: Boolean) = appSettings.setRemindScheduled(on)
     fun setRemindDeadline(on: Boolean) = appSettings.setRemindDeadline(on)
     fun setRemindAllDay(on: Boolean) = appSettings.setRemindAllDay(on)
@@ -509,6 +509,19 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** The note being created, even after its screen was left (back saves it). */
     private var newNoteScreen: Screen.NewNote? = null
 
+    /** A new note's screen whose content is being edited while the note gets created. */
+    var newNoteEditingContent: Screen.NewNote? = null
+
+    /** The created note whose screen goes on editing its content. */
+    private var resumedContentEditing: Screen.Note? = null
+
+    /** Whether [note]'s screen takes over the content edit of its new-note screen (only once). */
+    fun takeResumedContentEditing(note: OrgNote): Boolean {
+        val resumed = resumedContentEditing?.let { it.fileUri == note.fileUri && it.index == note.index } == true
+        if (resumed) resumedContentEditing = null
+        return resumed
+    }
+
     private suspend fun saveDraft(edit: NoteEdit): OrgNote? {
         val screen = newNoteScreen ?: return null
         newNoteDraft = edit
@@ -539,8 +552,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val i = stack.indexOf(screen)
         if (i >= 0) {
             navigatedForward = true
-            stack[i] = Screen.Note(note.fileUri, note.index)
+            val next = Screen.Note(note.fileUri, note.index)
+            if (newNoteEditingContent == screen) resumedContentEditing = next
+            stack[i] = next
         }
+        newNoteEditingContent = null
         return note
     }
 

@@ -4,6 +4,18 @@ All notable changes to Narwhal. Versions follow [Semantic Versioning](https://se
 
 ## [Unreleased]
 
+### Added
+- Hidden properties setting: the properties not shown on the note screen (the ID by default),
+  in place of the switch for the ID
+
+### Changed
+- New notes no longer get an ID by default: linking to a note gives it one
+
+### Fixed
+- The list no longer jumps when a note or a notebook gets selected
+- The keyboard toolbar goes away with the keyboard
+- On a new note, going from the title to the content keeps the keyboard up
+
 ## [0.4.0] - 2026-10-06
 
 ### Added
