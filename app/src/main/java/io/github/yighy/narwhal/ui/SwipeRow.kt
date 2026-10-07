@@ -11,7 +11,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -100,11 +100,12 @@ fun SwipeRow(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 actions.forEach { action ->
-                    FilledTonalIconButton(onClick = {
+                    // Plain icons, as for the swipe right
+                    IconButton(onClick = {
                         scope.launch { offset.animateTo(0f, spatial) }
                         currentOnOpenChange(false)
                         action.onClick()
-                    }) { Icon(action.icon, action.label) }
+                    }) { Icon(action.icon, action.label, tint = MaterialTheme.colorScheme.onSurfaceVariant) }
                 }
             }
         }
