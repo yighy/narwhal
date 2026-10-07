@@ -8,6 +8,5 @@
     <circle cx="47" cy="72" r="3.2" fill="#0F3D3A"/>
     <circle cx="65" cy="72" r="3.2" fill="#0F3D3A"/>
     <path d="M0,86 q10,-5 20,0 t20,0 t20,0 t20,0 t20,0 t20,0 V120 H0 Z" fill="#0A524C"/>
-    <path d="M0,86 q10,-5 20,0 t20,0 t20,0 t20,0 t20,0 t20,0" fill="none" stroke="#FFFFFF" stroke-width="3"/>
   </g>
 </svg>

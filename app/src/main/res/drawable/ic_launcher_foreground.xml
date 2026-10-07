@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- A round narwhal with its tusk and tail, rising from a dark sea with a foam line, on a 108dp adaptive icon canvas. -->
+<!-- A round narwhal with its tusk and tail, rising from a dark sea, on a 108dp adaptive icon canvas. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
@@ -11,5 +11,4 @@
     <path android:fillColor="#0F3D3A" android:pathData="M46.2,61.2m-1.92,0a1.92,1.92 0,1 1,3.84 0a1.92,1.92 0,1 1,-3.84 0" />
     <path android:fillColor="#0F3D3A" android:pathData="M57,61.2m-1.92,0a1.92,1.92 0,1 1,3.84 0a1.92,1.92 0,1 1,-3.84 0" />
     <path android:fillColor="#0A524C" android:pathData="M-6,69.6q6,-3 12,0t12,0t12,0t12,0t12,0t12,0t12,0t12,0t12,0t12,0V108H-6Z" />
-    <path android:strokeColor="#FFFFFF" android:strokeWidth="1.8" android:pathData="M-6,69.6q6,-3 12,0t12,0t12,0t12,0t12,0t12,0t12,0t12,0t12,0t12,0" />
 </vector>
