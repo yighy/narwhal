@@ -4,6 +4,8 @@ All notable changes to Narwhal. Versions follow [Semantic Versioning](https://se
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-10-07
+
 ### Added
 - French translation, and a "Use English language" setting that ignores the phone's language
   (on Android 13+, the app's language can also be chosen in the system settings)
@@ -109,7 +111,8 @@ All notable changes to Narwhal. Versions follow [Semantic Versioning](https://se
 - First prototype: notebooks from a folder of `.org` files, outline, note editing, search, tags,
   and `id:` links to other notes
 
-[Unreleased]: https://github.com/yighy/narwhal/compare/v0.5.3...HEAD
+[Unreleased]: https://github.com/yighy/narwhal/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/yighy/narwhal/compare/v0.5.3...v0.6.0
 [0.5.3]: https://github.com/yighy/narwhal/compare/v0.5.2...v0.5.3
 [0.5.2]: https://github.com/yighy/narwhal/compare/v0.5.1...v0.5.2
 [0.5.1]: https://github.com/yighy/narwhal/compare/v0.5.0...v0.5.1
