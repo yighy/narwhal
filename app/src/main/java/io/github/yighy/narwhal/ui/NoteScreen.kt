@@ -517,7 +517,7 @@ fun NoteScreen(
             MetaSlot(note.closed != null) {
                 MetaRow("Closed", OrgTime.display(closed).orEmpty(), onClick = null)
             }
-            // Hidden properties (the ID by default: links need it, but it means nothing to read)
+            // Properties chosen in the settings stay hidden (still in the file)
             note.properties.filter { it.first.uppercase() !in settings.hiddenProperties }.forEach { (name, value) ->
                 key(name.uppercase()) {
                     // The property just added replaces its new row without unfolding again

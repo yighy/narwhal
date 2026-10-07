@@ -52,7 +52,7 @@ class AppSettings(context: Context) {
         /** Give every new note an ID property, so it can be linked to with id:. */
         val addIdToNewNotes: Boolean = false,
         /** Properties not shown on the note screen (kept in the file), in upper case. */
-        val hiddenProperties: Set<String> = setOf("ID"),
+        val hiddenProperties: Set<String> = emptySet(),
         /** Give every new note a CREATED property with when it was created. */
         val addCreatedToNewNotes: Boolean = false,
         /** Set reminders as alarm clock alarms (the most reliable; an alarm icon shows). */
@@ -81,10 +81,7 @@ class AppSettings(context: Context) {
             allDayTime = LocalTime.ofSecondOfDay(prefs.getInt(KEY_ALL_DAY_MINUTES, 9 * 60) * 60L),
             keywords = prefs.getString(KEY_KEYWORDS, null)?.let(Keywords::parse) ?: Keywords.DEFAULT,
             addIdToNewNotes = prefs.getBoolean(KEY_ADD_ID, false),
-            hiddenProperties = parseProperties(
-                // Before the list, a switch showed or hid the ID
-                prefs.getString(KEY_HIDDEN_PROPERTIES, null) ?: if (prefs.getBoolean(KEY_SHOW_ID, false)) "" else "ID",
-            ),
+            hiddenProperties = parseProperties(prefs.getString(KEY_HIDDEN_PROPERTIES, null).orEmpty()),
             addCreatedToNewNotes = prefs.getBoolean(KEY_ADD_CREATED, false),
             useAlarmClock = prefs.getBoolean(KEY_ALARM_CLOCK, false),
             snoozeMinutes = prefs.getInt(KEY_SNOOZE_MINUTES, 60),
@@ -189,7 +186,6 @@ class AppSettings(context: Context) {
         private const val KEY_SEARCHES = "saved_searches"
         private const val ICON_PREFIX = "icon:"
         private const val KEY_ADD_ID = "add_id_to_new_notes"
-        private const val KEY_SHOW_ID = "show_id_property"
         private const val KEY_HIDDEN_PROPERTIES = "hidden_properties"
         private const val KEY_ADD_CREATED = "add_created_to_new_notes"
         private const val KEY_ALARM_CLOCK = "use_alarm_clock"

@@ -4,6 +4,10 @@ All notable changes to Narwhal. Versions follow [Semantic Versioning](https://se
 
 ## [Unreleased]
 
+### Changed
+- No property is hidden by default: the ID shows on the note screen unless added to the hidden
+  properties
+
 ## [0.5.1] - 2026-10-07
 
 ### Changed
