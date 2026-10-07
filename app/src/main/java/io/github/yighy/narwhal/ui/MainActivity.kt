@@ -1,5 +1,7 @@
 package io.github.yighy.narwhal.ui
 
+import android.content.Context
+import io.github.yighy.narwhal.data.AppLanguage
 import io.github.yighy.narwhal.R
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -78,6 +80,9 @@ import io.github.yighy.narwhal.data.NoteRepository
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
+
+    // The language chosen in the settings, before Android 13
+    override fun attachBaseContext(newBase: Context) = super.attachBaseContext(AppLanguage.wrap(newBase))
 
     private val viewModel: AppViewModel by viewModels()
 

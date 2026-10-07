@@ -1,5 +1,7 @@
 package io.github.yighy.narwhal.ui
 
+import androidx.activity.compose.LocalActivity
+import io.github.yighy.narwhal.data.AppLanguage
 import androidx.compose.ui.platform.LocalResources
 import io.github.yighy.narwhal.R
 import androidx.compose.ui.res.stringResource
@@ -68,6 +70,8 @@ fun SettingsScreen(
     var editKeywords by remember { mutableStateOf(false) }
     var pickLinkRenaming by remember { mutableStateOf(false) }
     var pickTheme by remember { mutableStateOf(false) }
+    val english = remember { AppLanguage.isEnglish(context) }
+    val activity = LocalActivity.current
     var pickSnooze by remember { mutableStateOf(false) }
     var pickSpacing by remember { mutableStateOf(false) }
     var editHiddenProperties by remember { mutableStateOf(false) }
@@ -109,6 +113,12 @@ fun SettingsScreen(
                     onCheckedChange = viewModel::setDynamicColor,
                 )
             }
+            SwitchItem(
+                title = stringResource(R.string.settings_english),
+                summary = stringResource(R.string.settings_english_summary),
+                checked = english,
+                onCheckedChange = { on -> activity?.let { AppLanguage.setEnglish(it, on) } },
+            )
 
             SectionHeader(stringResource(R.string.settings_notes))
             ListItem(

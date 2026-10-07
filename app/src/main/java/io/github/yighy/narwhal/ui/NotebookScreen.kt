@@ -1,5 +1,8 @@
 package io.github.yighy.narwhal.ui
 
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.runtime.withFrameNanos
+import androidx.compose.foundation.gestures.animateScrollBy
 import io.github.yighy.narwhal.R
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.LocalContext
@@ -8,6 +11,7 @@ import io.github.yighy.narwhal.core.Checkboxes
 import androidx.compose.runtime.LaunchedEffect
 import kotlinx.coroutines.delay
 import io.github.yighy.narwhal.core.Notebooks
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
@@ -33,7 +37,6 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -72,6 +75,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import io.github.yighy.narwhal.core.NoteTree
@@ -232,6 +236,7 @@ private fun NotebookOutline(
     onAddNear: (OrgNote, Placement) -> Unit,
 ) {
     val shown = NoteTree.visible(file.notes, viewModel::isFolded).map { it.index }.toSet()
+    val rowKeys = remember(file.notes) { outlineKeys(file.notes) }
     val stagger = remember { FoldStagger() }
     val delays = stagger.delays(shown)
     // The cascade follows the system's animation speed (none when animations are off)
@@ -295,7 +300,7 @@ private fun NotebookOutline(
             }
             // Every note stays in the list; folded ones collapse to zero height so
             // that folding and unfolding animate like an outline
-            items(file.notes, key = { it.fileUri + "#" + it.index }) { note ->
+            itemsIndexed(file.notes, key = { i, _ -> rowKeys[i] }) { _, note ->
                 // Shown or hidden after its turn in the cascade
                 val target = note.index in shown
                 var visible by remember { mutableStateOf(target) }
@@ -305,6 +310,8 @@ private fun NotebookOutline(
                 }
                 AnimatedVisibility(
                     visible = visible,
+                    // A moved note slides to its new place
+                    modifier = Modifier.animateItem(fadeInSpec = null, fadeOutSpec = null, placementSpec = MoveSpec),
                     enter = expandVertically(FoldSpatialSpec) + fadeIn(FoldEffectsSpec),
                     exit = shrinkVertically(FoldSpatialSpec) + fadeOut(FoldEffectsSpec),
                 ) {
@@ -341,6 +348,29 @@ private fun NotebookOutline(
                         onToggleCheckbox = { n -> viewModel.update(note) { it.copy(content = Checkboxes.toggle(it.content, n)) } },
                     )
                 }
+            }
+        }
+
+        // The selected notes stay in view when they move, clear of the selection toolbar
+        val toolbarRoom = with(LocalDensity.current) { 96.dp.toPx() }
+        LaunchedEffect(selected, rowKeys) {
+            val first = selected.minOrNull() ?: return@LaunchedEffect
+            val last = selected.max()
+            // Once the list is laid out with the notes in their new places
+            withFrameNanos { }
+            val layout = listState.layoutInfo
+            val top = layout.viewportStartOffset
+            val bottom = layout.viewportEndOffset - toolbarRoom
+            val firstRow = layout.visibleItemsInfo.firstOrNull { it.key == rowKeys.getOrNull(first) }
+            val lastRow = layout.visibleItemsInfo.firstOrNull { it.key == rowKeys.getOrNull(last) }
+            when {
+                // The header comes first, then one item per note
+                firstRow == null -> listState.animateScrollToItem(first + 1)
+                firstRow.offset < top -> listState.animateScrollBy((firstRow.offset - top).toFloat())
+                lastRow == null -> listState.animateScrollBy((firstRow.offset - top).toFloat())
+                lastRow.offset + lastRow.size > bottom ->
+                    // Down to the last one, without losing the first
+                    listState.animateScrollBy(minOf(lastRow.offset + lastRow.size - bottom, (firstRow.offset - top).toFloat()))
             }
         }
     }
@@ -457,6 +487,19 @@ private fun OutlineRow(
 }
 
 /**
+ * Keys of the outline rows that follow a note when it moves: its text without the heading stars
+ * (so a change of level keeps it), numbered among identical ones.
+ */
+private fun outlineKeys(notes: List<OrgNote>): List<String> {
+    val seen = HashMap<String, Int>()
+    return notes.map { note ->
+        val text = note.raw.trimStart('*')
+        val n = seen.merge(text, 1, Int::plus)
+        "$n#$text"
+    }
+}
+
+/**
  * Notes shown or hidden by a fold come one after the other, like cards: from the top when they
  * appear, from the bottom when they go, the whole cascade within [TOTAL_MS].
  */
@@ -493,6 +536,7 @@ private const val FOLD_SPATIAL_DAMPING = 0.8f
 private const val FOLD_SPATIAL_STIFFNESS = 380f * 4
 private val FoldSpatialSpec = spring(FOLD_SPATIAL_DAMPING, FOLD_SPATIAL_STIFFNESS, IntSize.VisibilityThreshold)
 private val FoldEffectsSpec = spring<Float>(1f, 1600f * 4)
+private val MoveSpec = spring(FOLD_SPATIAL_DAMPING, FOLD_SPATIAL_STIFFNESS, IntOffset.VisibilityThreshold)
 
 /** Start padding of a note at [level] in the outline. */
 private fun indent(level: Int) = 4.dp + 24.dp * (level - 1).coerceIn(0, 6)

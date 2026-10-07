@@ -1,5 +1,7 @@
 package io.github.yighy.narwhal
 
+import android.content.Context
+import io.github.yighy.narwhal.data.AppLanguage
 import android.app.Application
 import io.github.yighy.narwhal.data.AppSettings
 import io.github.yighy.narwhal.data.NoteRepository
@@ -21,6 +23,9 @@ import kotlinx.coroutines.launch
  * and keeps the next reminder alarm in sync with the notes.
  */
 class NarwhalApplication : Application() {
+
+    // The language chosen in the settings, before Android 13 (notifications use this context)
+    override fun attachBaseContext(base: Context) = super.attachBaseContext(AppLanguage.wrap(base))
 
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 

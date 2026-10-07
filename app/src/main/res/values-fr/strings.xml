@@ -163,6 +163,8 @@
     <string name="settings_credits_summary">Inspiré d’Orgzly ; fichiers Org lus et écrits avec sa bibliothèque org-java</string>
     <string name="settings_dynamic_color">Couleurs dynamiques</string>
     <string name="settings_dynamic_color_summary">Utiliser les couleurs du fond d’écran</string>
+    <string name="settings_english">Utiliser l’anglais</string>
+    <string name="settings_english_summary">Ignorer la langue par défaut</string>
     <string name="settings_exact_alarms">Alarmes exactes</string>
     <string name="settings_exact_alarms_off">Désactivées : les rappels peuvent être en retard. Touchez pour autoriser.</string>
     <string name="settings_exact_alarms_on">Autorisées : les rappels sonnent à l’heure</string>

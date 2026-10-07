@@ -5,7 +5,9 @@ All notable changes to Narwhal. Versions follow [Semantic Versioning](https://se
 ## [Unreleased]
 
 ### Added
-- French translation; on Android 13+, the app's language can be chosen in the system settings
+- French translation, and a "Use English language" setting that ignores the phone's language
+  (on Android 13+, the app's language can also be chosen in the system settings)
+- Moved notes slide to their new place in the outline, and the list scrolls to keep them in view
 
 ## [0.5.3] - 2026-10-07
 
