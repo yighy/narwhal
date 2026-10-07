@@ -1,10 +1,14 @@
 package io.github.yighy.narwhal.data
 
+import java.io.IOException
 import android.content.ContentResolver
 import android.net.Uri
 import android.os.ParcelFileDescriptor
 import android.provider.DocumentsContract
 import android.provider.DocumentsContract.Document
+
+/** What is on disk after a save is not what was written. */
+class FileNotSavedException : IOException("The file was not saved correctly")
 
 /** Reads and writes .org files in a folder picked by the user (Storage Access Framework). */
 class OrgFolder(private val resolver: ContentResolver, val treeUri: Uri) {
@@ -78,7 +82,7 @@ class OrgFolder(private val resolver: ContentResolver, val treeUri: Uri) {
             resolver.openOutputStream(uri, "wt")?.use { it.write(bytes) } ?: error("Cannot write $uri")
         }
         val written = resolver.openInputStream(uri)?.use { it.readBytes() }
-        if (written == null || !written.contentEquals(bytes)) error("The file was not saved correctly")
+        if (written == null || !written.contentEquals(bytes)) throw FileNotSavedException()
         justWritten = uri to text
     }
 

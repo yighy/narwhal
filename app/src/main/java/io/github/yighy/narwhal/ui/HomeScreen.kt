@@ -1,5 +1,8 @@
 package io.github.yighy.narwhal.ui
 
+import io.github.yighy.narwhal.R
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.DropdownMenu
@@ -75,16 +78,15 @@ fun WelcomeScreen(onPickFolder: () -> Unit) {
         ) {
             AppIcon(96.dp)
             Spacer(Modifier.height(24.dp))
-            Text("Narwhal", style = MaterialTheme.typography.displaySmall)
+            Text(stringResource(R.string.app_name), style = MaterialTheme.typography.displaySmall)
             Spacer(Modifier.height(12.dp))
             Text(
-                "Pick the folder that holds your .org files. They stay where they are: " +
-                    "Narwhal reads and writes them directly.",
+                stringResource(R.string.welcome_text),
                 style = MaterialTheme.typography.bodyLarge,
             )
             Spacer(Modifier.height(32.dp))
             Button(onClick = onPickFolder, contentPadding = PaddingValues(horizontal = 32.dp, vertical = 16.dp)) {
-                Text("Choose folder", style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(R.string.choose_folder), style = MaterialTheme.typography.titleMedium)
             }
         }
     }
@@ -117,26 +119,26 @@ fun HomeScreen(
                 TopAppBar(
                     colors = blendedTopBarColors(),
                     navigationIcon = {
-                        IconButton(onClick = viewModel::clearNotebookSelection) { Icon(Icons.Default.Close, "Clear selection") }
+                        IconButton(onClick = viewModel::clearNotebookSelection) { Icon(Icons.Default.Close, stringResource(R.string.clear_selection)) }
                     },
-                    title = { Text("${selected.size} selected") },
+                    title = { Text(pluralStringResource(R.plurals.n_selected, selected.size, selected.size)) },
                     actions = {
                         // One notebook at a time
                         if (selected.size == 1) {
-                            IconButton(onClick = { pickIcon = selected.first() }) { Icon(Icons.Default.Face, "Change icon") }
+                            IconButton(onClick = { pickIcon = selected.first() }) { Icon(Icons.Default.Face, stringResource(R.string.change_icon)) }
                         }
                         Box {
-                            IconButton(onClick = { selectionMenu = true }) { Icon(Icons.Default.MoreVert, "More") }
+                            IconButton(onClick = { selectionMenu = true }) { Icon(Icons.Default.MoreVert, stringResource(R.string.more)) }
                             DropdownMenu(expanded = selectionMenu, onDismissRequest = { selectionMenu = false }) {
                                 if (selected.size == 1) {
                                     DropdownMenuItem(
-                                        text = { Text("Rename") },
+                                        text = { Text(stringResource(R.string.rename)) },
                                         leadingIcon = { Icon(Icons.Default.Edit, null) },
                                         onClick = { selectionMenu = false; renaming = library.file(selected.first()) },
                                     )
                                 }
                                 DropdownMenuItem(
-                                    text = { Text("Delete") },
+                                    text = { Text(stringResource(R.string.delete)) },
                                     leadingIcon = { Icon(Icons.Default.Delete, null) },
                                     onClick = { selectionMenu = false; confirmDelete = true },
                                 )
@@ -148,20 +150,20 @@ fun HomeScreen(
             val tasks = library.files.sumOf { it.openTasks }
             TopBarWithSelection(selecting, selectionBar) {
                 SearchableTopBar(
-                    title = "Notebooks",
+                    title = stringResource(R.string.notebooks),
                     subtitle = if (tasks > 0) {
                         { CountsSubtitle(notes = null, todo = tasks, onTodoClick = { viewModel.searchFor("it.todo") }) }
                     } else {
                         null
                     },
                     navigationIcon = Icons.Default.Menu,
-                    navigationDescription = "Menu",
+                    navigationDescription = stringResource(R.string.menu),
                     onNavigation = onOpenDrawer,
                     searchActive = viewModel.searchActive,
                     onSearchActiveChange = viewModel::setSearch,
                     query = viewModel.query,
                     onQueryChange = { viewModel.query = it },
-                    searchPlaceholder = "Search all notes",
+                    searchPlaceholder = stringResource(R.string.search_all_notes),
                     scrollBehavior = scrollBehavior,
                     onSaveSearch = { viewModel.saveCurrentSearch(null) }
                         .takeIf { viewModel.query.isNotBlank() || viewModel.tag != null },
@@ -170,7 +172,7 @@ fun HomeScreen(
         },
         floatingActionButton = {
             if (!selecting) {
-                FloatingActionButton(onClick = { newNotebook = true }) { Icon(Icons.Default.Add, "New notebook") }
+                FloatingActionButton(onClick = { newNotebook = true }) { Icon(Icons.Default.Add, stringResource(R.string.new_notebook)) }
             }
         },
         snackbarHost = { SnackbarHost(snackbar) },
@@ -188,7 +190,7 @@ fun HomeScreen(
 
                 library.files.isEmpty() ->
                     Text(
-                        "No notebooks yet. Tap + to create one.",
+                        stringResource(R.string.no_notebooks),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(24.dp),
                     )
@@ -229,12 +231,12 @@ fun HomeScreen(
         val names = library.files.filter { it.uri in selected }.map { it.ref.path }
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
-            title = { Text(if (names.size == 1) "Delete this notebook?" else "Delete ${names.size} notebooks?") },
-            text = { Text("These files are deleted from the folder, with all their notes:\n" + names.joinToString("\n") { "• $it" }) },
+            title = { Text(pluralStringResource(R.plurals.delete_notebooks_title, names.size, names.size)) },
+            text = { Text(stringResource(R.string.delete_notebooks_text) + "\n" + names.joinToString("\n") { "• $it" }) },
             confirmButton = {
-                TextButton(onClick = { confirmDelete = false; viewModel.deleteSelectedNotebooks() }) { Text("Delete") }
+                TextButton(onClick = { confirmDelete = false; viewModel.deleteSelectedNotebooks() }) { Text(stringResource(R.string.delete)) }
             },
-            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Cancel") } },
+            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text(stringResource(R.string.cancel)) } },
         )
     }
 
@@ -252,9 +254,9 @@ fun HomeScreen(
 
     renaming?.let { file ->
         TextInputDialog(
-            title = "Rename notebook",
-            label = "Name",
-            confirmLabel = "Rename",
+            title = stringResource(R.string.rename_notebook),
+            label = stringResource(R.string.name),
+            confirmLabel = stringResource(R.string.rename),
             initial = file.title,
             onDismiss = { renaming = null },
             onConfirm = { renaming = null; viewModel.renameSelectedNotebook(it) },
@@ -263,10 +265,10 @@ fun HomeScreen(
 
     if (newNotebook) {
         TextInputDialog(
-            title = "New notebook",
-            label = "Name",
+            title = stringResource(R.string.new_notebook),
+            label = stringResource(R.string.name),
             suffix = ".org",
-            confirmLabel = "Create",
+            confirmLabel = stringResource(R.string.create),
             onDismiss = { newNotebook = false },
             onConfirm = { newNotebook = false; viewModel.createNotebook(it) },
         )
@@ -305,7 +307,7 @@ private fun NotebookCard(
                 Box(
                     Modifier.size(56.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary),
                     contentAlignment = Alignment.Center,
-                ) { Icon(Icons.Default.Check, "Selected", tint = MaterialTheme.colorScheme.onPrimary) }
+                ) { Icon(Icons.Default.Check, stringResource(R.string.item_selected), tint = MaterialTheme.colorScheme.onPrimary) }
             } else {
                 NotebookAvatar(file.title, icon)
             }
@@ -318,8 +320,8 @@ private fun NotebookCard(
                     modifier = Modifier.sharedText(notebookTitleKey(file.uri)),
                 )
                 val counts = buildList {
-                    add(if (file.notes.size == 1) "1 note" else "${file.notes.size} notes")
-                    if (file.openTasks > 0) add("${file.openTasks} to do")
+                    add(pluralStringResource(R.plurals.n_notes, file.notes.size, file.notes.size))
+                    if (file.openTasks > 0) add(pluralStringResource(R.plurals.n_to_do, file.openTasks, file.openTasks))
                 }
                 Text(
                     counts.joinToString(" · "),

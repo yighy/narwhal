@@ -1,5 +1,9 @@
 package io.github.yighy.narwhal.ui
 
+import androidx.compose.ui.platform.LocalResources
+import androidx.annotation.StringRes
+import androidx.compose.ui.res.stringResource
+import io.github.yighy.narwhal.R
 import io.github.yighy.narwhal.core.Checkboxes
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.rememberTextMeasurer
@@ -143,6 +147,7 @@ fun NoteScreen(
 ) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    val resources = LocalResources.current
     val settings by viewModel.settings.collectAsState()
     val file = library.file(note.fileUri)
     val keywords = file?.doc?.keywords ?: Keywords.DEFAULT
@@ -271,32 +276,32 @@ fun NoteScreen(
                 title = {},
                 colors = blendedTopBarColors(),
                 navigationIcon = {
-                    IconButton(onClick = { commit(); viewModel.back() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
+                    IconButton(onClick = { commit(); viewModel.back() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back)) }
                 },
                 actions = {
                     // Nothing to link to until the note exists
                     if (newNote == null) Box {
-                        IconButton(onClick = { moreMenu = true }) { Icon(Icons.Default.MoreVert, "More") }
+                        IconButton(onClick = { moreMenu = true }) { Icon(Icons.Default.MoreVert, stringResource(R.string.more)) }
                         DropdownMenu(expanded = moreMenu, onDismissRequest = { moreMenu = false; shareMenu = false }) {
                             if (shareMenu) {
                                 // The note as Org text (heading, planning, properties, content)
                                 DropdownMenuItem(
-                                    text = { Text("Note") },
+                                    text = { Text(stringResource(R.string.note)) },
                                     onClick = { moreMenu = false; shareMenu = false; share(note.raw.trimEnd()) },
                                 )
                                 DropdownMenuItem(
-                                    text = { Text("Title") },
+                                    text = { Text(stringResource(R.string.title)) },
                                     onClick = { moreMenu = false; shareMenu = false; share(displayTitle(note.title)) },
                                 )
                                 DropdownMenuItem(
-                                    text = { Text("Content") },
+                                    text = { Text(stringResource(R.string.content)) },
                                     enabled = note.content.isNotBlank(),
                                     onClick = { moreMenu = false; shareMenu = false; share(IdLinks.plainText(note.content.trimIndent())) },
                                 )
                                 return@DropdownMenu
                             }
                             DropdownMenuItem(
-                                text = { Text("Copy link to this note") },
+                                text = { Text(stringResource(R.string.copy_link)) },
                                 leadingIcon = { Icon(NarwhalIcons.Link, null) },
                                 onClick = {
                                     moreMenu = false
@@ -304,12 +309,12 @@ fun NoteScreen(
                                         val (id, _) = viewModel.idFor(note) ?: return@launch
                                         context.getSystemService(ClipboardManager::class.java)
                                             .setPrimaryClip(ClipData.newPlainText("Org link", IdLinks.format(id, displayTitle(note.title))))
-                                        viewModel.message("Link copied")
+                                        viewModel.message(R.string.msg_link_copied)
                                     }
                                 },
                             )
                             DropdownMenuItem(
-                                text = { Text("Share") },
+                                text = { Text(stringResource(R.string.share)) },
                                 leadingIcon = { Icon(Icons.Default.Share, null) },
                                 trailingIcon = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) },
                                 onClick = { shareMenu = true },
@@ -373,7 +378,7 @@ fun NoteScreen(
                             val icon by remember { derivedStateOf { if (checkedProgress > 0.5f) Icons.Default.Close else Icons.Default.Add } }
                             Icon(
                                 rememberVectorPainter(icon),
-                                contentDescription = if (fabMenu) "Close" else "New note",
+                                contentDescription = stringResource(if (fabMenu) R.string.close else R.string.new_note),
                                 modifier = Modifier.animateIcon({ checkedProgress }),
                             )
                         }
@@ -385,7 +390,7 @@ fun NoteScreen(
                                 fabMenu = false
                                 viewModel.startNewNote(note.fileUri, note, placement)
                             },
-                            text = { Text(newNoteTitle(placement)) },
+                            text = { Text(stringResource(newNoteTitle(placement))) },
                             icon = { Icon(placementIcon(placement), null) },
                         )
                     }
@@ -426,7 +431,7 @@ fun NoteScreen(
 
             // Title: edited where it is shown, looking the same; a tap puts the cursor there
             val titleStyle = MaterialTheme.typography.headlineMedium
-            val titlePlaceholder = if (newNote != null) "Add a title to create the note" else "Untitled"
+            val titlePlaceholder = stringResource(if (newNote != null) R.string.title_placeholder_new else R.string.untitled)
             if (editing == Editing.Title) {
                 InPlaceField(
                     value = draft,
@@ -485,7 +490,7 @@ fun NoteScreen(
             val state = lastNonNull(note.state)
             MetaSlot(note.state != null || metaEdit == MetaEdit.State) {
                 ChoiceRow(
-                    label = "State",
+                    label = stringResource(R.string.state),
                     options = keywords.all,
                     // While folding away, the row keeps showing the state it had
                     selected = note.state ?: state.takeIf { metaEdit != MetaEdit.State },
@@ -497,7 +502,7 @@ fun NoteScreen(
             val priority = lastNonNull(note.priority)
             MetaSlot(note.priority != null || metaEdit == MetaEdit.Priority) {
                 ChoiceRow(
-                    label = "Priority",
+                    label = stringResource(R.string.priority),
                     options = listOf("A", "B", "C"),
                     selected = note.priority ?: priority.takeIf { metaEdit != MetaEdit.Priority },
                     expanded = metaEdit == MetaEdit.Priority,
@@ -507,15 +512,15 @@ fun NoteScreen(
             }
             val scheduled = lastNonNull(note.scheduled)
             MetaSlot(note.scheduled != null) {
-                MetaRow("Scheduled", OrgTime.display(scheduled).orEmpty(), onClick = { openDialog(DateDialog.Scheduled) })
+                MetaRow(stringResource(R.string.scheduled), displayTime(resources, scheduled).orEmpty(), onClick = { openDialog(DateDialog.Scheduled) })
             }
             val deadline = lastNonNull(note.deadline)
             MetaSlot(note.deadline != null) {
-                MetaRow("Deadline", OrgTime.display(deadline).orEmpty(), onClick = { openDialog(DateDialog.Deadline) })
+                MetaRow(stringResource(R.string.deadline), displayTime(resources, deadline).orEmpty(), onClick = { openDialog(DateDialog.Deadline) })
             }
             val closed = lastNonNull(note.closed)
             MetaSlot(note.closed != null) {
-                MetaRow("Closed", OrgTime.display(closed).orEmpty(), onClick = null)
+                MetaRow(stringResource(R.string.closed), displayTime(resources, closed).orEmpty(), onClick = null)
             }
             // Properties chosen in the settings stay hidden (still in the file)
             note.properties.filter { it.first.uppercase() !in settings.hiddenProperties }.forEach { (name, value) ->
@@ -526,7 +531,7 @@ fun NoteScreen(
                             // Read-only, so links to the note never break by mistake; a tap copies it
                             MetaRow(name, value, onClick = {
                                 context.getSystemService(ClipboardManager::class.java).setPrimaryClip(ClipData.newPlainText("ID", value))
-                                viewModel.message("ID copied")
+                                viewModel.message(R.string.msg_id_copied)
                             })
                         } else {
                             PropertyRow(
@@ -564,12 +569,12 @@ fun NoteScreen(
 
             // What can still be added, on one line that scrolls
             val addChips = listOfNotNull(
-                ("Tags" to { metaEdit = MetaEdit.Tags }).takeIf { note.tags.isEmpty() && metaEdit != MetaEdit.Tags },
-                ("State" to { metaEdit = MetaEdit.State }).takeIf { note.state == null && metaEdit != MetaEdit.State },
-                ("Priority" to { metaEdit = MetaEdit.Priority }).takeIf { note.priority == null && metaEdit != MetaEdit.Priority },
-                ("Scheduled" to { openDialog(DateDialog.Scheduled) }).takeIf { note.scheduled == null },
-                ("Deadline" to { openDialog(DateDialog.Deadline) }).takeIf { note.deadline == null },
-                ("Property" to { addedProperty = null; metaEdit = MetaEdit.Property }).takeIf { metaEdit != MetaEdit.Property },
+                (stringResource(R.string.tags) to { metaEdit = MetaEdit.Tags }).takeIf { note.tags.isEmpty() && metaEdit != MetaEdit.Tags },
+                (stringResource(R.string.state) to { metaEdit = MetaEdit.State }).takeIf { note.state == null && metaEdit != MetaEdit.State },
+                (stringResource(R.string.priority) to { metaEdit = MetaEdit.Priority }).takeIf { note.priority == null && metaEdit != MetaEdit.Priority },
+                (stringResource(R.string.scheduled) to { openDialog(DateDialog.Scheduled) }).takeIf { note.scheduled == null },
+                (stringResource(R.string.deadline) to { openDialog(DateDialog.Deadline) }).takeIf { note.deadline == null },
+                (stringResource(R.string.property) to { addedProperty = null; metaEdit = MetaEdit.Property }).takeIf { metaEdit != MetaEdit.Property },
             )
             val addRow = rememberLazyListState()
             // A chip coming back at the start is shown, not left scrolled out of sight
@@ -599,7 +604,7 @@ fun NoteScreen(
 
             // Content: edited where it is shown, looking the same
             val contentStyle = MaterialTheme.typography.bodyLarge
-            val contentPlaceholder = "Add content (type id: or file: to link to a note or notebook)"
+            val contentPlaceholder = stringResource(R.string.content_placeholder)
             if (editing == Editing.Content) {
                 InPlaceField(
                     value = draft,
@@ -646,7 +651,7 @@ fun NoteScreen(
             if (backlinks.isNotEmpty() && newNote == null) {
                 HorizontalDivider(Modifier.padding(vertical = 8.dp))
                 Text(
-                    "Linked from",
+                    stringResource(R.string.linked_from),
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(vertical = 4.dp),
@@ -796,15 +801,16 @@ private fun TagsEditor(
     LaunchedEffect(tags) { tags.forEach { tag -> if (shown.none { it.equals(tag, ignoreCase = true) }) shown.add(tag) } }
     // The field grows with what is typed
     val fieldStyle = MaterialTheme.typography.labelLarge
+    val tagPlaceholder = stringResource(R.string.tag)
     val measurer = rememberTextMeasurer()
-    val typedWidth = with(LocalDensity.current) { measurer.measure(text.ifEmpty { "Tag" }, fieldStyle).size.width.toDp() }
+    val typedWidth = with(LocalDensity.current) { measurer.measure(text.ifEmpty { tagPlaceholder }, fieldStyle).size.width.toDp() }
     val fieldWidth by animateDpAsState(typedWidth + 28.dp, motion.fastSpatialSpec(), label = "tag field")
     val chipShape = AssistChipDefaults.shape
     val chipBorder = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
 
     Column(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.heightIn(min = 48.dp)) {
-            Text("Tags", style = metaLabelStyle(), modifier = Modifier.width(130.dp))
+            Text(stringResource(R.string.tags), style = metaLabelStyle(), modifier = Modifier.width(130.dp))
             FlowRow(
                 Modifier.weight(1f),
                 horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.End),
@@ -826,7 +832,7 @@ private fun TagsEditor(
                                 selected = false,
                                 onClick = { onRemove(tag) },
                                 label = { Text(tag) },
-                                trailingIcon = { Icon(Icons.Default.Close, "Remove $tag", Modifier.size(InputChipDefaults.IconSize)) },
+                                trailingIcon = { Icon(Icons.Default.Close, stringResource(R.string.remove_tag, tag), Modifier.size(InputChipDefaults.IconSize)) },
                             )
                         }
                     }
@@ -870,7 +876,7 @@ private fun TagsEditor(
                                 contentAlignment = Alignment.CenterStart,
                             ) {
                                 if (text.isEmpty()) {
-                                    Text("Tag", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text(tagPlaceholder, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                                 inner()
                             }
@@ -885,7 +891,7 @@ private fun TagsEditor(
                         modifier = Modifier.padding(vertical = 8.dp).size(32.dp),
                     ) {
                         Box(contentAlignment = Alignment.Center) {
-                            Icon(Icons.Default.Add, "Add tag", Modifier.size(AssistChipDefaults.IconSize))
+                            Icon(Icons.Default.Add, stringResource(R.string.add_tag), Modifier.size(AssistChipDefaults.IconSize))
                         }
                     }
                 }
@@ -925,7 +931,7 @@ private fun ChoiceRow(
             if (selected != null) {
                 shown(selected)
             } else {
-                Text("None", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.none), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
         val motion = MaterialTheme.motionScheme
@@ -1017,7 +1023,7 @@ private fun PropertyRow(
             modifier = Modifier.width(130.dp).focusRequester(focus),
             decorationBox = { field ->
                 Box {
-                    if (n.isEmpty()) Text("NAME", style = metaLabelStyle(), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    if (n.isEmpty()) Text(stringResource(R.string.property_name), style = metaLabelStyle(), color = MaterialTheme.colorScheme.onSurfaceVariant)
                     field()
                 }
             },
@@ -1033,14 +1039,14 @@ private fun PropertyRow(
             modifier = Modifier.weight(1f),
             decorationBox = { field ->
                 Box(contentAlignment = Alignment.CenterEnd) {
-                    if (v.isEmpty()) Text("Value", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    if (v.isEmpty()) Text(stringResource(R.string.property_value), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     field()
                 }
             },
         )
         // Removing is offered while the property is being edited
         if (hasFocus) {
-            IconButton(onClick = { n = ""; focusManager.clearFocus(); save() }) { Icon(Icons.Default.Close, "Remove property") }
+            IconButton(onClick = { n = ""; focusManager.clearFocus(); save() }) { Icon(Icons.Default.Close, stringResource(R.string.remove_property)) }
         }
     }
 }
@@ -1050,18 +1056,20 @@ fun noteTitleKey(note: OrgNote) = "note-title-${note.fileUri}#${note.index}"
 
 fun noteContentKey(note: OrgNote) = "note-content-${note.fileUri}#${note.index}"
 
+@StringRes
 fun newNoteTitle(placement: Placement) = when (placement) {
-    Placement.Above -> "New note above"
-    Placement.Under -> "New sub-note"
-    Placement.Below -> "New note below"
+    Placement.Above -> R.string.new_note_above
+    Placement.Under -> R.string.new_sub_note
+    Placement.Below -> R.string.new_note_below
 }
 
 /** Where a new note goes, e.g. "sub-note of Design". */
+@Composable
 private fun positionLabel(screen: Screen.NewNote): String {
-    val anchor = screen.anchor?.let { displayTitle(it.title) } ?: return "new note at the end"
+    val anchor = screen.anchor?.let { displayTitle(it.title) } ?: return stringResource(R.string.position_end)
     return when (screen.placement) {
-        Placement.Above -> "new note above $anchor"
-        Placement.Under -> "sub-note of $anchor"
-        Placement.Below, null -> "new note below $anchor"
+        Placement.Above -> stringResource(R.string.position_above, anchor)
+        Placement.Under -> stringResource(R.string.position_under, anchor)
+        Placement.Below, null -> stringResource(R.string.position_below, anchor)
     }
 }

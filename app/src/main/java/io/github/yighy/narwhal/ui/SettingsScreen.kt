@@ -1,5 +1,8 @@
 package io.github.yighy.narwhal.ui
 
+import androidx.compose.ui.platform.LocalResources
+import io.github.yighy.narwhal.R
+import androidx.compose.ui.res.stringResource
 import io.github.yighy.narwhal.data.ThemeMode
 import android.annotation.SuppressLint
 import android.content.Intent
@@ -60,6 +63,7 @@ fun SettingsScreen(
 ) {
     val settings by viewModel.settings.collectAsState()
     val context = LocalContext.current
+    val resources = LocalResources.current
     var pickAllDayTime by remember { mutableStateOf(false) }
     var editKeywords by remember { mutableStateOf(false) }
     var pickLinkRenaming by remember { mutableStateOf(false) }
@@ -82,101 +86,101 @@ fun SettingsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Settings") },
+                title = { Text(stringResource(R.string.settings_title)) },
                 colors = blendedTopBarColors(),
                 navigationIcon = {
-                    IconButton(onClick = { viewModel.back() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
+                    IconButton(onClick = { viewModel.back() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back)) }
                 },
             )
         },
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState())) {
-            SectionHeader("Appearance")
+            SectionHeader(stringResource(R.string.settings_appearance))
             ListItem(
                 onClick = { pickTheme = true },
-                supportingContent = { Text(settings.themeMode.label) },
-            ) { Text("Theme") }
+                supportingContent = { Text(stringResource(settings.themeMode.label)) },
+            ) { Text(stringResource(R.string.settings_theme)) }
             // Wallpaper colors exist from Android 12
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 SwitchItem(
-                    title = "Dynamic color",
-                    summary = "Use the colors of your wallpaper",
+                    title = stringResource(R.string.settings_dynamic_color),
+                    summary = stringResource(R.string.settings_dynamic_color_summary),
                     checked = settings.dynamicColor,
                     onCheckedChange = viewModel::setDynamicColor,
                 )
             }
 
-            SectionHeader("Notes")
+            SectionHeader(stringResource(R.string.settings_notes))
             ListItem(
                 onClick = onPickFolder,
-                supportingContent = { Text(library.folderUri?.let(::folderLabel) ?: "None") },
-            ) { Text("Folder") }
+                supportingContent = { Text(library.folderUri?.let(::folderLabel) ?: stringResource(R.string.none)) },
+            ) { Text(stringResource(R.string.settings_folder)) }
             SwitchItem(
-                title = "Show note content in notebooks",
-                summary = "Display each note's text under its title in the outline",
+                title = stringResource(R.string.settings_show_content),
+                summary = stringResource(R.string.settings_show_content_summary),
                 checked = settings.showContentInNotebook,
                 onCheckedChange = viewModel::setShowContentInNotebook,
             )
             ListItem(
                 onClick = { pickSpacing = true },
-                supportingContent = { Text(settings.noteSpacing.label) },
-            ) { Text("Space between notes") }
+                supportingContent = { Text(stringResource(settings.noteSpacing.label)) },
+            ) { Text(stringResource(R.string.settings_spacing)) }
 
             ListItem(
                 onClick = { editKeywords = true },
-                supportingContent = { Text(settings.keywords.toSpec() + "\nFor files without a #+TODO: line") },
-            ) { Text("State keywords") }
+                supportingContent = { Text(settings.keywords.toSpec() + "\n" + stringResource(R.string.settings_keywords_summary)) },
+            ) { Text(stringResource(R.string.settings_keywords)) }
 
             SwitchItem(
-                title = "Add an ID to new notes",
-                summary = "Fill the ID property when a note is created; a note also gets one when an id: link to it is made",
+                title = stringResource(R.string.settings_add_id),
+                summary = stringResource(R.string.settings_add_id_summary),
                 checked = settings.addIdToNewNotes,
                 onCheckedChange = viewModel::setAddIdToNewNotes,
             )
             ListItem(
                 onClick = { editHiddenProperties = true },
                 supportingContent = {
-                    Text(settings.hiddenProperties.sorted().joinToString(" ").ifEmpty { "None" } + "\nNot shown on the note screen; kept in the file")
+                    Text(settings.hiddenProperties.sorted().joinToString(" ").ifEmpty { stringResource(R.string.none) } + "\n" + stringResource(R.string.settings_hidden_properties_summary))
                 },
-            ) { Text("Hidden properties") }
+            ) { Text(stringResource(R.string.settings_hidden_properties)) }
             SwitchItem(
-                title = "Add a creation date to new notes",
-                summary = "Fill the CREATED property when a note is created (searched with cr., sorted with o.cr)",
+                title = stringResource(R.string.settings_add_created),
+                summary = stringResource(R.string.settings_add_created_summary),
                 checked = settings.addCreatedToNewNotes,
                 onCheckedChange = viewModel::setAddCreatedToNewNotes,
             )
 
             ListItem(
                 onClick = { pickLinkRenaming = true },
-                supportingContent = { Text(settings.linkRenaming.label + "\nLinks that still show the old title") },
-            ) { Text("Links to a renamed note") }
+                supportingContent = { Text(stringResource(settings.linkRenaming.label) + "\n" + stringResource(R.string.settings_link_renaming_summary)) },
+            ) { Text(stringResource(R.string.settings_link_renaming)) }
 
-            SectionHeader("Reminders")
+            SectionHeader(stringResource(R.string.settings_reminders))
             SwitchItem(
-                title = "At scheduled times",
-                summary = "Notify at the time of SCHEDULED",
+                title = stringResource(R.string.settings_remind_scheduled),
+                summary = stringResource(R.string.settings_remind_scheduled_summary),
                 checked = settings.remindScheduled,
                 onCheckedChange = viewModel::setRemindScheduled,
             )
             SwitchItem(
-                title = "At deadline times",
-                summary = "Notify at the time of DEADLINE",
+                title = stringResource(R.string.settings_remind_deadline),
+                summary = stringResource(R.string.settings_remind_deadline_summary),
                 checked = settings.remindDeadline,
                 onCheckedChange = viewModel::setRemindDeadline,
             )
             SwitchItem(
-                title = "Use alarm clock alarms",
-                summary = "Most reliable, even with battery saving; an alarm icon shows in the status bar until the next reminder",
+                title = stringResource(R.string.settings_alarm_clock),
+                summary = stringResource(R.string.settings_alarm_clock_summary),
                 checked = settings.useAlarmClock,
                 onCheckedChange = viewModel::setUseAlarmClock,
             )
             ListItem(
                 onClick = { pickSnooze = true },
-                supportingContent = { Text(AppSettings.snoozeLabel(settings.snoozeMinutes) + "\nThe notification's snooze button") },
-            ) { Text("Snooze") }
+                supportingContent = { Text(AppSettings.snoozeLabel(resources, settings.snoozeMinutes) + "\n" + stringResource(R.string.settings_snooze_summary)) },
+            ) { Text(stringResource(R.string.settings_snooze)) }
             SwitchItem(
-                title = "For dates without a time",
-                summary = "Notify at ${settings.allDayTime.format(DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT))}",
+                title = stringResource(R.string.settings_all_day),
+                summary = stringResource(R.string.settings_all_day_summary, settings.allDayTime.format(DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT))),
                 checked = settings.remindAllDay,
                 onCheckedChange = viewModel::setRemindAllDay,
             )
@@ -184,22 +188,22 @@ fun SettingsScreen(
                 ListItem(
                     onClick = { pickAllDayTime = true },
                     supportingContent = { Text(settings.allDayTime.format(DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT))) },
-                ) { Text("Time for dates without a time") }
+                ) { Text(stringResource(R.string.settings_all_day_time)) }
             }
 
-            SectionHeader("Reliability")
+            SectionHeader(stringResource(R.string.settings_reliability))
             StatusItem(
-                title = "Notifications",
+                title = stringResource(R.string.settings_notifications),
                 ok = notificationsAllowed,
-                okText = "Allowed",
-                problemText = "Off: reminders can't be shown. Tap to allow.",
+                okText = stringResource(R.string.settings_allowed),
+                problemText = stringResource(R.string.settings_notifications_off),
                 onFix = onAllowNotifications,
             )
             StatusItem(
-                title = "Exact alarms",
+                title = stringResource(R.string.settings_exact_alarms),
                 ok = exactAlarms,
-                okText = "Allowed: reminders ring on time",
-                problemText = "Off: reminders may be late. Tap to allow.",
+                okText = stringResource(R.string.settings_exact_alarms_on),
+                problemText = stringResource(R.string.settings_exact_alarms_off),
                 onFix = {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                         context.startActivity(
@@ -209,10 +213,10 @@ fun SettingsScreen(
                 },
             )
             StatusItem(
-                title = "Battery optimization",
+                title = stringResource(R.string.settings_battery),
                 ok = unrestricted,
-                okText = "Not restricted",
-                problemText = "Restricted: the system may delay reminders. Tap to remove the restriction.",
+                okText = stringResource(R.string.settings_battery_on),
+                problemText = stringResource(R.string.settings_battery_off),
                 onFix = {
                     context.startActivity(
                         Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:${context.packageName}")),
@@ -220,44 +224,44 @@ fun SettingsScreen(
                 },
             )
 
-            SectionHeader("About")
+            SectionHeader(stringResource(R.string.settings_about))
             val version = remember { runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull() }
             ListItem(
-                supportingContent = { Text("Version ${version ?: "?"}") },
-            ) { Text("Narwhal") }
+                supportingContent = { Text(stringResource(R.string.settings_version, version ?: "?")) },
+            ) { Text(stringResource(R.string.app_name)) }
             fun open(url: String) = runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
             ListItem(
                 onClick = { open(SOURCE_URL) },
                 supportingContent = { Text(SOURCE_URL.removePrefix("https://")) },
-            ) { Text("Source code") }
+            ) { Text(stringResource(R.string.settings_source)) }
             ListItem(
                 onClick = { open(LICENSE_URL) },
-                supportingContent = { Text("GNU General Public License v3") },
-            ) { Text("License") }
+                supportingContent = { Text(stringResource(R.string.settings_license_summary)) },
+            ) { Text(stringResource(R.string.settings_license)) }
             ListItem(
                 onClick = { open(ORG_JAVA_URL) },
-                supportingContent = { Text("Inspired by Orgzly; Org files read and written with its org-java library") },
-            ) { Text("Credits") }
+                supportingContent = { Text(stringResource(R.string.settings_credits_summary)) },
+            ) { Text(stringResource(R.string.settings_credits)) }
         }
     }
 
     if (pickTheme) {
         ChoiceDialog(
-            title = "Theme",
-            options = ThemeMode.entries.map { it.label },
-            selected = settings.themeMode.label,
+            title = stringResource(R.string.settings_theme),
+            options = ThemeMode.entries.map { stringResource(it.label) },
+            selected = stringResource(settings.themeMode.label),
             onDismiss = { pickTheme = false },
             onSelect = { label ->
                 pickTheme = false
-                ThemeMode.entries.firstOrNull { it.label == label }?.let(viewModel::setThemeMode)
+                ThemeMode.entries.firstOrNull { resources.getString(it.label) == label }?.let(viewModel::setThemeMode)
             },
         )
     }
     if (editHiddenProperties) {
         TextInputDialog(
-            title = "Hidden properties",
-            label = "Names, separated by spaces",
-            confirmLabel = "Save",
+            title = stringResource(R.string.settings_hidden_properties),
+            label = stringResource(R.string.settings_hidden_properties_label),
+            confirmLabel = stringResource(R.string.save),
             initial = settings.hiddenProperties.sorted().joinToString(" "),
             allowEmpty = true,
             onDismiss = { editHiddenProperties = false },
@@ -269,48 +273,48 @@ fun SettingsScreen(
     }
     if (pickSpacing) {
         ChoiceDialog(
-            title = "Space between notes",
-            options = NoteSpacing.entries.map { it.label },
-            selected = settings.noteSpacing.label,
+            title = stringResource(R.string.settings_spacing),
+            options = NoteSpacing.entries.map { stringResource(it.label) },
+            selected = stringResource(settings.noteSpacing.label),
             onDismiss = { pickSpacing = false },
             onSelect = { label ->
                 pickSpacing = false
-                NoteSpacing.entries.firstOrNull { it.label == label }?.let(viewModel::setNoteSpacing)
+                NoteSpacing.entries.firstOrNull { resources.getString(it.label) == label }?.let(viewModel::setNoteSpacing)
             },
         )
     }
     if (pickSnooze) {
         ChoiceDialog(
-            title = "Snooze",
-            options = AppSettings.SNOOZE_CHOICES.map(AppSettings::snoozeLabel),
-            selected = AppSettings.snoozeLabel(settings.snoozeMinutes),
+            title = stringResource(R.string.settings_snooze),
+            options = AppSettings.SNOOZE_CHOICES.map { AppSettings.snoozeLabel(resources, it) },
+            selected = AppSettings.snoozeLabel(resources, settings.snoozeMinutes),
             onDismiss = { pickSnooze = false },
             onSelect = { label ->
                 pickSnooze = false
-                AppSettings.SNOOZE_CHOICES.firstOrNull { AppSettings.snoozeLabel(it) == label }?.let(viewModel::setSnoozeMinutes)
+                AppSettings.SNOOZE_CHOICES.firstOrNull { AppSettings.snoozeLabel(resources, it) == label }?.let(viewModel::setSnoozeMinutes)
             },
         )
     }
     if (pickLinkRenaming) {
         ChoiceDialog(
-            title = "Links to a renamed note",
-            options = LinkRenaming.entries.map { it.label },
-            selected = settings.linkRenaming.label,
+            title = stringResource(R.string.settings_link_renaming),
+            options = LinkRenaming.entries.map { stringResource(it.label) },
+            selected = stringResource(settings.linkRenaming.label),
             onDismiss = { pickLinkRenaming = false },
             onSelect = { label ->
                 pickLinkRenaming = false
-                LinkRenaming.entries.firstOrNull { it.label == label }?.let(viewModel::setLinkRenaming)
+                LinkRenaming.entries.firstOrNull { resources.getString(it.label) == label }?.let(viewModel::setLinkRenaming)
             },
         )
     }
     if (editKeywords) {
         TextInputDialog(
-            title = "State keywords",
-            label = "To-do keywords | done keywords",
-            confirmLabel = "Save",
+            title = stringResource(R.string.settings_keywords),
+            label = stringResource(R.string.settings_keywords_label),
+            confirmLabel = stringResource(R.string.save),
             initial = settings.keywords.toSpec(),
             onDismiss = { editKeywords = false },
-            onConfirm = { spec -> if (viewModel.setKeywords(spec)) editKeywords = false else viewModel.message("Type at least one keyword") },
+            onConfirm = { spec -> if (viewModel.setKeywords(spec)) editKeywords = false else viewModel.message(R.string.settings_keywords_empty) },
         )
     }
 
@@ -322,15 +326,15 @@ fun SettingsScreen(
         )
         AlertDialog(
             onDismissRequest = { pickAllDayTime = false },
-            title = { Text("Time for dates without a time") },
+            title = { Text(stringResource(R.string.settings_all_day_time)) },
             text = { TimeInput(state = state) },
             confirmButton = {
                 TextButton(onClick = {
                     pickAllDayTime = false
                     viewModel.setAllDayTime(LocalTime.of(state.hour, state.minute))
-                }) { Text("OK") }
+                }) { Text(stringResource(R.string.ok)) }
             },
-            dismissButton = { TextButton(onClick = { pickAllDayTime = false }) { Text("Cancel") } },
+            dismissButton = { TextButton(onClick = { pickAllDayTime = false }) { Text(stringResource(R.string.cancel)) } },
         )
     }
 }

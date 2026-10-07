@@ -101,13 +101,19 @@ object OrgTime {
     private val dateFormat = DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)
     private val timeFormat = DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)
 
-    /** Human-readable form, e.g. "Mon, Oct 5, 2026 · 09:00 · every week (+)". */
-    fun display(timestamp: String?): String? {
+    /**
+     * Human-readable form, e.g. "Mon, Oct 5, 2026 · 09:00 · every week (+)"; [repeatText] words
+     * the repeater ("+1w").
+     */
+    fun display(
+        timestamp: String?,
+        repeatText: (String) -> String = { Repeat.parse(it)?.describe() ?: "repeats $it" },
+    ): String? {
         val p = parts(timestamp) ?: return timestamp
         return buildList {
             add(p.date.dayOfWeek.getDisplayName(java.time.format.TextStyle.SHORT, java.util.Locale.getDefault()) + ", " + p.date.format(dateFormat))
             p.time?.let { add(it.format(timeFormat) + (p.endTime?.let { end -> " – " + end.format(timeFormat) } ?: "")) }
-            p.repeater?.let { add(Repeat.parse(it)?.describe() ?: "repeats $it") }
+            p.repeater?.let { add(repeatText(it)) }
         }.joinToString(" · ")
     }
 }

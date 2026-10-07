@@ -1,5 +1,8 @@
 package io.github.yighy.narwhal.ui
 
+import io.github.yighy.narwhal.R
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
@@ -63,10 +66,10 @@ fun AgendaScreen(
     Scaffold(
         topBar = {
             LargeFlexibleTopAppBar(
-                title = { Text("Agenda") },
-                subtitle = { Text(if (todayCount == 0) "Nothing for today" else "$todayCount for today") },
+                title = { Text(stringResource(R.string.agenda)) },
+                subtitle = { Text(if (todayCount == 0) stringResource(R.string.agenda_nothing_today) else pluralStringResource(R.plurals.agenda_today, todayCount, todayCount)) },
                 navigationIcon = {
-                    IconButton(onClick = { viewModel.back() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
+                    IconButton(onClick = { viewModel.back() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back)) }
                 },
                 colors = blendedTopBarColors(),
                 scrollBehavior = scrollBehavior,
@@ -98,7 +101,7 @@ fun LazyListScope.agendaItems(
     today: LocalDate,
 ) {
     if (agenda.overdue.isNotEmpty()) {
-        item(key = "overdue") { DayHeader("Overdue", MaterialTheme.colorScheme.error) }
+        item(key = "overdue") { DayHeader(stringResource(R.string.overdue), MaterialTheme.colorScheme.error) }
         items(agenda.overdue, key = { "overdue-" + entryKey(it) }) { entry ->
             AgendaRow(viewModel, library, entry, today, overdue = true)
         }
@@ -108,7 +111,7 @@ fun LazyListScope.agendaItems(
         if (day.entries.isEmpty()) {
             item(key = "empty-${day.date}") {
                 Text(
-                    "Nothing planned",
+                    stringResource(R.string.nothing_planned),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
@@ -137,11 +140,13 @@ private fun DayHeader(label: String, color: androidx.compose.ui.graphics.Color) 
 private val shortDate = DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)
 private val timeFormat = DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)
 
-private fun weekday(date: LocalDate) = date.dayOfWeek.getDisplayName(TextStyle.FULL, Locale.getDefault())
+private fun weekday(date: LocalDate) =
+    date.dayOfWeek.getDisplayName(TextStyle.FULL, Locale.getDefault()).replaceFirstChar { it.titlecase(Locale.getDefault()) }
 
+@Composable
 private fun dayLabel(date: LocalDate, today: LocalDate): String = when (date) {
-    today -> "Today · " + date.format(shortDate)
-    today.plusDays(1) -> "Tomorrow · " + date.format(shortDate)
+    today -> stringResource(R.string.today_date, date.format(shortDate))
+    today.plusDays(1) -> stringResource(R.string.tomorrow_date, date.format(shortDate))
     else -> weekday(date) + " · " + date.format(shortDate)
 }
 
@@ -206,14 +211,14 @@ private fun AgendaRow(
                 val details = buildList {
                     add(
                         when (entry.kind) {
-                            Agenda.Kind.Scheduled -> "Scheduled"
-                            Agenda.Kind.Deadline -> "Deadline"
-                            Agenda.Kind.Event -> "Event"
+                            Agenda.Kind.Scheduled -> stringResource(R.string.scheduled)
+                            Agenda.Kind.Deadline -> stringResource(R.string.deadline)
+                            Agenda.Kind.Event -> stringResource(R.string.event)
                         },
                     )
                     if (overdue) {
                         val late = entry.daysLate(today)
-                        add(if (late == 1L) "1 day late" else "$late days late")
+                        add(pluralStringResource(R.plurals.days_late, late.toInt(), late.toInt()))
                     }
                     add(library.file(note.fileUri)?.title ?: note.fileName)
                 }
@@ -237,11 +242,11 @@ private fun NotificationsCard(onAllow: () -> Unit) {
     ) {
         Row(Modifier.padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(
-                "Allow notifications to get reminders at scheduled and deadline times.",
+                stringResource(R.string.allow_notifications_text),
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.weight(1f),
             )
-            TextButton(onClick = onAllow) { Text("Allow") }
+            TextButton(onClick = onAllow) { Text(stringResource(R.string.allow)) }
         }
     }
 }

@@ -1,5 +1,8 @@
 package io.github.yighy.narwhal.data
 
+import io.github.yighy.narwhal.R
+import android.content.res.Resources
+import androidx.annotation.StringRes
 import android.content.SharedPreferences
 import org.json.JSONObject
 import org.json.JSONArray
@@ -12,24 +15,24 @@ import kotlinx.coroutines.flow.update
 import java.time.LocalTime
 
 /** Light or dark appearance: as the system, or always one of them. */
-enum class ThemeMode(val label: String) {
-    System("System default"),
-    Light("Light"),
-    Dark("Dark"),
+enum class ThemeMode(@StringRes val label: Int) {
+    System(R.string.theme_system),
+    Light(R.string.theme_light),
+    Dark(R.string.theme_dark),
 }
 
 /** Room around each note of a notebook's outline: [padding] above and below its title. */
-enum class NoteSpacing(val label: String, val padding: Int) {
-    Comfortable("Comfortable", 12),
-    Compact("Compact", 7),
-    Dense("Dense", 3),
+enum class NoteSpacing(@StringRes val label: Int, val padding: Int) {
+    Comfortable(R.string.spacing_comfortable, 12),
+    Compact(R.string.spacing_compact, 7),
+    Dense(R.string.spacing_dense, 3),
 }
 
 /** When a note is renamed, links to it that still show its old title can follow. */
-enum class LinkRenaming(val label: String) {
-    Ask("Ask each time"),
-    Always("Update them"),
-    Never("Leave them as they are"),
+enum class LinkRenaming(@StringRes val label: Int) {
+    Ask(R.string.link_renaming_ask),
+    Always(R.string.link_renaming_always),
+    Never(R.string.link_renaming_never),
 }
 
 /** A search kept under a name, run from the drawer (as Orgzly's saved searches). */
@@ -175,11 +178,10 @@ class AppSettings(context: Context) {
         val SNOOZE_CHOICES = listOf(5, 10, 15, 30, 60, 120, 180)
 
         /** "In 15 min", "In 1 hour", "In 1 h 30" for a snooze of [minutes]. */
-        fun snoozeLabel(minutes: Int): String = when {
-            minutes < 60 -> "In $minutes min"
-            minutes == 60 -> "In 1 hour"
-            minutes % 60 == 0 -> "In ${minutes / 60} hours"
-            else -> "In ${minutes / 60} h ${minutes % 60}"
+        fun snoozeLabel(resources: Resources, minutes: Int): String = when {
+            minutes < 60 -> resources.getString(R.string.snooze_minutes, minutes)
+            minutes % 60 == 0 -> resources.getQuantityString(R.plurals.snooze_hours, minutes / 60, minutes / 60)
+            else -> resources.getString(R.string.snooze_hours_minutes, minutes / 60, minutes % 60)
         }
 
         private const val KEY_KEYWORDS = "keywords"

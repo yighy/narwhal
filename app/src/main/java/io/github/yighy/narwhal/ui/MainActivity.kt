@@ -1,5 +1,8 @@
 package io.github.yighy.narwhal.ui
 
+import io.github.yighy.narwhal.R
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.graphics.toArgb
 import android.graphics.drawable.ColorDrawable
 import androidx.activity.SystemBarStyle
@@ -217,7 +220,7 @@ fun NarwhalApp(viewModel: AppViewModel, notificationsAllowed: Boolean, onAllowNo
         drawerContent = {
             ModalDrawerSheet {
                 Text(
-                    "Narwhal",
+                    stringResource(R.string.app_name),
                     style = MaterialTheme.typography.titleLarge,
                     modifier = Modifier.padding(start = 28.dp, top = 24.dp, bottom = 16.dp),
                 )
@@ -226,14 +229,14 @@ fun NarwhalApp(viewModel: AppViewModel, notificationsAllowed: Boolean, onAllowNo
                     action()
                 }
                 NavigationDrawerItem(
-                    label = { Text("Notebooks") },
+                    label = { Text(stringResource(R.string.notebooks)) },
                     icon = { Icon(Icons.Default.Home, null) },
                     selected = top != Screen.Agenda && top != Screen.Searches,
                     onClick = { close(viewModel::openHome) },
                     modifier = Modifier.padding(horizontal = 12.dp),
                 )
                 NavigationDrawerItem(
-                    label = { Text("Agenda") },
+                    label = { Text(stringResource(R.string.agenda)) },
                     icon = { Icon(Icons.Default.DateRange, null) },
                     selected = top == Screen.Agenda,
                     onClick = { close(viewModel::openAgenda) },
@@ -243,7 +246,7 @@ fun NarwhalApp(viewModel: AppViewModel, notificationsAllowed: Boolean, onAllowNo
                 val searches by viewModel.savedSearches.collectAsState()
                 if (searches.isNotEmpty()) {
                     NavigationDrawerItem(
-                        label = { Text("Searches") },
+                        label = { Text(stringResource(R.string.searches)) },
                         icon = { Icon(Icons.Default.Search, null) },
                         selected = top == Screen.Searches,
                         onClick = { close(viewModel::openSearches) },
@@ -252,7 +255,7 @@ fun NarwhalApp(viewModel: AppViewModel, notificationsAllowed: Boolean, onAllowNo
                 }
                 HorizontalDivider(Modifier.padding(vertical = 8.dp, horizontal = 28.dp))
                 NavigationDrawerItem(
-                    label = { Text("Settings") },
+                    label = { Text(stringResource(R.string.settings_title)) },
                     icon = { Icon(Icons.Default.Settings, null) },
                     selected = false,
                     onClick = { close(viewModel::openSettings) },
@@ -323,13 +326,20 @@ fun NarwhalApp(viewModel: AppViewModel, notificationsAllowed: Boolean, onAllowNo
     viewModel.linkRename?.let { rename ->
         AlertDialog(
             onDismissRequest = viewModel::keepRenamedLinks,
-            title = { Text("Update links?") },
+            title = { Text(stringResource(R.string.update_links_title)) },
             text = {
-                val where = if (rename.notes == 1) "1 note links" else "${rename.notes} notes link"
-                Text("$where to this note as “${IdLinks.description(rename.oldTitle)}”. Show the new title “${IdLinks.description(rename.newTitle)}” in these links instead?")
+                Text(
+                    pluralStringResource(
+                        R.plurals.update_links_text,
+                        rename.notes,
+                        rename.notes,
+                        IdLinks.description(rename.oldTitle),
+                        IdLinks.description(rename.newTitle),
+                    ),
+                )
             },
-            confirmButton = { TextButton(onClick = viewModel::updateRenamedLinks) { Text("Update") } },
-            dismissButton = { TextButton(onClick = viewModel::keepRenamedLinks) { Text("Keep") } },
+            confirmButton = { TextButton(onClick = viewModel::updateRenamedLinks) { Text(stringResource(R.string.update)) } },
+            dismissButton = { TextButton(onClick = viewModel::keepRenamedLinks) { Text(stringResource(R.string.keep)) } },
         )
     }
 }

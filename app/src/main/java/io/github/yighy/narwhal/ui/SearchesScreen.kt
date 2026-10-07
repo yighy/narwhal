@@ -1,5 +1,8 @@
 package io.github.yighy.narwhal.ui
 
+import io.github.yighy.narwhal.R
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -60,32 +63,32 @@ fun SearchesScreen(viewModel: AppViewModel, snackbar: SnackbarHostState) {
         topBar = {
             if (selecting) {
                 TopAppBar(
-                    title = { Text("${selected.size} selected") },
+                    title = { Text(pluralStringResource(R.plurals.n_selected, selected.size, selected.size)) },
                     colors = blendedTopBarColors(),
                     navigationIcon = {
-                        IconButton(onClick = { selected = emptySet() }) { Icon(Icons.Default.Close, "Clear selection") }
+                        IconButton(onClick = { selected = emptySet() }) { Icon(Icons.Default.Close, stringResource(R.string.clear_selection)) }
                     },
                     actions = {
                         // Order: one search at a time
                         selected.singleOrNull()?.let { index ->
                             IconButton(enabled = index > 0, onClick = { selected = setOf(viewModel.moveSavedSearch(index, -1)) }) {
-                                Icon(Icons.Default.KeyboardArrowUp, "Move up")
+                                Icon(Icons.Default.KeyboardArrowUp, stringResource(R.string.move_up))
                             }
                             IconButton(enabled = index < searches.lastIndex, onClick = { selected = setOf(viewModel.moveSavedSearch(index, 1)) }) {
-                                Icon(Icons.Default.KeyboardArrowDown, "Move down")
+                                Icon(Icons.Default.KeyboardArrowDown, stringResource(R.string.move_down))
                             }
                         }
                         IconButton(onClick = { viewModel.deleteSavedSearches(selected); selected = emptySet() }) {
-                            Icon(Icons.Default.Delete, "Delete")
+                            Icon(Icons.Default.Delete, stringResource(R.string.delete))
                         }
                     },
                 )
             } else {
                 TopAppBar(
-                    title = { Text("Searches") },
+                    title = { Text(stringResource(R.string.searches)) },
                     colors = blendedTopBarColors(),
                     navigationIcon = {
-                        IconButton(onClick = { viewModel.back() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
+                        IconButton(onClick = { viewModel.back() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back)) }
                     },
                 )
             }
@@ -96,7 +99,7 @@ fun SearchesScreen(viewModel: AppViewModel, snackbar: SnackbarHostState) {
             if (searches.isEmpty()) {
                 item {
                     Text(
-                        "No saved searches. Save one with the bookmark button while searching.",
+                        stringResource(R.string.no_saved_searches),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(24.dp),
                     )
@@ -116,14 +119,14 @@ fun SearchesScreen(viewModel: AppViewModel, snackbar: SnackbarHostState) {
                             Box(
                                 Modifier.size(24.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary),
                                 contentAlignment = Alignment.Center,
-                            ) { Icon(Icons.Default.Check, "Selected", Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onPrimary) }
+                            ) { Icon(Icons.Default.Check, stringResource(R.string.item_selected), Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onPrimary) }
                         } else {
                             Icon(Icons.Default.Search, null)
                         }
                     },
                     trailingContent = {
                         if (!selecting) {
-                            IconButton(onClick = { viewModel.editSavedSearch(index) }) { Icon(Icons.Default.Edit, "Edit ${search.name}") }
+                            IconButton(onClick = { viewModel.editSavedSearch(index) }) { Icon(Icons.Default.Edit, stringResource(R.string.edit_search, search.name)) }
                         }
                     },
                     modifier = Modifier.animateItem(),

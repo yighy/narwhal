@@ -4,6 +4,9 @@ All notable changes to Narwhal. Versions follow [Semantic Versioning](https://se
 
 ## [Unreleased]
 
+### Added
+- French translation; on Android 13+, the app's language can be chosen in the system settings
+
 ## [0.5.3] - 2026-10-07
 
 ### Changed

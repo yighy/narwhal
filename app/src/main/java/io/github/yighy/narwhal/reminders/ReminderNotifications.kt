@@ -31,8 +31,8 @@ object ReminderNotifications {
     const val EXTRA_SNOOZE_MINUTES = "snooze_minutes"
 
     fun createChannel(context: Context) {
-        val channel = NotificationChannel(CHANNEL_ID, "Reminders", NotificationManager.IMPORTANCE_HIGH).apply {
-            description = "Scheduled and deadline times of your notes"
+        val channel = NotificationChannel(CHANNEL_ID, context.getString(R.string.channel_reminders), NotificationManager.IMPORTANCE_HIGH).apply {
+            description = context.getString(R.string.channel_reminders_description)
         }
         context.getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
     }
@@ -78,22 +78,22 @@ object ReminderNotifications {
         )
 
         val snoozeMinutes = (context.applicationContext as NarwhalApplication).settings.values.value.snoozeMinutes
-        val kind = if (reminder.kind == Agenda.Kind.Deadline) "Deadline" else "Scheduled"
+        val kind = context.getString(if (reminder.kind == Agenda.Kind.Deadline) R.string.deadline else R.string.scheduled)
         val time = reminder.at.toLocalTime().format(DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT))
 
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(listOfNotNull(note.state, displayTitle(note.title)).joinToString(" "))
-            .setContentText("$kind $time · $notebook")
+            .setContentText(context.getString(R.string.notification_text, kind, time, notebook))
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setWhen(reminder.at.atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli())
             .setShowWhen(true)
             .setAutoCancel(true)
             .setContentIntent(open)
-            .addAction(0, "Done", done)
-            .addAction(0, AppSettings.snoozeLabel(snoozeMinutes), snooze(snoozeMinutes.toLong(), id + 1))
-            .addAction(0, "Tomorrow", snooze(24 * 60, id + 2))
+            .addAction(0, context.getString(R.string.notification_done), done)
+            .addAction(0, AppSettings.snoozeLabel(context.resources, snoozeMinutes), snooze(snoozeMinutes.toLong(), id + 1))
+            .addAction(0, context.getString(R.string.notification_tomorrow), snooze(24 * 60, id + 2))
             .build()
 
         try {

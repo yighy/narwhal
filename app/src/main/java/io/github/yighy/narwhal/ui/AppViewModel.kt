@@ -1,5 +1,10 @@
 package io.github.yighy.narwhal.ui
 
+import io.github.yighy.narwhal.data.FileNotSavedException
+import io.github.yighy.narwhal.data.NoteChangedException
+import io.github.yighy.narwhal.R
+import androidx.annotation.PluralsRes
+import androidx.annotation.StringRes
 import io.github.yighy.narwhal.data.NoteSpacing
 import io.github.yighy.narwhal.data.ThemeMode
 import java.time.LocalDateTime
@@ -123,7 +128,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val search = SavedSearch(name.trim(), query.trim())
         val list = savedSearches.value
         appSettings.setSavedSearches(if (draft.index == null) list + search else list.mapIndexed { i, s -> if (i == draft.index) search else s })
-        if (draft.index == null) message("Search saved")
+        if (draft.index == null) message(R.string.msg_search_saved)
     }
 
     fun deleteSearchDraft() {
@@ -138,7 +143,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun deleteSavedSearches(indices: Set<Int>) {
         appSettings.setSavedSearches(savedSearches.value.filterIndexed { i, _ -> i !in indices })
-        message(if (indices.size == 1) "Search deleted" else "${indices.size} searches deleted")
+        pluralMessage(R.plurals.msg_searches_deleted, indices.size)
     }
 
     /** Moves a saved search by [delta] places; returns its new index. */
@@ -256,7 +261,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         pendingOpen = null
         val note = lib.note(p.fileUri, p.index)?.takeIf { p.title == null || it.title == p.title }
             ?: lib.file(p.fileUri)?.notes?.firstOrNull { it.title == p.title }
-        if (note != null) openNote(note) else message("This note has moved or was deleted")
+        if (note != null) openNote(note) else message(R.string.msg_note_moved_or_deleted)
     }
 
     fun setFolder(uri: Uri) {
@@ -330,7 +335,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
         viewModelScope.launch {
             val (uri, type) = attempt { repository.findInFolder(relative) } ?: run {
-                message("No file $relative in the folder")
+                message(R.string.msg_no_file, relative)
                 return@launch
             }
             view(uri, type)
@@ -344,13 +349,13 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         try {
             getApplication<Application>().startActivity(intent)
         } catch (e: ActivityNotFoundException) {
-            message("No app can open $uri")
+            message(R.string.msg_no_app, uri)
         }
     }
 
     fun openById(id: String) {
         val note = library.value.noteById(id)
-        if (note != null) openNote(note) else message("No note with ID $id")
+        if (note != null) openNote(note) else message(R.string.msg_no_note_with_id, id)
     }
 
     fun back(): Boolean {
@@ -417,7 +422,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     private suspend fun renameLinks(rename: LinkRename) {
         val changed = attempt { repository.renameLinks(rename.id, rename.oldTitle, rename.newTitle) } ?: return
-        message(if (changed == 1) "Link updated in 1 note" else "Links updated in $changed notes")
+        pluralMessage(R.plurals.msg_links_updated, changed)
     }
 
     fun keepRenamedLinks() {
@@ -433,8 +438,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 NoteStates.apply(latest.toEdit(), target, keywords).also { shifted = it.shifted }.edit
             } ?: return@launch
             if (shifted) {
-                val next = OrgTime.display(saved.scheduled ?: saved.deadline)
-                message("Repeating task moved to $next")
+                val next = displayTime(getApplication<Application>().resources, saved.scheduled ?: saved.deadline)
+                message(R.string.msg_repeating_moved, next.orEmpty())
             }
         }
     }
@@ -595,7 +600,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             attempt {
                 repository.deleteFiles(uris)
-                message(if (uris.size == 1) "Notebook deleted" else "${uris.size} notebooks deleted")
+                pluralMessage(R.plurals.msg_notebooks_deleted, uris.size)
             }
         }
     }
@@ -641,11 +646,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    private fun count(n: Int) = if (n == 1) "1 note" else "$n notes"
-
     fun copySelection() = withSelection { notes ->
         clipboard = repository.copySubtrees(notes.first().fileUri, notes)
-        message("${count(clipboard.size)} copied")
+        pluralMessage(R.plurals.msg_notes_copied, clipboard.size)
     }
 
     fun cutSelection() = withSelection { notes ->
@@ -655,7 +658,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             Outline.delete(doc, indices)
         }
         clipboard = cut
-        message("${count(cut.size)} cut")
+        pluralMessage(R.plurals.msg_notes_cut, cut.size)
     }
 
     fun pasteAtSelection(placement: Placement) = withSelection { notes ->
@@ -672,7 +675,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             deleted = Outline.roots(doc, indices).size
             Outline.delete(doc, indices)
         }
-        message("${count(deleted)} deleted")
+        pluralMessage(R.plurals.msg_notes_deleted, deleted)
     }
 
     enum class Move { Up, Down, Promote, Demote }
@@ -695,7 +698,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun moveSelectionTo(fileUri: String) = withSelection { notes ->
         repository.moveToFile(notes, fileUri)
-        message("${count(notes.size)} moved to ${library.value.file(fileUri)?.title}")
+        pluralMessage(R.plurals.msg_notes_moved, notes.size, library.value.file(fileUri)?.title.orEmpty())
     }
 
     /** Applies [change] to every selected note in one write, keeping the selection. */
@@ -738,7 +741,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         try {
             block()
         } catch (e: Exception) {
-            message(e.message ?: e.toString())
+            when (e) {
+                is NoteChangedException -> message(R.string.msg_note_changed)
+                is FileNotSavedException -> message(R.string.msg_file_not_saved)
+                else -> message(e.message ?: e.toString())
+            }
             null
         }
 
@@ -751,4 +758,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun message(text: String) {
         _messages.tryEmit(text)
     }
+
+    fun message(@StringRes text: Int, vararg args: Any) = message(getApplication<Application>().getString(text, *args))
+
+    /** A message that depends on [count] (one note, several notes); [count] is its first argument. */
+    private fun pluralMessage(@PluralsRes text: Int, count: Int, vararg args: Any) =
+        message(getApplication<Application>().resources.getQuantityString(text, count, count, *args))
 }

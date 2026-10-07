@@ -1,5 +1,10 @@
 package io.github.yighy.narwhal.ui
 
+import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import android.content.res.Resources
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.material3.Surface
 import androidx.compose.foundation.Image
 import androidx.compose.ui.res.painterResource
@@ -189,7 +194,7 @@ fun SearchableTopBar(
             colors = blendedTopBarColors(),
             navigationIcon = {
                 IconButton(onClick = { onSearchActiveChange(false) }) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, "Close search")
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.close_search))
                 }
             },
             title = {
@@ -215,10 +220,10 @@ fun SearchableTopBar(
             },
             actions = {
                 if (onSaveSearch != null) {
-                    IconButton(onClick = onSaveSearch) { Icon(NarwhalIcons.BookmarkAdd, "Save search") }
+                    IconButton(onClick = onSaveSearch) { Icon(NarwhalIcons.BookmarkAdd, stringResource(R.string.save_search)) }
                 }
                 if (query.isNotEmpty()) {
-                    IconButton(onClick = { onQueryChange("") }) { Icon(Icons.Default.Clear, "Clear search") }
+                    IconButton(onClick = { onQueryChange("") }) { Icon(Icons.Default.Clear, stringResource(R.string.clear_search)) }
                 }
             },
         )
@@ -271,10 +276,10 @@ fun SearchableTopBar(
             },
             actions = {
                 extraActions()
-                IconButton(onClick = { onSearchActiveChange(true) }) { Icon(Icons.Default.Search, "Search") }
+                IconButton(onClick = { onSearchActiveChange(true) }) { Icon(Icons.Default.Search, stringResource(R.string.search)) }
                 if (menu != null) {
                     Box {
-                        IconButton(onClick = { menuOpen = true }) { Icon(Icons.Default.MoreVert, "More") }
+                        IconButton(onClick = { menuOpen = true }) { Icon(Icons.Default.MoreVert, stringResource(R.string.more)) }
                         DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                             menu { menuOpen = false }
                         }
@@ -406,7 +411,7 @@ fun SearchResults(
             if (results.isEmpty()) {
                 item {
                     Text(
-                        if (idle) "Type words, or a query like  i.todo t.work s.today  o.p" else "No matching notes",
+                        stringResource(if (idle) R.string.search_hint else R.string.no_matching_notes),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(24.dp),
                     )
@@ -458,11 +463,12 @@ fun NoteLine(
             }
         }
         // Timestamps are parsed once per note, not on every redraw of the list
-        val details = remember(note.tags, note.scheduled, note.deadline, subtitle) {
+        val resources = LocalResources.current
+        val details = remember(note.tags, note.scheduled, note.deadline, subtitle, resources) {
             buildList {
                 if (note.tags.isNotEmpty()) add(note.tags.joinToString(" ") { "#$it" })
-                note.scheduled?.let { add("Scheduled " + OrgTime.display(it)) }
-                note.deadline?.let { add("Deadline " + OrgTime.display(it)) }
+                note.scheduled?.let { add(resources.getString(R.string.scheduled_at, displayTime(resources, it))) }
+                note.deadline?.let { add(resources.getString(R.string.deadline_at, displayTime(resources, it))) }
                 subtitle?.let { add(it) }
             }
         }
@@ -610,7 +616,7 @@ fun LinkedText(
                     box.partial -> NarwhalIcons.CheckBoxPartial
                     else -> NarwhalIcons.CheckBoxBlank
                 },
-                if (box.checked) "Checked" else "Not checked",
+                stringResource(if (box.checked) R.string.checked else R.string.not_checked),
                 tint = boxColor,
                 modifier = Modifier.fillMaxSize().clickable { toggle?.invoke(i) },
             )
@@ -782,6 +788,28 @@ object EditingDialog {
     var open by mutableStateOf(false)
 }
 
+/** A timestamp as shown, e.g. "Mon, Oct 5, 2026 · 09:00 · every week (+)", in the app's language. */
+fun displayTime(resources: Resources, timestamp: String?): String? =
+    OrgTime.display(timestamp) { repeatText(resources, it) }
+
+/** A repeater ("+1w") in words: "every week (+)", "every 2 days from done (.+)". */
+fun repeatText(resources: Resources, repeater: String): String {
+    val repeat = OrgTime.Repeat.parse(repeater) ?: return resources.getString(R.string.repeat_unknown, repeater)
+    val interval = resources.getQuantityString(
+        when (repeat.unit) {
+            'h' -> R.plurals.repeat_every_hour
+            'd' -> R.plurals.repeat_every_day
+            'w' -> R.plurals.repeat_every_week
+            'm' -> R.plurals.repeat_every_month
+            else -> R.plurals.repeat_every_year
+        },
+        repeat.every,
+        repeat.every,
+    )
+    val text = if (repeat.type == ".+") resources.getString(R.string.repeat_from_done, interval) else interval
+    return "$text (${repeat.type})"
+}
+
 /** Notebook names, keywords and inherited tags that search queries need. */
 fun searchContext(library: NoteRepository.Library): SearchQuery.Context {
     val inherited = library.files.associate { it.uri to NoteTree.inheritedTags(it.notes) }
@@ -802,12 +830,12 @@ fun searchContext(library: NoteRepository.Library): SearchQuery.Context {
 fun CountsSubtitle(notes: Int?, todo: Int, onTodoClick: () -> Unit) {
     Row {
         notes?.let {
-            Text(if (it == 1) "1 note" else "$it notes", maxLines = 1)
+            Text(pluralStringResource(R.plurals.n_notes, it, it), maxLines = 1)
             if (todo > 0) Text(" · ", maxLines = 1)
         }
         if (todo > 0) {
             Text(
-                "$todo to do",
+                pluralStringResource(R.plurals.n_to_do, todo, todo),
                 color = MaterialTheme.colorScheme.primary,
                 maxLines = 1,
                 modifier = Modifier.clickable(onClick = onTodoClick),

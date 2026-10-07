@@ -1,5 +1,7 @@
 package io.github.yighy.narwhal.ui
 
+import io.github.yighy.narwhal.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.LocalContext
 import android.provider.Settings
 import io.github.yighy.narwhal.core.Checkboxes
@@ -133,13 +135,13 @@ fun NotebookScreen(
                         CountsSubtitle(file.notes.size, file.openTasks, onTodoClick = { viewModel.searchFor("it.todo") })
                     },
                     navigationIcon = Icons.AutoMirrored.Filled.ArrowBack,
-                    navigationDescription = "Back",
+                    navigationDescription = stringResource(R.string.back),
                     onNavigation = { viewModel.back() },
                     searchActive = viewModel.searchActive,
                     onSearchActiveChange = viewModel::setSearch,
                     query = viewModel.query,
                     onQueryChange = { viewModel.query = it },
-                    searchPlaceholder = "Search in ${file.title}",
+                    searchPlaceholder = stringResource(R.string.search_in, file.title),
                     scrollBehavior = scrollBehavior,
                     extraActions = { FoldAllButton(viewModel, file.notes) },
                     sharedTitleKey = notebookTitleKey(file.uri),
@@ -148,7 +150,7 @@ fun NotebookScreen(
                         .takeIf { viewModel.query.isNotBlank() || viewModel.tag != null },
                 ) { dismiss ->
                     DropdownMenuItem(
-                        text = { Text("Edit preface") },
+                        text = { Text(stringResource(R.string.edit_preface)) },
                         leadingIcon = { Icon(Icons.Default.Edit, null) },
                         onClick = { dismiss(); editPreface() },
                     )
@@ -158,7 +160,7 @@ fun NotebookScreen(
         },
         floatingActionButton = {
             if (prefaceDraft == null && !selecting) {
-                FloatingActionButton(onClick = { viewModel.startNewNote(file.uri) }) { Icon(Icons.Default.Add, "New note") }
+                FloatingActionButton(onClick = { viewModel.startNewNote(file.uri) }) { Icon(Icons.Default.Add, stringResource(R.string.new_note)) }
             }
         },
         bottomBar = {
@@ -206,7 +208,7 @@ private fun FoldAllButton(viewModel: AppViewModel, notes: List<OrgNote>) {
     IconButton(onClick = { viewModel.setAllFolded(notes, anyExpanded) }) {
         Icon(
             if (anyExpanded) NarwhalIcons.UnfoldLess else NarwhalIcons.UnfoldMore,
-            if (anyExpanded) "Collapse all" else "Expand all",
+            stringResource(if (anyExpanded) R.string.collapse_all else R.string.expand_all),
         )
     }
 }
@@ -260,7 +262,7 @@ private fun NotebookOutline(
                         value = prefaceDraft,
                         onValueChange = onPrefaceDraftChange,
                         style = prefaceStyle,
-                        placeholder = "Text before the first note. Lines like #+TITLE: set the notebook's name.",
+                        placeholder = stringResource(R.string.preface_placeholder),
                         onFocusLost = onCommitPreface,
                         modifier = Modifier
                             .fillMaxWidth()
@@ -285,7 +287,7 @@ private fun NotebookOutline(
             if (file.notes.isEmpty()) {
                 item {
                     Text(
-                        "No notes yet. Tap + to add one.",
+                        stringResource(R.string.no_notes),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(16.dp),
                     )
@@ -386,7 +388,7 @@ private fun OutlineRow(
         swipeRightIcon = if (note.isDone) NarwhalIcons.Undo else NarwhalIcons.Check,
         onSwipeRight = onToggleDone,
         actions = Placement.entries.map { placement ->
-            SwipeAction(placementIcon(placement), newNoteTitle(placement)) { onAddNear(placement) }
+            SwipeAction(placementIcon(placement), stringResource(newNoteTitle(placement))) { onAddNear(placement) }
         },
         modifier = Modifier.sharedContainer("note-$key", RectangleShape),
         enabled = !selecting,
@@ -417,7 +419,7 @@ private fun OutlineRow(
                 IconButton(onClick = onToggleFold, modifier = Modifier.size(48.dp, iconHeight)) {
                     Icon(
                         Icons.Default.KeyboardArrowDown,
-                        if (folded) "Expand" else "Collapse",
+                        stringResource(if (folded) R.string.expand else R.string.collapse),
                         Modifier.rotate(chevronRotation),
                     )
                 }

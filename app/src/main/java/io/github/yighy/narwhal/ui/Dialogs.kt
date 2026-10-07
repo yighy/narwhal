@@ -1,5 +1,8 @@
 package io.github.yighy.narwhal.ui
 
+import io.github.yighy.narwhal.R
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.material3.Switch
@@ -89,7 +92,7 @@ fun TextInputDialog(
         confirmButton = {
             TextButton(enabled = allowEmpty || text.isNotBlank(), onClick = { onConfirm(text.trim()) }) { Text(confirmLabel) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
     )
 }
 
@@ -116,12 +119,12 @@ fun ChoiceDialog(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         RadioButton(selected = option == selected, onClick = { onSelect(option) })
-                        Text(option ?: "None", style = MaterialTheme.typography.bodyLarge)
+                        Text(option ?: stringResource(R.string.none), style = MaterialTheme.typography.bodyLarge)
                     }
                 }
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
     )
 }
 
@@ -162,12 +165,12 @@ fun TimestampDialog(
                     onClick = {
                         pickedDate = Instant.ofEpochMilli(dateState.selectedDateMillis!!).atZone(ZoneOffset.UTC).toLocalDate()
                     },
-                ) { Text("Next") }
+                ) { Text(stringResource(R.string.next)) }
             },
             dismissButton = {
                 Row {
-                    if (initial != null) TextButton(onClick = { onConfirm(null) }) { Text("Remove") }
-                    TextButton(onClick = onDismiss) { Text("Cancel") }
+                    if (initial != null) TextButton(onClick = { onConfirm(null) }) { Text(stringResource(R.string.remove)) }
+                    TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
                 }
             },
         ) {
@@ -205,7 +208,7 @@ fun TimestampDialog(
         AlertDialog(
             // Closing keeps the date with the time shown (not with an end before the start)
             onDismissRequest = { if (endTooEarly) onDismiss() else onConfirm(result(shownTime())) },
-            title = { Text("Time") },
+            title = { Text(stringResource(R.string.time)) },
             text = {
                 Column(Modifier.verticalScroll(rememberScrollState())) {
                     TimeInput(state = timeState)
@@ -214,7 +217,7 @@ fun TimestampDialog(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.toggleable(value = hasEnd, onValueChange = { hasEnd = it }),
                     ) {
-                        Text("End time", style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+                        Text(stringResource(R.string.end_time), style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
                         Switch(checked = hasEnd, onCheckedChange = null)
                     }
                     AnimatedVisibility(hasEnd) {
@@ -222,7 +225,7 @@ fun TimestampDialog(
                             TimeInput(state = endState, modifier = Modifier.padding(top = 8.dp))
                             if (endTooEarly) {
                                 Text(
-                                    "The end time must be after the start.",
+                                    stringResource(R.string.end_time_too_early),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.error,
                                 )
@@ -232,8 +235,8 @@ fun TimestampDialog(
                     RepeatPicker(repeat) { repeat = it; repeatChanged = true }
                 }
             },
-            confirmButton = { TextButton(enabled = !endTooEarly, onClick = { onConfirm(result(shownTime())) }) { Text("OK") } },
-            dismissButton = { TextButton(onClick = { onConfirm(result(null)) }) { Text("No time") } },
+            confirmButton = { TextButton(enabled = !endTooEarly, onClick = { onConfirm(result(shownTime())) }) { Text(stringResource(R.string.ok)) } },
+            dismissButton = { TextButton(onClick = { onConfirm(result(null)) }) { Text(stringResource(R.string.no_time)) } },
         )
     }
 }
@@ -243,15 +246,15 @@ fun TimestampDialog(
 @Composable
 private fun RepeatPicker(repeat: OrgTime.Repeat?, onChange: (OrgTime.Repeat?) -> Unit) {
     val units = buildList {
-        if (repeat?.unit == 'h') add('h' to "Hourly")
-        add('d' to "Daily")
-        add('w' to "Weekly")
-        add('m' to "Monthly")
-        add('y' to "Yearly")
+        if (repeat?.unit == 'h') add('h' to stringResource(R.string.repeat_hourly))
+        add('d' to stringResource(R.string.repeat_daily))
+        add('w' to stringResource(R.string.repeat_weekly))
+        add('m' to stringResource(R.string.repeat_monthly))
+        add('y' to stringResource(R.string.repeat_yearly))
     }
-    Text("Repeat", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 8.dp, bottom = 4.dp))
+    Text(stringResource(R.string.repeat), style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 8.dp, bottom = 4.dp))
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        FilterChip(selected = repeat == null, onClick = { onChange(null) }, label = { Text("Never") })
+        FilterChip(selected = repeat == null, onClick = { onChange(null) }, label = { Text(stringResource(R.string.repeat_never)) })
         units.forEach { (unit, label) ->
             FilterChip(
                 selected = repeat?.unit == unit,
@@ -264,7 +267,7 @@ private fun RepeatPicker(repeat: OrgTime.Repeat?, onChange: (OrgTime.Repeat?) ->
 
     var every by remember { mutableStateOf(repeat.every.toString()) }
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp)) {
-        Text("Every", style = MaterialTheme.typography.bodyLarge)
+        Text(stringResource(R.string.repeat_every), style = MaterialTheme.typography.bodyLarge)
         Spacer(Modifier.width(12.dp))
         OutlinedTextField(
             value = every,
@@ -277,15 +280,21 @@ private fun RepeatPicker(repeat: OrgTime.Repeat?, onChange: (OrgTime.Repeat?) ->
             modifier = Modifier.width(72.dp),
         )
         Spacer(Modifier.width(12.dp))
-        val names = mapOf('h' to "hour", 'd' to "day", 'w' to "week", 'm' to "month", 'y' to "year")
-        Text(names.getValue(repeat.unit) + if (repeat.every == 1) "" else "s", style = MaterialTheme.typography.bodyLarge)
+        val unitName = when (repeat.unit) {
+            'h' -> R.plurals.unit_hour
+            'd' -> R.plurals.unit_day
+            'w' -> R.plurals.unit_week
+            'm' -> R.plurals.unit_month
+            else -> R.plurals.unit_year
+        }
+        Text(pluralStringResource(unitName, repeat.every), style = MaterialTheme.typography.bodyLarge)
     }
 
-    Text("Once done", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 12.dp, bottom = 4.dp))
+    Text(stringResource(R.string.repeat_once_done), style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 12.dp, bottom = 4.dp))
     listOf(
-        "+" to "Move by the interval",
-        "++" to "Move to the first date after today",
-        ".+" to "Start again from the day it is done",
+        "+" to stringResource(R.string.repeat_type_plus),
+        "++" to stringResource(R.string.repeat_type_plus_plus),
+        ".+" to stringResource(R.string.repeat_type_dot_plus),
     ).forEach { (type, label) ->
         Row(
             Modifier
@@ -335,7 +344,7 @@ fun IconDialog(current: String?, onDismiss: () -> Unit, onSelect: (String?) -> U
     var typed by remember { mutableStateOf("") }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Notebook icon") },
+        title = { Text(stringResource(R.string.notebook_icon)) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
                 FlowRow {
@@ -356,19 +365,19 @@ fun IconDialog(current: String?, onDismiss: () -> Unit, onSelect: (String?) -> U
                 OutlinedTextField(
                     value = typed,
                     onValueChange = { typed = it },
-                    label = { Text("Other emoji") },
+                    label = { Text(stringResource(R.string.other_emoji)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
         },
         confirmButton = {
-            TextButton(enabled = firstGrapheme(typed) != null, onClick = { onSelect(firstGrapheme(typed)) }) { Text("OK") }
+            TextButton(enabled = firstGrapheme(typed) != null, onClick = { onSelect(firstGrapheme(typed)) }) { Text(stringResource(R.string.ok)) }
         },
         dismissButton = {
             Row {
-                if (current != null) TextButton(onClick = { onSelect(null) }) { Text("Use initial") }
-                TextButton(onClick = onDismiss) { Text("Cancel") }
+                if (current != null) TextButton(onClick = { onSelect(null) }) { Text(stringResource(R.string.use_initial)) }
+                TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
             }
         },
     )
@@ -387,33 +396,33 @@ fun SavedSearchDialog(
     var q by remember { mutableStateOf(query) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (onDelete == null) "Save search" else "Saved search") },
+        title = { Text(stringResource(if (onDelete == null) R.string.save_search else R.string.saved_search)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
                     value = n,
                     onValueChange = { n = it },
-                    label = { Text("Name") },
+                    label = { Text(stringResource(R.string.name)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
                 OutlinedTextField(
                     value = q,
                     onValueChange = { q = it },
-                    label = { Text("Query") },
-                    supportingText = { Text("Like  i.todo t.work s.today  o.p") },
+                    label = { Text(stringResource(R.string.query)) },
+                    supportingText = { Text(stringResource(R.string.query_example)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
         },
         confirmButton = {
-            TextButton(enabled = n.isNotBlank() && q.isNotBlank(), onClick = { onSave(n, q) }) { Text("Save") }
+            TextButton(enabled = n.isNotBlank() && q.isNotBlank(), onClick = { onSave(n, q) }) { Text(stringResource(R.string.save)) }
         },
         dismissButton = {
             Row {
-                onDelete?.let { TextButton(onClick = it) { Text("Delete") } }
-                TextButton(onClick = onDismiss) { Text("Cancel") }
+                onDelete?.let { TextButton(onClick = it) { Text(stringResource(R.string.delete)) } }
+                TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
             }
         },
     )

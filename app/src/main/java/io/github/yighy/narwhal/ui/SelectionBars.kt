@@ -1,5 +1,9 @@
 package io.github.yighy.narwhal.ui
 
+import androidx.annotation.StringRes
+import io.github.yighy.narwhal.R
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
@@ -58,12 +62,12 @@ fun SelectionTopBar(viewModel: AppViewModel, library: NoteRepository.Library, fi
         colors = blendedTopBarColors(),
         navigationIcon = {
             if (moving) {
-                IconButton(onClick = { moving = false }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Done moving") }
+                IconButton(onClick = { moving = false }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.done_moving)) }
             } else {
-                IconButton(onClick = viewModel::clearSelection) { Icon(Icons.Default.Close, "Clear selection") }
+                IconButton(onClick = viewModel::clearSelection) { Icon(Icons.Default.Close, stringResource(R.string.clear_selection)) }
             }
         },
-        title = { Text(if (moving) "Move" else "$count selected") },
+        title = { Text(if (moving) stringResource(R.string.move) else pluralStringResource(R.plurals.n_selected, count, count)) },
         actions = {
             val fade = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
             AnimatedContent(
@@ -74,30 +78,30 @@ fun SelectionTopBar(viewModel: AppViewModel, library: NoteRepository.Library, fi
                 Row {
                     if (isMoving) {
                         IconButton(enabled = single, onClick = { viewModel.moveSelection(AppViewModel.Move.Up) }) {
-                            Icon(Icons.Default.KeyboardArrowUp, "Move up")
+                            Icon(Icons.Default.KeyboardArrowUp, stringResource(R.string.move_up))
                         }
                         IconButton(enabled = single, onClick = { viewModel.moveSelection(AppViewModel.Move.Down) }) {
-                            Icon(Icons.Default.KeyboardArrowDown, "Move down")
+                            Icon(Icons.Default.KeyboardArrowDown, stringResource(R.string.move_down))
                         }
                         IconButton(onClick = { viewModel.moveSelection(AppViewModel.Move.Promote) }) {
-                            Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, "Promote")
+                            Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, stringResource(R.string.promote))
                         }
                         IconButton(onClick = { viewModel.moveSelection(AppViewModel.Move.Demote) }) {
-                            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, "Demote")
+                            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, stringResource(R.string.demote))
                         }
                         IconButton(enabled = library.files.size > 1, onClick = { pickNotebook = true }) {
-                            Icon(NarwhalIcons.ToNotebook, "Move to notebook")
+                            Icon(NarwhalIcons.ToNotebook, stringResource(R.string.move_to_notebook))
                         }
                     } else {
-                        IconButton(onClick = viewModel::cutSelection) { Icon(NarwhalIcons.Cut, "Cut") }
-                        IconButton(onClick = viewModel::copySelection) { Icon(NarwhalIcons.Copy, "Copy") }
+                        IconButton(onClick = viewModel::cutSelection) { Icon(NarwhalIcons.Cut, stringResource(R.string.cut)) }
+                        IconButton(onClick = viewModel::copySelection) { Icon(NarwhalIcons.Copy, stringResource(R.string.copy)) }
                         if (single && viewModel.clipboard.isNotEmpty()) {
                             Box {
-                                IconButton(onClick = { pasteMenu = true }) { Icon(NarwhalIcons.Paste, "Paste") }
+                                IconButton(onClick = { pasteMenu = true }) { Icon(NarwhalIcons.Paste, stringResource(R.string.paste)) }
                                 DropdownMenu(expanded = pasteMenu, onDismissRequest = { pasteMenu = false }) {
                                     Placement.entries.forEach { placement ->
                                         DropdownMenuItem(
-                                            text = { Text(pasteLabel(placement)) },
+                                            text = { Text(stringResource(pasteLabel(placement))) },
                                             leadingIcon = { Icon(placementIcon(placement), null) },
                                             onClick = { pasteMenu = false; viewModel.pasteAtSelection(placement) },
                                         )
@@ -105,16 +109,16 @@ fun SelectionTopBar(viewModel: AppViewModel, library: NoteRepository.Library, fi
                                 }
                             }
                         }
-                        IconButton(onClick = { moving = true }) { Icon(NarwhalIcons.Move, "Move") }
+                        IconButton(onClick = { moving = true }) { Icon(NarwhalIcons.Move, stringResource(R.string.move)) }
                         Box {
-                            IconButton(onClick = { moreMenu = true }) { Icon(Icons.Default.MoreVert, "More") }
+                            IconButton(onClick = { moreMenu = true }) { Icon(Icons.Default.MoreVert, stringResource(R.string.more)) }
                             DropdownMenu(expanded = moreMenu, onDismissRequest = { moreMenu = false }) {
                                 DropdownMenuItem(
-                                    text = { Text("Select all") },
+                                    text = { Text(stringResource(R.string.select_all)) },
                                     onClick = { moreMenu = false; viewModel.selectAll(file.notes) },
                                 )
                                 DropdownMenuItem(
-                                    text = { Text("Delete") },
+                                    text = { Text(stringResource(R.string.delete)) },
                                     leadingIcon = { Icon(Icons.Default.Delete, null) },
                                     onClick = { moreMenu = false; confirmDelete = true },
                                 )
@@ -129,19 +133,19 @@ fun SelectionTopBar(viewModel: AppViewModel, library: NoteRepository.Library, fi
     if (confirmDelete) {
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
-            title = { Text(if (single) "Delete this note?" else "Delete $count notes?") },
-            text = { Text("Their sub-notes are deleted too.") },
+            title = { Text(pluralStringResource(R.plurals.delete_notes_title, count, count)) },
+            text = { Text(stringResource(R.string.delete_notes_text)) },
             confirmButton = {
-                TextButton(onClick = { confirmDelete = false; viewModel.deleteSelection() }) { Text("Delete") }
+                TextButton(onClick = { confirmDelete = false; viewModel.deleteSelection() }) { Text(stringResource(R.string.delete)) }
             },
-            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Cancel") } },
+            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text(stringResource(R.string.cancel)) } },
         )
     }
 
     if (pickNotebook) {
         val targets = library.files.filter { it.uri != file.uri }
         ChoiceDialog(
-            title = "Move to notebook",
+            title = stringResource(R.string.move_to_notebook),
             options = targets.map { it.title },
             selected = null,
             onDismiss = { pickNotebook = false },
@@ -181,21 +185,21 @@ fun SelectionToolbar(viewModel: AppViewModel, file: NoteRepository.LoadedFile, m
             Row {
                 if (placing) {
                     IconButton(onClick = { choosingPlacement = false }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back to actions")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back_to_actions))
                     }
                     Placement.entries.forEach { placement ->
                         IconButton(onClick = {
                             choosingPlacement = false
                             viewModel.startNewNoteNearSelection(placement)
-                        }) { Icon(placementIcon(placement), newNoteTitle(placement)) }
+                        }) { Icon(placementIcon(placement), stringResource(newNoteTitle(placement))) }
                     }
                 } else {
-                    IconButton(onClick = { dialog = ToolbarDialog.Scheduled }) { Icon(NarwhalIcons.Scheduled, "Schedule") }
-                    IconButton(onClick = { dialog = ToolbarDialog.Deadline }) { Icon(NarwhalIcons.Deadline, "Deadline") }
-                    IconButton(onClick = { dialog = ToolbarDialog.State }) { Icon(NarwhalIcons.State, "State") }
-                    IconButton(onClick = viewModel::toggleDoneOfSelection) { Icon(Icons.Default.Check, "Done") }
+                    IconButton(onClick = { dialog = ToolbarDialog.Scheduled }) { Icon(NarwhalIcons.Scheduled, stringResource(R.string.schedule)) }
+                    IconButton(onClick = { dialog = ToolbarDialog.Deadline }) { Icon(NarwhalIcons.Deadline, stringResource(R.string.deadline)) }
+                    IconButton(onClick = { dialog = ToolbarDialog.State }) { Icon(NarwhalIcons.State, stringResource(R.string.state)) }
+                    IconButton(onClick = viewModel::toggleDoneOfSelection) { Icon(Icons.Default.Check, stringResource(R.string.done)) }
                     if (single != null) {
-                        IconButton(onClick = { choosingPlacement = true }) { Icon(Icons.Default.Add, "New note") }
+                        IconButton(onClick = { choosingPlacement = true }) { Icon(Icons.Default.Add, stringResource(R.string.new_note)) }
                     }
                 }
             }
@@ -215,7 +219,7 @@ fun SelectionToolbar(viewModel: AppViewModel, file: NoteRepository.LoadedFile, m
             onConfirm = { dialog = null; viewModel.setDeadlineOfSelection(it) },
         )
         ToolbarDialog.State -> ChoiceDialog(
-            title = "State",
+            title = stringResource(R.string.state),
             options = listOf(null) + file.doc.keywords.all,
             selected = single?.state,
             onDismiss = { dialog = null },
@@ -230,8 +234,9 @@ fun placementIcon(placement: Placement) = when (placement) {
     Placement.Below -> NarwhalIcons.NewBelow
 }
 
+@StringRes
 private fun pasteLabel(placement: Placement) = when (placement) {
-    Placement.Above -> "Paste above"
-    Placement.Under -> "Paste as sub-notes"
-    Placement.Below -> "Paste below"
+    Placement.Above -> R.string.paste_above
+    Placement.Under -> R.string.paste_under
+    Placement.Below -> R.string.paste_below
 }

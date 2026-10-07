@@ -1,5 +1,7 @@
 package io.github.yighy.narwhal.ui
 
+import io.github.yighy.narwhal.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
@@ -150,24 +152,24 @@ fun EditToolbar(value: TextFieldValue, onChange: (TextFieldValue) -> Unit, histo
         // Buttons don't take the focus: the text keeps it, and the keyboard stays
         Row(verticalAlignment = Alignment.CenterVertically) {
             Row(Modifier.weight(1f).horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = { emphasis('*') }) { Icon(NarwhalIcons.Bold, "Bold") }
-                IconButton(onClick = { emphasis('/') }) { Icon(NarwhalIcons.Italic, "Italic") }
-                IconButton(onClick = { emphasis('_') }) { Icon(NarwhalIcons.Underline, "Underline") }
-                IconButton(onClick = { emphasis('+') }) { Icon(NarwhalIcons.Strike, "Strike-through") }
-                IconButton(onClick = { emphasis('~') }) { Icon(NarwhalIcons.Code, "Code") }
-                IconButton(onClick = { apply(TextEditing::toggleList) }) { Icon(NarwhalIcons.ListBulleted, "List") }
-                IconButton(onClick = { apply(TextEditing::toggleCheckbox) }) { Icon(NarwhalIcons.CheckBox, "Checkbox") }
-                IconButton(onClick = { apply(TextEditing::indent) }) { Icon(NarwhalIcons.Indent, "Indent") }
-                IconButton(onClick = { apply(TextEditing::outdent) }) { Icon(NarwhalIcons.Outdent, "Outdent") }
-                IconButton(onClick = { insertWord("id:") }) { Icon(NarwhalIcons.Link, "Link to a note") }
+                IconButton(onClick = { emphasis('*') }) { Icon(NarwhalIcons.Bold, stringResource(R.string.bold)) }
+                IconButton(onClick = { emphasis('/') }) { Icon(NarwhalIcons.Italic, stringResource(R.string.italic)) }
+                IconButton(onClick = { emphasis('_') }) { Icon(NarwhalIcons.Underline, stringResource(R.string.underline)) }
+                IconButton(onClick = { emphasis('+') }) { Icon(NarwhalIcons.Strike, stringResource(R.string.strike)) }
+                IconButton(onClick = { emphasis('~') }) { Icon(NarwhalIcons.Code, stringResource(R.string.code)) }
+                IconButton(onClick = { apply(TextEditing::toggleList) }) { Icon(NarwhalIcons.ListBulleted, stringResource(R.string.list)) }
+                IconButton(onClick = { apply(TextEditing::toggleCheckbox) }) { Icon(NarwhalIcons.CheckBox, stringResource(R.string.checkbox)) }
+                IconButton(onClick = { apply(TextEditing::indent) }) { Icon(NarwhalIcons.Indent, stringResource(R.string.indent)) }
+                IconButton(onClick = { apply(TextEditing::outdent) }) { Icon(NarwhalIcons.Outdent, stringResource(R.string.outdent)) }
+                IconButton(onClick = { insertWord("id:") }) { Icon(NarwhalIcons.Link, stringResource(R.string.link_to_note)) }
                 IconButton(onClick = {
                     datePicking = TextEditing.timestampAt(value.toEdit())
                     dateOpen = true
-                }) { Icon(Icons.Default.DateRange, "Date") }
+                }) { Icon(Icons.Default.DateRange, stringResource(R.string.date)) }
             }
             VerticalDivider(Modifier.height(24.dp))
-            IconButton(enabled = history.canUndo, onClick = { history.undo(value)?.let(onChange) }) { Icon(NarwhalIcons.Undo, "Undo") }
-            IconButton(enabled = history.canRedo, onClick = { history.redo(value)?.let(onChange) }) { Icon(NarwhalIcons.Redo, "Redo") }
+            IconButton(enabled = history.canUndo, onClick = { history.undo(value)?.let(onChange) }) { Icon(NarwhalIcons.Undo, stringResource(R.string.undo)) }
+            IconButton(enabled = history.canRedo, onClick = { history.redo(value)?.let(onChange) }) { Icon(NarwhalIcons.Redo, stringResource(R.string.redo)) }
         }
     }
 

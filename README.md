@@ -26,6 +26,8 @@ An Android app for [Org mode](https://orgmode.org) notes, inspired by
   and snooze buttons in the notification.
 - **Material 3 Expressive.** Smooth transitions, light and dark themes, colors from your
   wallpaper.
+- **In English and French.** Texts live in `app/src/main/res/values*/strings.xml`; a new
+  language is one more translated file.
 
 ## Download
 
