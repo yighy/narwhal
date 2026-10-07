@@ -10,6 +10,7 @@ All notable changes to Narwhal. Versions follow [Semantic Versioning](https://se
 
 ### Changed
 - New notes no longer get an ID by default: linking to a note gives it one
+- New icon: the narwhal rises from the sea with its tail, its tusk on its head
 
 ### Fixed
 - The list no longer jumps when a note or a notebook gets selected

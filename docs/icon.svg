@@ -1,7 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120">
-  <rect width="120" height="120" rx="30" fill="#0F766E"/>
-  <path d="M55,50 L65,50 L68,18 Z" fill="#FFFFFF"/>
-  <path d="M32,86 A28,28 0 0 1 88,86 Z" fill="#FFFFFF"/>
-  <circle cx="51" cy="74" r="3.2" fill="#0F3D3A"/>
-  <circle cx="69" cy="74" r="3.2" fill="#0F3D3A"/>
+  <clipPath id="tile"><rect width="120" height="120" rx="30"/></clipPath>
+  <g clip-path="url(#tile)">
+    <rect width="120" height="120" fill="#0F766E"/>
+    <path d="M93,90 L95,79 Q89,76 87,69 Q94,71 97,75 Q100,71 107,69 Q105,76 99,79 L99,90 Z" fill="#FFFFFF"/>
+    <path d="M51,66 L61,66 L64,28 Z" fill="#FFFFFF"/>
+    <path d="M28,90 A28,28 0 0 1 84,90 Z" fill="#FFFFFF"/>
+    <circle cx="47" cy="72" r="3.2" fill="#0F3D3A"/>
+    <circle cx="65" cy="72" r="3.2" fill="#0F3D3A"/>
+    <path d="M0,86 q10,-5 20,0 t20,0 t20,0 t20,0 t20,0 t20,0 V120 H0 Z" fill="#0A524C"/>
+    <path d="M0,86 q10,-5 20,0 t20,0 t20,0 t20,0 t20,0 t20,0" fill="none" stroke="#FFFFFF" stroke-width="3"/>
+  </g>
 </svg>
