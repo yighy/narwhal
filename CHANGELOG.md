@@ -4,6 +4,12 @@ All notable changes to Narwhal. Versions follow [Semantic Versioning](https://se
 
 ## [Unreleased]
 
+### Changed
+- Notebook initials and icons sit in a plain circle, of the same color for all notebooks
+
+### Fixed
+- In a done note's title, links are grayed out like the rest
+
 ## [0.7.0] - 2026-10-08
 
 ### Added

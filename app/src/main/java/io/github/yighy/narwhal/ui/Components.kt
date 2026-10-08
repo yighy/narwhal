@@ -98,10 +98,8 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.toShape
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
@@ -458,7 +456,15 @@ fun NoteLine(
                 color = if (note.isDone) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.onSurface,
             )
             if (onOpenLink != null) {
-                LinkedText(note.title, titleStyle, onOpenLink, titleModifier, maxLines = 2)
+                // A done note's links are grayed out with the rest of its title
+                LinkedText(
+                    note.title,
+                    titleStyle,
+                    onOpenLink,
+                    titleModifier,
+                    maxLines = 2,
+                    linkColor = if (note.isDone) titleStyle.color else Color.Unspecified,
+                )
             } else {
                 Text(displayTitle(note.title), style = titleStyle, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = titleModifier)
             }
@@ -516,31 +522,15 @@ fun AppIcon(size: Dp = 56.dp) {
     }
 }
 
-/**
- * Notebook's [icon] (an emoji), or else its initial, inside an expressive shape picked from
- * the notebook's name.
- */
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+/** Notebook's [icon] (an emoji), or else its initial, in a circle of the theme's color. */
 @Composable
 fun NotebookAvatar(title: String, icon: String? = null) {
-    val shapes = listOf(
-        MaterialShapes.Cookie9Sided, MaterialShapes.Clover4Leaf, MaterialShapes.Sunny,
-        MaterialShapes.Gem, MaterialShapes.Pentagon, MaterialShapes.Cookie6Sided,
-        MaterialShapes.SoftBurst, MaterialShapes.Puffy,
-    )
-    val colors = MaterialTheme.colorScheme.let {
-        listOf(
-            it.primaryContainer to it.onPrimaryContainer,
-            it.secondaryContainer to it.onSecondaryContainer,
-            it.tertiaryContainer to it.onTertiaryContainer,
-        )
-    }
-    val hash = title.lowercase().hashCode().let { if (it == Int.MIN_VALUE) 0 else kotlin.math.abs(it) }
-    val (container, content) = colors[hash % colors.size]
+    val container = MaterialTheme.colorScheme.primaryContainer
+    val content = MaterialTheme.colorScheme.onPrimaryContainer
     Box(
         Modifier
             .size(56.dp)
-            .clip(shapes[hash % shapes.size].toShape())
+            .clip(CircleShape)
             .background(container),
         contentAlignment = Alignment.Center,
     ) {
@@ -572,12 +562,14 @@ fun LinkedText(
     onTextTap: ((Int) -> Unit)? = null,
     /** Given, Org checkboxes ("- [ ] item") show as boxes; a tap toggles the nth one. */
     onToggleCheckbox: ((Int) -> Unit)? = null,
+    /** Color of the links; the theme's link color by default. */
+    linkColor: Color = Color.Unspecified,
 ) {
     // Links keep the line through a struck text
     val struck = style.textDecoration?.contains(TextDecoration.LineThrough) == true
     val linkStyle = TextLinkStyles(
         SpanStyle(
-            color = MaterialTheme.colorScheme.primary,
+            color = linkColor.takeOrElse { MaterialTheme.colorScheme.primary },
             textDecoration = if (struck) TextDecoration.combine(listOf(TextDecoration.Underline, TextDecoration.LineThrough)) else TextDecoration.Underline,
         ),
     )
