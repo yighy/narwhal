@@ -202,6 +202,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun setShowContentInNotebook(show: Boolean) = appSettings.setShowContentInNotebook(show)
 
+    fun setStrikeDone(on: Boolean) = appSettings.setStrikeDone(on)
+
     fun setNoteSpacing(spacing: NoteSpacing) = appSettings.setNoteSpacing(spacing)
 
     fun setHiddenProperties(names: Set<String>) = appSettings.setHiddenProperties(names)

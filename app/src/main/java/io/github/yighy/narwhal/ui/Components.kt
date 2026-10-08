@@ -1,5 +1,6 @@
 package io.github.yighy.narwhal.ui
 
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -453,7 +454,7 @@ fun NoteLine(
                 Spacer(Modifier.width(8.dp))
             }
             val titleStyle = MaterialTheme.typography.bodyLarge.copy(
-                textDecoration = if (note.isDone) TextDecoration.LineThrough else null,
+                textDecoration = if (note.isDone && LocalStrikeDone.current) TextDecoration.LineThrough else null,
                 color = if (note.isDone) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.onSurface,
             )
             if (onOpenLink != null) {
@@ -572,14 +573,19 @@ fun LinkedText(
     /** Given, Org checkboxes ("- [ ] item") show as boxes; a tap toggles the nth one. */
     onToggleCheckbox: ((Int) -> Unit)? = null,
 ) {
+    // Links keep the line through a struck text
+    val struck = style.textDecoration?.contains(TextDecoration.LineThrough) == true
     val linkStyle = TextLinkStyles(
-        SpanStyle(color = MaterialTheme.colorScheme.primary, textDecoration = TextDecoration.Underline),
+        SpanStyle(
+            color = MaterialTheme.colorScheme.primary,
+            textDecoration = if (struck) TextDecoration.combine(listOf(TextDecoration.Underline, TextDecoration.LineThrough)) else TextDecoration.Underline,
+        ),
     )
     val toggle by rememberUpdatedState(onToggleCheckbox)
     val showBoxes = onToggleCheckbox != null
     val codeBackground = MaterialTheme.colorScheme.surfaceContainerHighest
     // The text as shown, and how its parts map to the raw text (links, checkboxes, emphasis)
-    val (annotated, ranges, boxes) = remember(text, linkStyle, showBoxes, codeBackground) {
+    val (annotated, ranges, boxes) = remember(text, linkStyle, showBoxes, codeBackground, struck) {
         val ranges = mutableListOf<ShownPart>()
         val links = Links.find(text)
         val boxes = if (showBoxes) Checkboxes.find(text).filter { b -> links.none { b.box in it.range } } else emptyList()
@@ -598,7 +604,7 @@ fun LinkedText(
                         append(segment.shown)
                     }
                     is Checkboxes.Box -> appendInlineContent("box${boxes.indexOf(segment)}", if (segment.checked) "[X]" else "[ ]")
-                    is Markup.Emphasis -> withStyle(emphasisStyle(segment.style, codeBackground)) { append(segment.content) }
+                    is Markup.Emphasis -> withStyle(emphasisStyle(segment.style, codeBackground, struck)) { append(segment.content) }
                 }
                 ranges += ShownPart(start until length, range, editable = segment is Markup.Emphasis)
                 last = range.last + 1
@@ -655,14 +661,20 @@ private fun rawOffset(shown: Int, parts: List<ShownPart>): Int? {
     return shown + shift
 }
 
+/** Whether done notes show struck through (a setting). */
+val LocalStrikeDone = compositionLocalOf { true }
+
 /** A part of the text shown otherwise than written: a link, a checkbox, emphasis. */
 private data class ShownPart(val shown: IntRange, val raw: IntRange, val editable: Boolean)
 
-/** How Org emphasis shows. */
-private fun emphasisStyle(style: Markup.Style, codeBackground: Color): SpanStyle = when (style) {
+/** How Org emphasis shows ([struck]: within a text struck through). */
+private fun emphasisStyle(style: Markup.Style, codeBackground: Color, struck: Boolean): SpanStyle = when (style) {
     Markup.Style.Bold -> SpanStyle(fontWeight = FontWeight.Bold)
     Markup.Style.Italic -> SpanStyle(fontStyle = FontStyle.Italic)
-    Markup.Style.Underline -> SpanStyle(textDecoration = TextDecoration.Underline)
+    // In a struck text, the line through stays
+    Markup.Style.Underline -> SpanStyle(
+        textDecoration = if (struck) TextDecoration.combine(listOf(TextDecoration.Underline, TextDecoration.LineThrough)) else TextDecoration.Underline,
+    )
     Markup.Style.Strike -> SpanStyle(textDecoration = TextDecoration.LineThrough)
     Markup.Style.Verbatim, Markup.Style.Code -> SpanStyle(fontFamily = FontFamily.Monospace, background = codeBackground)
 }

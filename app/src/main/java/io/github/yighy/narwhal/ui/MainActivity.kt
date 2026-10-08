@@ -109,7 +109,9 @@ class MainActivity : ComponentActivity() {
         setContent {
             val settings by viewModel.settings.collectAsState()
             NarwhalTheme(settings.themeMode, settings.dynamicColor) {
-                NarwhalApp(viewModel, notificationsAllowed, ::askForNotifications)
+                CompositionLocalProvider(LocalStrikeDone provides settings.strikeDone) {
+                    NarwhalApp(viewModel, notificationsAllowed, ::askForNotifications)
+                }
             }
         }
     }

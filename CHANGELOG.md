@@ -4,6 +4,12 @@ All notable changes to Narwhal. Versions follow [Semantic Versioning](https://se
 
 ## [Unreleased]
 
+### Added
+- Setting to strike through done notes or not
+
+### Fixed
+- In a done note's title, links and underlined text are struck through too
+
 ## [0.6.0] - 2026-10-07
 
 ### Added

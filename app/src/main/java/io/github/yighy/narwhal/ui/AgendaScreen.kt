@@ -201,7 +201,7 @@ private fun AgendaRow(
                     LinkedText(
                         note.title,
                         MaterialTheme.typography.bodyLarge.copy(
-                            textDecoration = if (note.isDone) TextDecoration.LineThrough else null,
+                            textDecoration = if (note.isDone && LocalStrikeDone.current) TextDecoration.LineThrough else null,
                         ),
                         viewModel::openLink,
                         maxLines = 2,

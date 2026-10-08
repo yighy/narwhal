@@ -195,6 +195,8 @@
     <string name="settings_snooze_summary">Le bouton de report de la notification</string>
     <string name="settings_source">Code source</string>
     <string name="settings_spacing">Espacement entre les notes</string>
+    <string name="settings_strike_done">Barrer les notes faites</string>
+    <string name="settings_strike_done_summary">Leurs titres, liens compris</string>
     <string name="settings_theme">Thème</string>
     <string name="settings_title">Paramètres</string>
     <string name="settings_version">Version %1$s</string>

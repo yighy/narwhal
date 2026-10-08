@@ -197,6 +197,8 @@
     <string name="settings_snooze_summary">The notification\'s snooze button</string>
     <string name="settings_source">Source code</string>
     <string name="settings_spacing">Space between notes</string>
+    <string name="settings_strike_done">Strike through done notes</string>
+    <string name="settings_strike_done_summary">Their titles, links included</string>
     <string name="settings_theme">Theme</string>
     <string name="settings_title">Settings</string>
     <string name="settings_version">Version %1$s</string>

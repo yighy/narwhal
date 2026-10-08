@@ -131,6 +131,12 @@ fun SettingsScreen(
                 checked = settings.showContentInNotebook,
                 onCheckedChange = viewModel::setShowContentInNotebook,
             )
+            SwitchItem(
+                title = stringResource(R.string.settings_strike_done),
+                summary = stringResource(R.string.settings_strike_done_summary),
+                checked = settings.strikeDone,
+                onCheckedChange = viewModel::setStrikeDone,
+            )
             ListItem(
                 onClick = { pickSpacing = true },
                 supportingContent = { Text(stringResource(settings.noteSpacing.label)) },

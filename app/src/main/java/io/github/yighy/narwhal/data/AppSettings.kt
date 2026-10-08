@@ -44,6 +44,8 @@ class AppSettings(context: Context) {
     data class Values(
         /** Show each note's content under its title in the notebook outline. */
         val showContentInNotebook: Boolean = true,
+        /** Strike through the titles of done notes in lists. */
+        val strikeDone: Boolean = true,
         val noteSpacing: NoteSpacing = NoteSpacing.Comfortable,
         val remindScheduled: Boolean = true,
         val remindDeadline: Boolean = true,
@@ -77,6 +79,7 @@ class AppSettings(context: Context) {
     private val _values = MutableStateFlow(
         Values(
             showContentInNotebook = prefs.getBoolean(KEY_SHOW_CONTENT, true),
+            strikeDone = prefs.getBoolean(KEY_STRIKE_DONE, true),
             noteSpacing = NoteSpacing.entries.firstOrNull { it.name == prefs.getString(KEY_NOTE_SPACING, null) } ?: NoteSpacing.Comfortable,
             remindScheduled = prefs.getBoolean(KEY_REMIND_SCHEDULED, true),
             remindDeadline = prefs.getBoolean(KEY_REMIND_DEADLINE, true),
@@ -135,6 +138,8 @@ class AppSettings(context: Context) {
         prefs.edit().apply(edit).apply()
         _values.update(change)
     }
+
+    fun setStrikeDone(on: Boolean) = save({ putBoolean(KEY_STRIKE_DONE, on) }) { it.copy(strikeDone = on) }
 
     fun setShowContentInNotebook(show: Boolean) =
         save({ putBoolean(KEY_SHOW_CONTENT, show) }) { it.copy(showContentInNotebook = show) }
@@ -196,6 +201,7 @@ class AppSettings(context: Context) {
         private const val KEY_THEME = "theme_mode"
         private const val KEY_DYNAMIC_COLOR = "dynamic_color"
         private const val KEY_SHOW_CONTENT = "show_content_in_notebook"
+        private const val KEY_STRIKE_DONE = "strike_done"
         private const val KEY_NOTE_SPACING = "note_spacing"
         private const val KEY_REMIND_SCHEDULED = "remind_scheduled"
         private const val KEY_REMIND_DEADLINE = "remind_deadline"
