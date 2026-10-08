@@ -4,6 +4,8 @@ All notable changes to Narwhal. Versions follow [Semantic Versioning](https://se
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-10-08
+
 ### Added
 - Setting to strike through done notes or not
 
@@ -117,7 +119,8 @@ All notable changes to Narwhal. Versions follow [Semantic Versioning](https://se
 - First prototype: notebooks from a folder of `.org` files, outline, note editing, search, tags,
   and `id:` links to other notes
 
-[Unreleased]: https://github.com/yighy/narwhal/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/yighy/narwhal/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/yighy/narwhal/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/yighy/narwhal/compare/v0.5.3...v0.6.0
 [0.5.3]: https://github.com/yighy/narwhal/compare/v0.5.2...v0.5.3
 [0.5.2]: https://github.com/yighy/narwhal/compare/v0.5.1...v0.5.2
