@@ -13,8 +13,7 @@ An Android app for [Org mode](https://orgmode.org) notes, inspired by
 - **Notes that link to each other.** Type `id:` to pick a note by its title; Narwhal gives it an
   `ID` if needed and inserts the link. Each note lists the notes that link to it, and links follow
   when a note is renamed.
-- **Edit where you read.** Title, content, tags, state and priority are edited in place, without
-  dialogs. Lists and checkboxes continue as you type, and brackets close themselves.
+  
 - **A toolbar over the keyboard.** Bold, italic, underline, strike-through and code; lists,
   checkboxes, indent and outdent; a link to another note; a date with its time, end time and
   repeat, or a change to the date at the cursor; undo and redo, always in view.
@@ -26,9 +25,7 @@ An Android app for [Org mode](https://orgmode.org) notes, inspired by
   and snooze buttons in the notification.
 - **Material 3 Expressive.** Smooth transitions, light and dark themes, colors from your
   wallpaper.
-- **In English and French.** Texts live in `app/src/main/res/values*/strings.xml`; a new
-  language is one more translated file.
-
+  
 ## Download
 
 Signed APKs are attached to each [release](https://github.com/yighy/narwhal/releases); see
