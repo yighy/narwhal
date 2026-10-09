@@ -73,7 +73,6 @@ fun SettingsScreen(
     val english = remember { AppLanguage.isEnglish(context) }
     val activity = LocalActivity.current
     var pickSnooze by remember { mutableStateOf(false) }
-    var pickInbox by remember { mutableStateOf(false) }
     var pickSpacing by remember { mutableStateOf(false) }
     var editHiddenProperties by remember { mutableStateOf(false) }
 
@@ -126,12 +125,6 @@ fun SettingsScreen(
                 onClick = onPickFolder,
                 supportingContent = { Text(library.folderUri?.let(::folderLabel) ?: stringResource(R.string.none)) },
             ) { Text(stringResource(R.string.settings_folder)) }
-            ListItem(
-                onClick = { pickInbox = true },
-                supportingContent = {
-                    Text(settings.inboxNotebook?.let(library::file)?.title ?: stringResource(R.string.settings_inbox_default))
-                },
-            ) { Text(stringResource(R.string.settings_inbox)) }
             SwitchItem(
                 title = stringResource(R.string.settings_show_content),
                 summary = stringResource(R.string.settings_show_content_summary),
@@ -303,19 +296,6 @@ fun SettingsScreen(
             onSelect = { label ->
                 pickSpacing = false
                 NoteSpacing.entries.firstOrNull { resources.getString(it.label) == label }?.let(viewModel::setNoteSpacing)
-            },
-        )
-    }
-    if (pickInbox) {
-        val inboxDefault = stringResource(R.string.settings_inbox_default)
-        ChoiceDialog(
-            title = stringResource(R.string.settings_inbox),
-            options = listOf(inboxDefault) + library.files.map { it.title },
-            selected = settings.inboxNotebook?.let(library::file)?.title ?: inboxDefault,
-            onDismiss = { pickInbox = false },
-            onSelect = { title ->
-                pickInbox = false
-                viewModel.setInboxNotebook(library.files.firstOrNull { it.title == title }?.uri)
             },
         )
     }

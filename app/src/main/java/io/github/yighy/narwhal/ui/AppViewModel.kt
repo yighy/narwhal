@@ -1,5 +1,7 @@
 package io.github.yighy.narwhal.ui
 
+import io.github.yighy.narwhal.core.InternalLinks
+import io.github.yighy.narwhal.core.Cookies
 import kotlinx.coroutines.flow.first
 import java.time.format.FormatStyle
 import java.time.format.DateTimeFormatter
@@ -334,6 +336,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         when {
             link.startsWith("id:", ignoreCase = true) -> openById(link.substring(3).trim())
             link.startsWith("file:", ignoreCase = true) -> openFileLink(link.substring(5))
+            InternalLinks.isInternal(link) -> openInternal(link)
             else -> view(Uri.parse(link))
         }
     }
@@ -369,6 +372,21 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /**
+     * Opens the note an internal link leads to ([[*Title]], [[#custom-id]], [[name]]): in the
+     * notebook shown first, as Org does, then in the others.
+     */
+    private fun openInternal(target: String) {
+        val current = when (val screen = stack.lastOrNull()) {
+            is Screen.Note -> screen.fileUri
+            is Screen.Notebook -> screen.fileUri
+            else -> null
+        }
+        val notes = library.value.notes.sortedBy { it.fileUri != current }
+        val note = InternalLinks.find(notes, target)
+        if (note != null) openNote(note) else message(R.string.msg_link_not_found, target)
+    }
+
     fun openById(id: String) {
         val note = library.value.noteById(id)
         if (note != null) openNote(note) else message(R.string.msg_no_note_with_id, id)
@@ -395,8 +413,30 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
         return saveLock.withLock {
             val latest = library.value.note(note.fileUri, note.index) ?: note
-            attempt { repository.saveNote(latest, change(latest)) }
+            attempt { repository.saveNote(latest, withCookies(latest, change(latest))) }
         }
+    }
+
+    /** [edit] with its [/] and [%] cookies counting as they now should (as Org keeps them). */
+    private fun withCookies(note: OrgNote, edit: NoteEdit): NoteEdit {
+        val content = Cookies.updateContent(edit.content)
+        return edit.copy(title = Cookies.updateTitle(edit.title, content, subNotes(note)), content = content)
+    }
+
+    /** Direct sub-notes of [note]. */
+    private fun subNotes(note: OrgNote): List<OrgNote> {
+        val notes = library.value.file(note.fileUri)?.notes ?: return emptyList()
+        if (note.index !in notes.indices) return emptyList()
+        return notes.drop(note.index + 1).takeWhile { it.level > note.level }.filter { it.level == note.level + 1 }
+    }
+
+    /** After [note]'s state changed, the cookie of its parent counting its sub-notes follows. */
+    private suspend fun updateParentCookie(note: OrgNote) {
+        val notes = library.value.file(note.fileUri)?.notes ?: return
+        if (note.index !in notes.indices) return
+        val parent = NoteTree.ancestors(notes, note.index).lastOrNull() ?: return
+        if (!Cookies.countsSubNotes(parent)) return
+        if (Cookies.updateTitle(parent.title, parent.content, subNotes(parent)) != parent.title) saveLatest(parent) { it.toEdit() }
     }
 
     /** Returns the saved note, or null if it could not be saved. */
@@ -453,6 +493,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             val saved = saveLatest(note) { latest ->
                 NoteStates.apply(latest.toEdit(), target, keywords).also { shifted = it.shifted }.edit
             } ?: return@launch
+            updateParentCookie(saved)
             if (shifted) {
                 val next = displayTime(getApplication<Application>().resources, saved.scheduled ?: saved.deadline)
                 message(R.string.msg_repeating_moved, next.orEmpty())
@@ -555,9 +596,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     // ---- Text shared from other apps ----
 
-    fun setInboxNotebook(fileUri: String?) = appSettings.setInboxNotebook(fileUri)
+    /** The note just made from shared text: its screen offers to choose where it goes. */
+    var sharedNote by mutableStateOf<Screen.Note?>(null)
+        private set
 
-    /** Makes a note of text shared by another app, in the inbox notebook, and opens it. */
+    /** Makes a note of text shared by another app, in the Inbox notebook, and opens it. */
     fun receiveShared(subject: String?, text: String?) {
         val shared = Sharing.note(subject, text) ?: return
         viewModelScope.launch {
@@ -574,14 +617,14 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 if (edit != created.toEdit()) repository.saveNote(created, edit) else created
             } ?: return@launch
             openNote(note)
+            sharedNote = Screen.Note(note.fileUri, note.index)
             message(R.string.msg_shared_added, library.value.file(note.fileUri)?.title.orEmpty())
         }
     }
 
-    /** The notebook chosen for shared text, or the one named Inbox (made if there is none). */
+    /** The notebook named Inbox (made if there is none). */
     private suspend fun inboxUri(lib: NoteRepository.Library): String =
-        settings.value.inboxNotebook?.takeIf { lib.file(it) != null }
-            ?: lib.files.firstOrNull { it.title.equals(INBOX, ignoreCase = true) || it.ref.name.equals("$INBOX.org", ignoreCase = true) }?.uri
+        lib.files.firstOrNull { it.title.equals(INBOX, ignoreCase = true) || it.ref.name.equals("$INBOX.org", ignoreCase = true) }?.uri
             ?: repository.createFile(INBOX).toString()
 
     // ---- Clocking ----
@@ -802,14 +845,20 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Moves [note] under [parent], or to the end of the notebook [fileUri], and shows it there. */
     fun refileNote(note: OrgNote, fileUri: String, parent: OrgNote?) {
         viewModelScope.launch {
-            val index = attempt { refile(listOf(note), fileUri, parent) } ?: return@launch
-            val i = stack.indexOfLast { it is Screen.Note && it.fileUri == note.fileUri && it.index == note.index }
-            if (i >= 0) stack[i] = Screen.Note(fileUri, index)
+            attempt {
+                // The screen follows the note before it leaves its notebook (else it would close)
+                refile(listOf(note), fileUri, parent) { index ->
+                    val i = stack.indexOfLast { it is Screen.Note && it.fileUri == note.fileUri && it.index == note.index }
+                    if (i >= 0) stack[i] = Screen.Note(fileUri, index)
+                    // A shared note moved can still be moved again from its screen
+                    if (sharedNote?.let { it.fileUri == note.fileUri && it.index == note.index } == true) sharedNote = Screen.Note(fileUri, index)
+                }
+            }
         }
     }
 
-    private suspend fun refile(notes: List<OrgNote>, fileUri: String, parent: OrgNote?): Int {
-        val index = repository.refile(notes, fileUri, parent)
+    private suspend fun refile(notes: List<OrgNote>, fileUri: String, parent: OrgNote?, onPlaced: (Int) -> Unit = {}): Int {
+        val index = repository.refile(notes, fileUri, parent, onPlaced)
         val where = parent?.let { displayTitle(it.title) } ?: library.value.file(fileUri)?.title.orEmpty()
         pluralMessage(R.plurals.msg_notes_moved, notes.size, where)
         return index
@@ -825,6 +874,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     i to SectionEditor.rewrite(section.raw, section.level, doc.keywords, change(notes[k], doc.keywords))
                 })
             }
+            // Parents counting their sub-notes, once all are written
+            notes.forEach { n -> library.value.note(uri, n.index)?.let { updateParentCookie(it) } }
         }
 
     fun setStateOfSelection(target: String?) = editSelection { note, keywords ->

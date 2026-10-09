@@ -73,15 +73,18 @@
     <string name="msg_file_not_saved">The file was not saved correctly</string>
     <string name="msg_id_copied">ID copied</string>
     <string name="msg_link_copied">Link copied</string>
+    <string name="msg_link_not_found">Nothing named “%1$s” in the notes</string>
     <string name="msg_no_app">No app can open %1$s</string>
     <string name="msg_no_file">No file %1$s in the folder</string>
     <string name="msg_no_note_with_id">No note with ID %1$s</string>
     <string name="msg_note_changed">The note was changed by another app. It has been reloaded.</string>
     <string name="msg_note_moved_or_deleted">This note has moved or was deleted</string>
     <string name="msg_postponed">Moved to %1$s</string>
+    <string name="msg_recalculated">Table recalculated</string>
     <string name="msg_repeating_moved">Repeating task moved to %1$s</string>
     <string name="msg_search_saved">Search saved</string>
     <string name="msg_shared_added">Added to %1$s</string>
+    <string name="msg_table_up_to_date">The table is up to date</string>
     <string name="name">Name</string>
     <string name="new_note">New note</string>
     <string name="new_note_above">New note above</string>
@@ -129,6 +132,7 @@
     <string name="property_value">Value</string>
     <string name="query">Query</string>
     <string name="query_example">Like  i.todo t.work s.today  o.p</string>
+    <string name="recalculate">Recalculate</string>
     <string name="redo">Redo</string>
     <string name="remove">Remove</string>
     <string name="remove_property">Remove property</string>
@@ -189,8 +193,6 @@
     <string name="settings_hidden_properties">Hidden properties</string>
     <string name="settings_hidden_properties_label">Names, separated by spaces</string>
     <string name="settings_hidden_properties_summary">Not shown on the note screen; kept in the file</string>
-    <string name="settings_inbox">Notebook for shared text</string>
-    <string name="settings_inbox_default">Inbox (created when needed)</string>
     <string name="settings_keywords">State keywords</string>
     <string name="settings_keywords_empty">Type at least one keyword</string>
     <string name="settings_keywords_label">To-do keywords | done keywords</string>
@@ -256,6 +258,10 @@
         <item quantity="one">Delete this notebook?</item>
         <item quantity="other">Delete %1$d notebooks?</item>
     </plurals>
+    <plurals name="msg_formulas_skipped">
+        <item quantity="one">%1$d formula not supported, left as it is</item>
+        <item quantity="other">%1$d formulas not supported, left as they are</item>
+    </plurals>
     <plurals name="msg_links_updated">
         <item quantity="one">Link updated in %1$d note</item>
         <item quantity="other">Links updated in %1$d notes</item>
@@ -283,6 +289,10 @@
     <plurals name="msg_searches_deleted">
         <item quantity="one">Search deleted</item>
         <item quantity="other">%1$d searches deleted</item>
+    </plurals>
+    <plurals name="n_formulas">
+        <item quantity="one">%1$d formula</item>
+        <item quantity="other">%1$d formulas</item>
     </plurals>
     <plurals name="n_notes">
         <item quantity="one">%1$d note</item>

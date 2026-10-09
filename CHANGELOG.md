@@ -4,6 +4,26 @@ All notable changes to Narwhal. Versions follow [Semantic Versioning](https://se
 
 ## [Unreleased]
 
+### Added
+- Statistics cookies, [/] and [%], kept up to date as in Emacs: in a list item they count its
+  sub-items' checkboxes, in a title the note's checkboxes or else its sub-notes done; a parent
+  checkbox shows [-] or [X] with its sub-items; cookies show as small pills
+- Table formulas (#+TBLFM): a "Recalculate" button under the table computes the common ones as
+  Emacs does (column and field formulas, references and ranges, + - * / ^, vsum, vmean, vmin,
+  vmax, vcount, formats such as %.2f) and realigns the table; others are left as they are
+- Columns of numbers align right in tables
+- Tables and blocks named with #+NAME show their name; links without a scheme lead within the
+  notes as in Org: [[name]] (a <<target>>, a named element, or a title), [[*Title]], [[#custom-id]]
+- remote(name, ref) in table formulas reads a field or range of another table, named with #+NAME
+  or by the ID of its note
+
+### Changed
+- Text shared from other apps always goes to the Inbox notebook; on the new note, a tap on the
+  notebook at the top moves it elsewhere (the setting is gone)
+
+### Fixed
+- A note moved to another notebook from its screen stays shown at its new place
+
 ## [0.9.0] - 2026-10-09
 
 ### Added

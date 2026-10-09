@@ -71,15 +71,18 @@
     <string name="msg_file_not_saved">Le fichier n’a pas été enregistré correctement</string>
     <string name="msg_id_copied">ID copié</string>
     <string name="msg_link_copied">Lien copié</string>
+    <string name="msg_link_not_found">Rien ne s’appelle « %1$s » dans les notes</string>
     <string name="msg_no_app">Aucune appli ne peut ouvrir %1$s</string>
     <string name="msg_no_file">Aucun fichier %1$s dans le dossier</string>
     <string name="msg_no_note_with_id">Aucune note avec l’ID %1$s</string>
     <string name="msg_note_changed">La note a été modifiée par une autre appli. Elle a été rechargée.</string>
     <string name="msg_note_moved_or_deleted">Cette note a été déplacée ou supprimée</string>
     <string name="msg_postponed">Décalée au %1$s</string>
+    <string name="msg_recalculated">Tableau recalculé</string>
     <string name="msg_repeating_moved">Tâche répétée déplacée au %1$s</string>
     <string name="msg_search_saved">Recherche enregistrée</string>
     <string name="msg_shared_added">Ajoutée à %1$s</string>
+    <string name="msg_table_up_to_date">Le tableau est à jour</string>
     <string name="name">Nom</string>
     <string name="new_note">Nouvelle note</string>
     <string name="new_note_above">Nouvelle note au-dessus</string>
@@ -127,6 +130,7 @@
     <string name="property_value">Valeur</string>
     <string name="query">Requête</string>
     <string name="query_example">Par exemple  i.todo t.work s.today  o.p</string>
+    <string name="recalculate">Recalculer</string>
     <string name="redo">Rétablir</string>
     <string name="remove">Retirer</string>
     <string name="remove_property">Retirer la propriété</string>
@@ -187,8 +191,6 @@
     <string name="settings_hidden_properties">Propriétés cachées</string>
     <string name="settings_hidden_properties_label">Noms, séparés par des espaces</string>
     <string name="settings_hidden_properties_summary">Pas affichées sur l’écran de la note ; gardées dans le fichier</string>
-    <string name="settings_inbox">Carnet pour les partages</string>
-    <string name="settings_inbox_default">Inbox (créé au besoin)</string>
     <string name="settings_keywords">Mots-clés d’état</string>
     <string name="settings_keywords_empty">Tapez au moins un mot-clé</string>
     <string name="settings_keywords_label">Mots-clés à faire | mots-clés faits</string>
@@ -257,6 +259,11 @@
         <item quantity="many">Supprimer ces %1$d carnets ?</item>
         <item quantity="other">Supprimer ces %1$d carnets ?</item>
     </plurals>
+    <plurals name="msg_formulas_skipped">
+        <item quantity="one">%1$d formule non prise en charge, laissée telle quelle</item>
+        <item quantity="many">%1$d formules non prises en charge, laissées telles quelles</item>
+        <item quantity="other">%1$d formules non prises en charge, laissées telles quelles</item>
+    </plurals>
     <plurals name="msg_links_updated">
         <item quantity="one">Lien mis à jour dans %1$d note</item>
         <item quantity="many">Liens mis à jour dans %1$d notes</item>
@@ -291,6 +298,11 @@
         <item quantity="one">Recherche supprimée</item>
         <item quantity="many">%1$d recherches supprimées</item>
         <item quantity="other">%1$d recherches supprimées</item>
+    </plurals>
+    <plurals name="n_formulas">
+        <item quantity="one">%1$d formule</item>
+        <item quantity="many">%1$d formules</item>
+        <item quantity="other">%1$d formules</item>
     </plurals>
     <plurals name="n_notes">
         <item quantity="one">%1$d note</item>

@@ -230,9 +230,10 @@ class NoteRepository(context: Context) {
     /**
      * Moves [notes] with their sub-notes under [parent] (after its sub-notes), or to the end of
      * [targetUri] as top-level notes; the notebook can be theirs. Returns the new index of the
-     * first moved note.
+     * first moved note, also given to [onPlaced] once the notes are in their new place (and
+     * before they leave another notebook).
      */
-    suspend fun refile(notes: List<OrgNote>, targetUri: String, parent: OrgNote?): Int {
+    suspend fun refile(notes: List<OrgNote>, targetUri: String, parent: OrgNote?, onPlaced: (Int) -> Unit = {}): Int {
         val sourceUri = notes.first().fileUri
         fun target(doc: OrgDocument, parentIndex: Int?) =
             if (parentIndex == null) doc.sections.size to 1 else doc.subtreeEnd(parentIndex) to doc.sections[parentIndex].level + 1
@@ -245,6 +246,7 @@ class NoteRepository(context: Context) {
                 newIndex = at - roots.filter { it < at }.sumOf { doc.subtreeEnd(it) - it }
                 Outline.moveWithin(doc, roots, at, level)
             }
+            onPlaced(newIndex)
         } else {
             val subtrees = copySubtrees(sourceUri, notes)
             modifyFile(targetUri, listOfNotNull(parent)) { doc, indices ->
@@ -252,6 +254,7 @@ class NoteRepository(context: Context) {
                 newIndex = at
                 Outline.insert(doc, at, level, subtrees)
             }
+            onPlaced(newIndex)
             modifyFile(sourceUri, notes) { doc, indices -> Outline.delete(doc, indices) }
         }
         return newIndex

@@ -1,5 +1,6 @@
 package io.github.yighy.narwhal.ui
 
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.PlayArrow
 import java.time.LocalDateTime
 import io.github.yighy.narwhal.core.Clock
@@ -430,13 +431,17 @@ fun NoteScreen(
                 .verticalScroll(scrollState)
                 .padding(horizontal = 16.dp),
         ) {
-            // Breadcrumbs: notebook · ancestors (or where a new note goes)
-            FlowRow(verticalArrangement = Arrangement.Center) {
+            // Breadcrumbs: notebook · ancestors (or where a new note goes); for a note just
+            // shared from another app, a tap chooses where it goes
+            val shared = viewModel.sharedNote?.let { it.fileUri == note.fileUri && it.index == note.index } == true
+            FlowRow(verticalArrangement = Arrangement.Center, itemVerticalAlignment = Alignment.CenterVertically) {
                 val crumbs = buildList<Pair<String, () -> Unit>> {
-                    add((file?.title ?: note.fileName) to { viewModel.openNotebook(note.fileUri) })
+                    add((file?.title ?: note.fileName) to { if (shared) refiling = true else viewModel.openNotebook(note.fileUri) })
                     if (newNote != null) add(positionLabel(newNote) to {})
                     else file?.notes?.let { notes ->
-                        NoteTree.ancestors(notes, note.index).forEach { a -> add(displayTitle(a.title) to { viewModel.openNote(a) }) }
+                        NoteTree.ancestors(notes, note.index).forEach { a ->
+                            add(displayTitle(a.title) to { if (shared) refiling = true else viewModel.openNote(a) })
+                        }
                     }
                 }
                 crumbs.forEachIndexed { i, (label, open) ->
@@ -446,6 +451,14 @@ fun NoteScreen(
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.clickable(onClick = open),
+                    )
+                }
+                if (shared) {
+                    Icon(
+                        Icons.Default.ArrowDropDown,
+                        stringResource(R.string.move_to),
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp).clickable { refiling = true },
                     )
                 }
             }
@@ -665,6 +678,25 @@ fun NoteScreen(
                             onToggleCheckbox = { n ->
                                 saved = Editing.Content to Checkboxes.toggle(content, n)
                                 viewModel.update(note) { it.copy(content = Checkboxes.toggle(it.content, n)) }
+                            },
+                            // Named tables of this note first, then of the others, or a note's first table by its ID
+                            tableNamed = { name ->
+                                Blocks.tableLines(content, name)
+                                    ?: library.notes.firstNotNullOfOrNull { Blocks.tableLines(it.content, name) }
+                                    ?: library.noteById(name)?.let { Blocks.tableLines(it.content, null) }
+                            },
+                            onRecalculate = { recalculated, skipped ->
+                                if (recalculated != null) {
+                                    saved = Editing.Content to recalculated
+                                    viewModel.update(note) { it.copy(content = recalculated) }
+                                }
+                                viewModel.message(
+                                    when {
+                                        skipped > 0 -> resources.getQuantityString(R.plurals.msg_formulas_skipped, skipped, skipped)
+                                        recalculated != null -> resources.getString(R.string.msg_recalculated)
+                                        else -> resources.getString(R.string.msg_table_up_to_date)
+                                    },
+                                )
                             },
                         )
                     }

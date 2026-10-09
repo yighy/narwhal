@@ -1,5 +1,8 @@
 package io.github.yighy.narwhal.ui
 
+import androidx.compose.ui.text.style.LineHeightStyle
+import androidx.compose.ui.unit.isSpecified
+import io.github.yighy.narwhal.core.Cookies
 import io.github.yighy.narwhal.core.Clock
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.platform.LocalResources
@@ -578,14 +581,18 @@ fun LinkedText(
     val toggle by rememberUpdatedState(onToggleCheckbox)
     val showBoxes = onToggleCheckbox != null
     val codeBackground = MaterialTheme.colorScheme.surfaceContainerHighest
-    // The text as shown, and how its parts map to the raw text (links, checkboxes, emphasis)
+    // The text as shown, and how its parts map to the raw text (links, checkboxes, emphasis, cookies)
     val (annotated, ranges, boxes) = remember(text, linkStyle, showBoxes, codeBackground, struck) {
         val ranges = mutableListOf<ShownPart>()
         val links = Links.find(text)
         val boxes = if (showBoxes) Checkboxes.find(text).filter { b -> links.none { b.box in it.range } } else emptyList()
         // Emphasis around a link is left as written
         val emphasis = Markup.find(text).filter { e -> links.none { it.range.first <= e.range.last && e.range.first <= it.range.last } }
-        val segments = (links.map { it.range to it } + boxes.map { it.range to it } + emphasis.map { it.range to it })
+        // Filled-in [2/3] and [66%] cookies, outside links
+        val cookies = Cookies.COOKIE.findAll(text)
+            .filter { m -> m.groupValues[1].isNotEmpty() && links.none { m.range.first in it.range } }
+            .toList()
+        val segments = (links.map { it.range to it } + boxes.map { it.range to it } + emphasis.map { it.range to it } + cookies.map { it.range to it })
             .sortedBy { it.first.first }
         val shown = buildAnnotatedString {
             var last = 0
@@ -599,6 +606,7 @@ fun LinkedText(
                     }
                     is Checkboxes.Box -> appendInlineContent("box${boxes.indexOf(segment)}", if (segment.checked) "[X]" else "[ ]")
                     is Markup.Emphasis -> withStyle(emphasisStyle(segment.style, codeBackground, struck)) { append(segment.content) }
+                    is MatchResult -> appendInlineContent("cookie:" + segment.value, segment.value)
                 }
                 ranges += ShownPart(start until length, range, editable = segment is Markup.Emphasis)
                 last = range.last + 1
@@ -608,7 +616,10 @@ fun LinkedText(
         Triple(shown, ranges, boxes)
     }
     val boxColor = MaterialTheme.colorScheme.primary
-    val inlineContent = boxes.withIndex().associate { (i, box) ->
+    val cookieContent = Cookies.COOKIE.findAll(text).filter { it.groupValues[1].isNotEmpty() }.associate { m ->
+        "cookie:" + m.value to cookieInline(m, style)
+    }
+    val inlineContent = cookieContent + boxes.withIndex().associate { (i, box) ->
         "box$i" to InlineTextContent(Placeholder(1.4.em, 1.2.em, PlaceholderVerticalAlign.TextCenter)) {
             Icon(
                 when {
@@ -638,6 +649,37 @@ fun LinkedText(
         inlineContent = inlineContent,
         onTextLayout = { layout = it },
     )
+}
+
+/** A cookie such as [2/3] or [66%] as a small pill, colored when all is done. */
+@Composable
+private fun cookieInline(m: MatchResult, style: TextStyle): InlineTextContent {
+    val (done, total, percent) = m.destructured
+    val shown = if (percent == "%") "$done%" else "$done/$total"
+    val complete = if (percent == "%") done == "100" else done.isNotEmpty() && done == total && done != "0"
+    val container = if (complete) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.secondaryContainer
+    val content = if (complete) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.onSecondaryContainer
+    val fontSize = if (style.fontSize.isSpecified) style.fontSize * 0.75f else 12.sp
+    return InlineTextContent(Placeholder((shown.length * 0.5f + 1f).em, 1.3.em, PlaceholderVerticalAlign.TextCenter)) {
+        Box(
+            Modifier.fillMaxSize().padding(horizontal = 1.dp).clip(RoundedCornerShape(50)).background(container),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                shown,
+                color = content,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                softWrap = false,
+                // Centered in the pill, without the font's extra space above and below
+                style = TextStyle(
+                    fontSize = fontSize,
+                    lineHeight = fontSize,
+                    lineHeightStyle = LineHeightStyle(LineHeightStyle.Alignment.Center, LineHeightStyle.Trim.Both),
+                ),
+            )
+        }
+    }
 }
 
 /** Position in the raw text of position [shown] in the text as displayed; null on a link or box. */

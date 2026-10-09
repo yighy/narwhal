@@ -14,8 +14,21 @@ object Blocks {
     /** Text as written, starting at [range]'s start. */
     data class Text(override val range: IntRange, val text: String) : Block
 
-    /** A table's rows; a null row is a rule (|---+---|). */
-    data class Table(override val range: IntRange, val rows: List<List<String>?>) : Block {
+    /**
+     * A table's rows (a null row is a rule), with its #+NAME line above and #+TBLFM lines under
+     * it; [range] covers them all, the table's own lines are from [tableStart] to [tableEnd]
+     * (exclusive).
+     */
+    data class Table(
+        override val range: IntRange,
+        val rows: List<List<String>?>,
+        val formulaLines: List<String> = emptyList(),
+        val tableEnd: Int = range.last + 1,
+        val name: String? = null,
+        val tableStart: Int = range.first,
+    ) : Block {
+        val formulas: List<String> get() = TableFormulas.formulas(formulaLines)
+
         val columns: Int get() = rows.maxOf { it?.size ?: 0 }
 
         /** Rows above the first rule are the header, when there are rows below it. */
@@ -26,8 +39,15 @@ object Blocks {
             }
     }
 
-    /** #+BEGIN_[kind] … #+END_[kind]; [inner] starts at [innerStart] in the content. */
-    data class Begin(override val range: IntRange, val kind: String, val args: String, val inner: String, val innerStart: Int) : Block {
+    /** #+BEGIN_[kind] … #+END_[kind] (named by a #+NAME line above); [inner] starts at [innerStart] in the content. */
+    data class Begin(
+        override val range: IntRange,
+        val kind: String,
+        val args: String,
+        val inner: String,
+        val innerStart: Int,
+        val name: String? = null,
+    ) : Block {
         /** Source and example blocks show as code, as do blocks of an unknown kind. */
         val isCode: Boolean get() = kind !in setOf("QUOTE", "VERSE", "CENTER")
         val language: String? get() = args.trim().split(Regex("\\s+")).firstOrNull()?.takeIf { kind == "SRC" && it.isNotEmpty() }
@@ -40,6 +60,8 @@ object Blocks {
     private val DRAWER_START = Regex("""^[ \t]*:([A-Za-z][\w-]*):[ \t]*$""")
     private val DRAWER_END = Regex("""^[ \t]*:END:[ \t]*$""", RegexOption.IGNORE_CASE)
     private val TABLE_LINE = Regex("""^[ \t]*\|.*$""")
+    private val TBLFM = Regex("""^[ \t]*#\+TBLFM:.*$""", RegexOption.IGNORE_CASE)
+    private val NAME = Regex("""^[ \t]*#\+NAME:[ \t]*(\S.*?)[ \t]*$""", RegexOption.IGNORE_CASE)
     private val RULE = Regex("""^\|[-+:| ]*-[-+:| ]*\|?$""")
 
     fun parse(text: String): List<Block> {
@@ -58,19 +80,38 @@ object Blocks {
             if (raw.isNotBlank()) blocks += Text(starts[from] until starts[from] + raw.length, raw)
         }
 
+        /** Line closing the #+BEGIN block on line [i], if it is one. */
+        fun blockEnd(i: Int): Int? {
+            val begin = BEGIN.matchEntire(lines[i]) ?: return null
+            val close = Regex("""^[ \t]*#\+END_${Regex.escape(begin.groupValues[1])}[ \t]*$""", RegexOption.IGNORE_CASE)
+            return (i + 1 until lines.size).firstOrNull { close.matches(lines[it]) }
+        }
+
+        // #+NAME line naming the table or block right under it
+        var name: String? = null
+        var nameStart = 0
+
         var i = 0
         while (i < lines.size) {
             val line = lines[i]
+            val named = NAME.matchEntire(line)
+            if (named != null && i + 1 < lines.size && (TABLE_LINE.matches(lines[i + 1]) || blockEnd(i + 1) != null)) {
+                flushText(i)
+                name = named.groupValues[1]
+                nameStart = starts[i]
+                i++
+                continue
+            }
             val begin = BEGIN.matchEntire(line)
             if (begin != null) {
                 val kind = begin.groupValues[1].uppercase()
-                val close = Regex("""^[ \t]*#\+END_${Regex.escape(kind)}[ \t]*$""", RegexOption.IGNORE_CASE)
-                val last = (i + 1 until lines.size).firstOrNull { close.matches(lines[it]) }
+                val last = blockEnd(i)
                 if (last != null) {
                     flushText(i)
                     val innerStart = if (last > i + 1) starts[i + 1] else starts[last]
                     val inner = if (last > i + 1) text.substring(starts[i + 1], starts[last] - 1) else ""
-                    blocks += Begin(starts[i]..end(last), kind, begin.groupValues[2], inner, innerStart)
+                    blocks += Begin((if (name != null) nameStart else starts[i])..end(last), kind, begin.groupValues[2], inner, innerStart, name)
+                    name = null
                     i = last + 1
                     continue
                 }
@@ -92,8 +133,13 @@ object Blocks {
                 var last = i
                 while (last + 1 < lines.size && TABLE_LINE.matches(lines[last + 1])) last++
                 val rows = (i..last).map { row(lines[it]) }
-                blocks += Table(starts[i]..end(last), rows)
-                i = last + 1
+                // Its formulas, on the lines right under it
+                var formulasEnd = last
+                while (formulasEnd + 1 < lines.size && TBLFM.matches(lines[formulasEnd + 1])) formulasEnd++
+                val formulaLines = (last + 1..formulasEnd).map { lines[it] }
+                blocks += Table((if (name != null) nameStart else starts[i])..end(formulasEnd), rows, formulaLines, end(last) + 1, name, starts[i])
+                name = null
+                i = formulasEnd + 1
                 continue
             }
             if (textFrom == null) textFrom = i
@@ -112,6 +158,12 @@ object Blocks {
 
     /** Whether [text] shows nothing: blank, or only a logbook (shown as the clock's time). */
     fun showsNothing(text: String): Boolean = parse(text).all { it is Drawer && it.name == "LOGBOOK" }
+
+    /** Lines of the table named [name] in [text] (#+NAME: name), or of its first table if [name] is null. */
+    fun tableLines(text: String, name: String?): List<String>? {
+        val table = parse(text).filterIsInstance<Table>().firstOrNull { name == null || it.name == name } ?: return null
+        return text.substring(table.tableStart, table.tableEnd).split('\n')
+    }
 
     private fun row(line: String): List<String>? {
         val t = line.trim()

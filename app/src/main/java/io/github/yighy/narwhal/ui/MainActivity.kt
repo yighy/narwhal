@@ -410,8 +410,9 @@ private fun ScreenContent(
             if (note != null) {
                 NoteScreen(viewModel, library, note, snackbar)
             } else if (!library.loading) {
-                // Note disappeared (file changed elsewhere)
-                LaunchedEffect(screen) { viewModel.back() }
+                // Note disappeared (file changed elsewhere): closes its screen, only if it is still
+                // the one shown (not one leaving, e.g. a note moved and shown at its new place)
+                LaunchedEffect(screen) { if (viewModel.stack.lastOrNull() == screen) viewModel.back() }
             }
         }
     }
