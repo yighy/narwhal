@@ -4,6 +4,14 @@ All notable changes to Narwhal. Versions follow [Semantic Versioning](https://se
 
 ## [Unreleased]
 
+### Added
+- Property names and values already in use are suggested while typing a property
+- Swiping a note left also offers to delete it
+
+### Changed
+- The keyboard toolbar and the `id:` and `file:` suggestions go as soon as the keyboard starts
+  to close, instead of following it down
+
 ## [0.7.1] - 2026-10-08
 
 ### Changed

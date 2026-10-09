@@ -1,5 +1,9 @@
 package io.github.yighy.narwhal.ui
 
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.foundation.gestures.animateScrollBy
@@ -126,6 +130,23 @@ fun NotebookScreen(
     DisposableEffect(Unit) { onDispose { commitPreface() } }
     // Closing the keyboard ends the preface editing (and saves it)
     ClearFocusWhenKeyboardHides()
+    // Note to delete from its swipe actions, once confirmed
+    var confirmDelete by remember { mutableStateOf<OrgNote?>(null) }
+    confirmDelete?.let { note ->
+        AlertDialog(
+            onDismissRequest = { confirmDelete = null },
+            title = { Text(pluralStringResource(R.plurals.delete_notes_title, 1, 1)) },
+            text = if (NoteTree.hasChildren(file.notes, note.index)) {
+                { Text(stringResource(R.string.delete_note_children)) }
+            } else {
+                null
+            },
+            confirmButton = {
+                TextButton(onClick = { confirmDelete = null; viewModel.deleteNote(note) }) { Text(stringResource(R.string.delete)) }
+            },
+            dismissButton = { TextButton(onClick = { confirmDelete = null }) { Text(stringResource(R.string.cancel)) } },
+        )
+    }
 
     Scaffold(
         modifier = Modifier
@@ -194,6 +215,7 @@ fun NotebookScreen(
                     spacing = settings.noteSpacing.padding.dp,
                     scrollConnection = scrollBehavior.nestedScrollConnection,
                     onAddNear = { note, placement -> viewModel.startNewNote(file.uri, note, placement) },
+                    onDelete = { confirmDelete = it },
                 )
             }
             if (selecting) {
@@ -234,6 +256,7 @@ private fun NotebookOutline(
     spacing: Dp,
     scrollConnection: androidx.compose.ui.input.nestedscroll.NestedScrollConnection,
     onAddNear: (OrgNote, Placement) -> Unit,
+    onDelete: (OrgNote) -> Unit,
 ) {
     val shown = NoteTree.visible(file.notes, viewModel::isFolded).map { it.index }.toSet()
     val rowKeys = remember(file.notes) { outlineKeys(file.notes) }
@@ -345,6 +368,7 @@ private fun NotebookOutline(
                         },
                         onOpenLink = viewModel::openLink,
                         onAddNear = { placement -> onAddNear(note, placement) },
+                        onDelete = { onDelete(note) },
                         onToggleCheckbox = { n -> viewModel.update(note) { it.copy(content = Checkboxes.toggle(it.content, n)) } },
                     )
                 }
@@ -378,7 +402,7 @@ private fun NotebookOutline(
 
 /**
  * One note in the notebook outline: fold chevron (or bullet), then the note.
- * Swipe left for new-note actions, swipe right to toggle TODO / DONE, long press to select.
+ * Swipe left for new-note actions and delete, swipe right to toggle TODO / DONE, long press to select.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -399,6 +423,7 @@ private fun OutlineRow(
     onLongClick: () -> Unit,
     onOpenLink: (String) -> Unit,
     onAddNear: (Placement) -> Unit,
+    onDelete: () -> Unit,
     onToggleCheckbox: (Int) -> Unit,
 ) {
     val chevronRotation by animateFloatAsState(
@@ -419,7 +444,7 @@ private fun OutlineRow(
         onSwipeRight = onToggleDone,
         actions = Placement.entries.map { placement ->
             SwipeAction(placementIcon(placement), stringResource(newNoteTitle(placement))) { onAddNear(placement) }
-        },
+        } + SwipeAction(Icons.Default.Delete, stringResource(R.string.delete), onDelete),
         modifier = Modifier.sharedContainer("note-$key", RectangleShape),
         enabled = !selecting,
     ) {

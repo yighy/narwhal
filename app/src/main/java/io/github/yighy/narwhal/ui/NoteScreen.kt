@@ -4,6 +4,7 @@ import androidx.compose.ui.platform.LocalResources
 import androidx.annotation.StringRes
 import androidx.compose.ui.res.stringResource
 import io.github.yighy.narwhal.R
+import io.github.yighy.narwhal.core.SearchQuery
 import io.github.yighy.narwhal.core.Checkboxes
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.rememberTextMeasurer
@@ -226,8 +227,8 @@ fun NoteScreen(
     // Closing the keyboard ends the editing (and saves), instead of leaving a cursor behind
     ClearFocusWhenKeyboardHides()
 
-    // "id:" and "file:" completion while editing the title or the content
-    val typing = draft.takeIf { editing != Editing.None && it.selection.collapsed }
+    // "id:" and "file:" completion while editing the title or the content, gone with the keyboard
+    val typing = draft.takeIf { editing != Editing.None && it.selection.collapsed && keyboardShown() }
     val query = typing?.let { IdLinks.queryAt(it.text, it.selection.start) }
     val suggestions = remember(query?.text, library) {
         query?.let { IdLinks.suggestions(library.notes, it.text) }.orEmpty()
@@ -241,6 +242,16 @@ fun NoteScreen(
                 .sortedBy { it.title.lowercase() }
                 .take(20)
         }.orEmpty()
+    }
+
+    // Property names in use in all notebooks, with their values, the most used first
+    val knownProperties = remember(library) {
+        library.notes.flatMap { it.properties }
+            .groupBy({ it.first.uppercase() }, { it.second.trim() })
+            .entries.sortedByDescending { it.value.size }
+            .associate { (name, values) ->
+                name to values.filter { it.isNotEmpty() }.groupingBy { it }.eachCount().entries.sortedByDescending { it.value }.map { it.key }
+            }
     }
 
     /** Puts a link to the notebook in place of the "file:" being typed. */
@@ -523,6 +534,7 @@ fun NoteScreen(
                 MetaRow(stringResource(R.string.closed), displayTime(resources, closed).orEmpty(), onClick = null)
             }
             // Properties chosen in the settings stay hidden (still in the file)
+            val takenProperties = note.properties.map { it.first.uppercase() }.toSet()
             note.properties.filter { it.first.uppercase() !in settings.hiddenProperties }.forEach { (name, value) ->
                 key(name.uppercase()) {
                     // The property just added replaces its new row without unfolding again
@@ -538,6 +550,8 @@ fun NoteScreen(
                                 name = name,
                                 value = value,
                                 focusOnStart = false,
+                                known = knownProperties,
+                                taken = takenProperties,
                                 onSave = { n, v ->
                                     viewModel.update(note) { e ->
                                         e.copy(properties = e.properties.map { if (it.first.equals(name, ignoreCase = true)) n to v else it })
@@ -561,6 +575,8 @@ fun NoteScreen(
                         name = "",
                         value = "",
                         focusOnStart = true,
+                        known = knownProperties,
+                        taken = takenProperties,
                         onSave = { n, v -> addedProperty = n; viewModel.update(note) { e -> e.copy(properties = e.properties + (n to v)) } },
                         onRemove = { metaEdit = null },
                     )
@@ -959,24 +975,33 @@ private fun ChoiceRow(
     }
 }
 
+/** Properties whose values are not suggested, being different for each note. */
+private val UNIQUE_PROPERTIES = setOf("ID", "CUSTOM_ID", SearchQuery.CREATED_PROPERTY)
+
 /**
  * A property edited in place: name on the left, value on the right, saved when the row loses
- * the focus. Emptying the name removes it.
+ * the focus. Emptying the name removes it. The names in use ([known]) and their values are
+ * suggested while typing, except names the note already has ([taken]).
  */
 @Composable
 private fun PropertyRow(
     name: String,
     value: String,
     focusOnStart: Boolean,
+    known: Map<String, List<String>>,
+    taken: Set<String>,
     onSave: (String, String) -> Unit,
     onRemove: () -> Unit,
 ) {
     var n by remember(name) { mutableStateOf(name) }
     var v by remember(value) { mutableStateOf(value) }
     var hasFocus by remember { mutableStateOf(false) }
+    var nameFocused by remember { mutableStateOf(false) }
+    var valueFocused by remember { mutableStateOf(false) }
     // Edited since it last had the focus, and not saved yet
     var pending by remember { mutableStateOf(false) }
     val focus = remember { FocusRequester() }
+    val valueFocus = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
     val scope = rememberCoroutineScope()
     LaunchedEffect(Unit) { if (focusOnStart) focus.requestFocus() }
@@ -993,11 +1018,18 @@ private fun PropertyRow(
     // Leaving the screen while editing still saves
     DisposableEffect(Unit) { onDispose { currentSave() } }
 
-    Row(
+    // Gone with the keyboard, at once
+    val keyboard = keyboardShown()
+    val suggestions = when {
+        !keyboard -> emptyList()
+        nameFocused -> known.keys.filter { it.contains(n, ignoreCase = true) && it != n && (it !in taken || it == name.uppercase()) }
+        valueFocused && n !in UNIQUE_PROPERTIES -> known[n].orEmpty().filter { it.contains(v.trim(), ignoreCase = true) && it != v.trim() }
+        else -> emptyList()
+    }.take(8)
+
+    Column(
         Modifier
             .fillMaxWidth()
-            .heightIn(min = 48.dp)
-            .padding(vertical = 6.dp)
             .onFocusChanged {
                 hasFocus = it.hasFocus
                 if (it.hasFocus) {
@@ -1011,42 +1043,75 @@ private fun PropertyRow(
                     }
                 }
             },
-        verticalAlignment = Alignment.CenterVertically,
     ) {
-        BasicTextField(
-            value = n,
-            onValueChange = { typed -> n = typed.filterNot { it.isWhitespace() || it == ':' }.uppercase() },
-            singleLine = true,
-            textStyle = fieldStyle(metaLabelStyle()),
-            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-            modifier = Modifier.width(130.dp).focusRequester(focus),
-            decorationBox = { field ->
-                Box {
-                    if (n.isEmpty()) Text(stringResource(R.string.property_name), style = metaLabelStyle(), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    field()
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .heightIn(min = 48.dp)
+                .padding(vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            BasicTextField(
+                value = n,
+                onValueChange = { typed -> n = typed.filterNot { it.isWhitespace() || it == ':' }.uppercase() },
+                singleLine = true,
+                textStyle = fieldStyle(metaLabelStyle()),
+                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                modifier = Modifier.width(130.dp).focusRequester(focus).onFocusChanged { nameFocused = it.isFocused },
+                decorationBox = { field ->
+                    Box {
+                        if (n.isEmpty()) Text(stringResource(R.string.property_name), style = metaLabelStyle(), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        field()
+                    }
+                },
+            )
+            BasicTextField(
+                value = v,
+                onValueChange = { v = it },
+                singleLine = true,
+                textStyle = fieldStyle(MaterialTheme.typography.bodyLarge, end = true),
+                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
+                modifier = Modifier.weight(1f).focusRequester(valueFocus).onFocusChanged { valueFocused = it.isFocused },
+                decorationBox = { field ->
+                    Box(contentAlignment = Alignment.CenterEnd) {
+                        if (v.isEmpty()) Text(stringResource(R.string.property_value), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        field()
+                    }
+                },
+            )
+            // Removing is offered while the property is being edited
+            if (hasFocus) {
+                IconButton(onClick = { n = ""; focusManager.clearFocus(); save() }) { Icon(Icons.Default.Close, stringResource(R.string.remove_property)) }
+            }
+        }
+        if (suggestions.isNotEmpty()) {
+            val suggestionRow = rememberLazyListState()
+            LazyRow(
+                state = suggestionRow,
+                modifier = Modifier.fillMaxWidth().fadingEdges(suggestionRow),
+                // Under the field they fill
+                horizontalArrangement = Arrangement.spacedBy(6.dp, if (nameFocused) Alignment.Start else Alignment.End),
+            ) {
+                items(suggestions, key = { it }) { suggestion ->
+                    SuggestionChip(
+                        onClick = {
+                            // A name goes on to its value; a value ends the editing
+                            if (nameFocused) {
+                                n = suggestion
+                                valueFocus.requestFocus()
+                            } else {
+                                v = suggestion
+                                focusManager.clearFocus()
+                            }
+                        },
+                        label = { Text(suggestion) },
+                        modifier = Modifier.animateItem(fadeOutSpec = null),
+                    )
                 }
-            },
-        )
-        BasicTextField(
-            value = v,
-            onValueChange = { v = it },
-            singleLine = true,
-            textStyle = fieldStyle(MaterialTheme.typography.bodyLarge, end = true),
-            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-            keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
-            modifier = Modifier.weight(1f),
-            decorationBox = { field ->
-                Box(contentAlignment = Alignment.CenterEnd) {
-                    if (v.isEmpty()) Text(stringResource(R.string.property_value), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    field()
-                }
-            },
-        )
-        // Removing is offered while the property is being edited
-        if (hasFocus) {
-            IconButton(onClick = { n = ""; focusManager.clearFocus(); save() }) { Icon(Icons.Default.Close, stringResource(R.string.remove_property)) }
+            }
         }
     }
 }

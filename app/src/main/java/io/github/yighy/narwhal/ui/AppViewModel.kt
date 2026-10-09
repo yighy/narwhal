@@ -680,6 +680,20 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         pluralMessage(R.plurals.msg_notes_deleted, deleted)
     }
 
+    /** Deletes [note] with its sub-notes. */
+    fun deleteNote(note: OrgNote) {
+        viewModelScope.launch {
+            attempt {
+                var deleted = 0
+                repository.modifyFile(note.fileUri, listOf(note)) { doc, indices ->
+                    deleted = Outline.roots(doc, indices).size
+                    Outline.delete(doc, indices)
+                }
+                pluralMessage(R.plurals.msg_notes_deleted, deleted)
+            }
+        }
+    }
+
     enum class Move { Up, Down, Promote, Demote }
 
     fun moveSelection(move: Move) {

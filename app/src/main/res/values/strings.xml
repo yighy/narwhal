@@ -35,6 +35,7 @@
     <string name="deadline">Deadline</string>
     <string name="deadline_at">Deadline %1$s</string>
     <string name="delete">Delete</string>
+    <string name="delete_note_children">Its sub-notes are deleted too.</string>
     <string name="delete_notebooks_text">These files are deleted from the folder, with all their notes:</string>
     <string name="delete_notes_text">Their sub-notes are deleted too.</string>
     <string name="demote">Demote</string>

@@ -33,6 +33,7 @@
     <string name="deadline">Échéance</string>
     <string name="deadline_at">Échéance %1$s</string>
     <string name="delete">Supprimer</string>
+    <string name="delete_note_children">Ses sous-notes sont supprimées aussi.</string>
     <string name="delete_notebooks_text">Ces fichiers sont supprimés du dossier, avec toutes leurs notes :</string>
     <string name="delete_notes_text">Leurs sous-notes sont aussi supprimées.</string>
     <string name="demote">Descendre d’un niveau</string>

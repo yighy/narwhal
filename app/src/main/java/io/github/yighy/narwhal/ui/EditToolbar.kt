@@ -1,5 +1,7 @@
 package io.github.yighy.narwhal.ui
 
+import androidx.compose.foundation.layout.imeAnimationTarget
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import io.github.yighy.narwhal.R
 import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.horizontalScroll
@@ -120,11 +122,16 @@ fun typedText(old: TextFieldValue, new: TextFieldValue, history: EditHistory, li
 }
 
 /**
- * Whether the bar over the keyboard shows: while the keyboard takes room on screen, so it goes
- * away with it (the system says it is hidden only later), or while its own dialog is open.
+ * Whether the keyboard is up or coming up: false as soon as it starts to go away, so what sits
+ * over it goes at once instead of following it down (the system says it is hidden only later).
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun editToolbarShown(): Boolean = WindowInsets.ime.getBottom(LocalDensity.current) > 0 || EditingDialog.open
+fun keyboardShown(): Boolean = WindowInsets.imeAnimationTarget.getBottom(LocalDensity.current) > 0
+
+/** Whether the bar over the keyboard shows: with the keyboard, or while its own dialog is open. */
+@Composable
+fun editToolbarShown(): Boolean = keyboardShown() || EditingDialog.open
 
 /**
  * Bar over the keyboard while a note's text is edited: bold, italic, underline, strike-through,
