@@ -4,6 +4,8 @@ All notable changes to Narwhal. Versions follow [Semantic Versioning](https://se
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-10-10
+
 ### Added
 - Statistics cookies, [/] and [%], kept up to date as in Emacs: in a list item they count its
   sub-items' checkboxes, in a title the note's checkboxes or else its sub-notes done; a parent
@@ -175,7 +177,8 @@ All notable changes to Narwhal. Versions follow [Semantic Versioning](https://se
 - First prototype: notebooks from a folder of `.org` files, outline, note editing, search, tags,
   and `id:` links to other notes
 
-[Unreleased]: https://github.com/yighy/narwhal/compare/v0.9.0...HEAD
+[Unreleased]: https://github.com/yighy/narwhal/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/yighy/narwhal/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/yighy/narwhal/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/yighy/narwhal/compare/v0.7.1...v0.8.0
 [0.7.1]: https://github.com/yighy/narwhal/compare/v0.7.0...v0.7.1
