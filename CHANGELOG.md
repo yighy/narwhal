@@ -9,6 +9,8 @@ All notable changes to Narwhal. Versions follow [Semantic Versioning](https://se
   sub-items fold
 - Folding and unfolding (all notes, or one with many sub-notes) moves the notes below once,
   instead of a second time a moment later
+- The buttons behind a swiped note stay in the part of it on screen, also on a note with a long
+  content and while scrolling
 
 ## [0.10.0] - 2026-10-10
 

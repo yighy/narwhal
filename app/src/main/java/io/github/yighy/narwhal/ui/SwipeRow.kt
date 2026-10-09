@@ -1,5 +1,11 @@
 package io.github.yighy.narwhal.ui
 
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.positionInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.material3.Text
@@ -41,6 +47,13 @@ import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 /** An action behind a row; [text], when given, shows in place of the [icon] (e.g. "+1d"). */
+/** Fills the height given, with the content placed at [top] (given its height) from the top. */
+private fun Modifier.inView(top: (Int) -> Int) = layout { measurable, constraints ->
+    val placeable = measurable.measure(constraints.copy(minHeight = 0))
+    val height = if (constraints.hasBoundedHeight) constraints.maxHeight else placeable.height
+    layout(placeable.width, height) { placeable.place(0, top(placeable.height)) }
+}
+
 data class SwipeAction(val icon: ImageVector, val label: String, val text: String? = null, val onClick: () -> Unit)
 
 /**
@@ -77,7 +90,30 @@ fun SwipeRow(
         if ((openKey != key || !enabled) && offset.value != 0f) offset.animateTo(0f, spatial)
     }
 
-    Box(modifier.fillMaxWidth()) {
+    // The part of the row on screen, from its top: on a tall row (a long content), what shows
+    // behind it is centered there, not off screen
+    var rowHeight by remember { mutableIntStateOf(0) }
+    var visibleTop by remember { mutableFloatStateOf(0f) }
+    var visibleBottom by remember { mutableFloatStateOf(0f) }
+
+    /** Offset from the row's top that centers something [height] tall in its part on screen. */
+    fun inView(height: Int): Int {
+        val bottom = if (visibleBottom > visibleTop) visibleBottom else rowHeight.toFloat()
+        val center = (visibleTop + bottom) / 2f
+        return (center - height / 2f).roundToInt().coerceIn(0, (rowHeight - height).coerceAtLeast(0))
+    }
+
+    Box(
+        modifier
+            .fillMaxWidth()
+            .onGloballyPositioned { c ->
+                val top = c.positionInWindow().y
+                val shown = c.boundsInWindow()
+                rowHeight = c.size.height
+                visibleTop = shown.top - top
+                visibleBottom = shown.bottom - top
+            },
+    ) {
         val x = offset.value
         if (x > 0f) {
             // Swipe right: quick action, highlighted once past the threshold
@@ -85,23 +121,22 @@ fun SwipeRow(
                 Modifier
                     .matchParentSize()
                     .background(if (armed) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh),
-                contentAlignment = Alignment.CenterStart,
             ) {
                 Icon(
                     swipeRightIcon,
                     null,
                     tint = if (armed) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(start = 24.dp),
+                    modifier = Modifier.inView(::inView).padding(start = 24.dp),
                 )
             }
         } else if (x < 0f) {
+            Box(Modifier.matchParentSize().background(MaterialTheme.colorScheme.surfaceContainer)) {
             Row(
                 Modifier
-                    .matchParentSize()
-                    .background(MaterialTheme.colorScheme.surfaceContainer)
+                    .align(Alignment.TopEnd)
+                    .inView(::inView)
                     .padding(end = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
-                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 actions.forEach { action ->
                     // Plain icons, as for the swipe right
@@ -122,6 +157,7 @@ fun SwipeRow(
                         }
                     }
                 }
+            }
             }
         }
 
