@@ -246,6 +246,10 @@ private fun NotebookOutline(
     val rowKeys = remember(file.notes) { outlineKeys(file.notes) }
     val stagger = remember { FoldStagger() }
     val delays = stagger.delays(shown)
+    // Rows slide to their new place only when notes move: when folding, the rows below already
+    // follow the ones that grow or shrink, and sliding as well would move them a second time
+    val motion = remember { OutlineMotion() }
+    val slide = motion.slide(shown, rowKeys)
     // The cascade follows the system's animation speed (none when animations are off)
     val context = LocalContext.current
     val animationScale = remember {
@@ -318,7 +322,7 @@ private fun NotebookOutline(
                 AnimatedVisibility(
                     visible = visible,
                     // A moved note slides to its new place
-                    modifier = Modifier.animateItem(fadeInSpec = null, fadeOutSpec = null, placementSpec = MoveSpec),
+                    modifier = Modifier.animateItem(fadeInSpec = null, fadeOutSpec = null, placementSpec = if (slide) MoveSpec else null),
                     enter = expandVertically(FoldSpatialSpec) + fadeIn(FoldEffectsSpec),
                     exit = shrinkVertically(FoldSpatialSpec) + fadeOut(FoldEffectsSpec),
                 ) {
@@ -514,6 +518,21 @@ private fun outlineKeys(notes: List<OrgNote>): List<String> {
  * Notes shown or hidden by a fold come one after the other, like cards: from the top when they
  * appear, from the bottom when they go, the whole cascade within [TOTAL_MS].
  */
+/** Whether the last change of the outline moved notes (their order changed) rather than folded them. */
+private class OutlineMotion {
+    private var shown: Set<Int>? = null
+    private var keys: List<String>? = null
+    private var moved = false
+
+    fun slide(shown: Set<Int>, keys: List<String>): Boolean {
+        if (this.keys != null && keys != this.keys) moved = true
+        else if (this.shown != null && shown != this.shown) moved = false
+        this.shown = shown
+        this.keys = keys
+        return moved
+    }
+}
+
 private class FoldStagger {
     private var last: Set<Int>? = null
     private var lastDelays = emptyMap<Int, Long>()
