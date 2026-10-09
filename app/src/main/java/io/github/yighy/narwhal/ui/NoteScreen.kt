@@ -1,5 +1,9 @@
 package io.github.yighy.narwhal.ui
 
+import androidx.compose.material.icons.filled.PlayArrow
+import java.time.LocalDateTime
+import io.github.yighy.narwhal.core.Clock
+import io.github.yighy.narwhal.core.Blocks
 import androidx.compose.ui.platform.LocalResources
 import androidx.annotation.StringRes
 import androidx.compose.ui.res.stringResource
@@ -172,6 +176,7 @@ fun NoteScreen(
     var addedProperty by remember { mutableStateOf<String?>(null) }
     var moreMenu by remember { mutableStateOf(false) }
     var shareMenu by remember { mutableStateOf(false) }
+    var refiling by remember { mutableStateOf(false) }
     var fabMenu by remember { mutableStateOf(false) }
     // The note as now loaded, also when saving as the screen goes away
     val currentNote by rememberUpdatedState(note)
@@ -323,6 +328,11 @@ fun NoteScreen(
                                         viewModel.message(R.string.msg_link_copied)
                                     }
                                 },
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.move_to)) },
+                                leadingIcon = { Icon(NarwhalIcons.ToNotebook, null) },
+                                onClick = { moreMenu = false; refiling = true },
                             )
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.share)) },
@@ -533,6 +543,11 @@ fun NoteScreen(
             MetaSlot(note.closed != null) {
                 MetaRow(stringResource(R.string.closed), displayTime(resources, closed).orEmpty(), onClick = null)
             }
+            // Time clocked: a tap starts or stops the clock
+            val clocked = remember(content) { Clock.entries(content).isNotEmpty() }
+            MetaSlot(clocked) {
+                ClockRow(content, onStart = { commit(); viewModel.clockIn(note) }, onStop = { commit(); viewModel.clockOut(note) })
+            }
             // Properties chosen in the settings stay hidden (still in the file)
             val takenProperties = note.properties.map { it.first.uppercase() }.toSet()
             note.properties.filter { it.first.uppercase() !in settings.hiddenProperties }.forEach { (name, value) ->
@@ -591,6 +606,7 @@ fun NoteScreen(
                 (stringResource(R.string.scheduled) to { openDialog(DateDialog.Scheduled) }).takeIf { note.scheduled == null },
                 (stringResource(R.string.deadline) to { openDialog(DateDialog.Deadline) }).takeIf { note.deadline == null },
                 (stringResource(R.string.property) to { addedProperty = null; metaEdit = MetaEdit.Property }).takeIf { metaEdit != MetaEdit.Property },
+                (stringResource(R.string.clock) to { viewModel.clockIn(note) }).takeIf { !clocked && newNote == null },
             )
             val addRow = rememberLazyListState()
             // A chip coming back at the start is shown, not left scrolled out of sight
@@ -637,10 +653,10 @@ fun NoteScreen(
                         .clickable(interactionSource = null, indication = null) { startEditing(Editing.Content) }
                         .padding(vertical = 8.dp),
                 ) {
-                    if (content.isBlank()) {
+                    if (Blocks.showsNothing(content)) {
                         Text(contentPlaceholder, style = contentStyle, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     } else {
-                        LinkedText(
+                        OrgContent(
                             content,
                             contentStyle,
                             viewModel::openLink,
@@ -690,6 +706,19 @@ fun NoteScreen(
                     },
             )
         }
+    }
+
+    if (refiling) {
+        RefileDialog(
+            library = library,
+            moving = listOf(note),
+            onDismiss = { refiling = false },
+            onConfirm = { uri, parent ->
+                refiling = false
+                commit()
+                viewModel.refileNote(note, uri, parent)
+            },
+        )
     }
 
     when (dialog) {
@@ -971,6 +1000,37 @@ private fun ChoiceRow(
                     )
                 }
             }
+        }
+    }
+}
+
+/** Time clocked on the note (the running clock ticking), with a button to start or stop it. */
+@Composable
+private fun ClockRow(content: String, onStart: () -> Unit, onStop: () -> Unit) {
+    val running = remember(content) { Clock.running(content) }
+    var now by remember { mutableStateOf(LocalDateTime.now()) }
+    if (running != null) {
+        LaunchedEffect(running) {
+            while (true) {
+                now = LocalDateTime.now()
+                delay(15_000)
+            }
+        }
+    }
+    val total = Clock.format(Clock.total(content, now))
+    MetaRow(stringResource(R.string.clock), onClick = if (running != null) onStop else onStart) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                total,
+                style = MaterialTheme.typography.bodyLarge,
+                color = if (running != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+            )
+            Spacer(Modifier.width(12.dp))
+            Icon(
+                if (running != null) NarwhalIcons.Stop else Icons.Default.PlayArrow,
+                stringResource(if (running != null) R.string.clock_out else R.string.clock_in),
+                tint = MaterialTheme.colorScheme.primary,
+            )
         }
     }
 }

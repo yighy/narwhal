@@ -4,6 +4,22 @@ All notable changes to Narwhal. Versions follow [Semantic Versioning](https://se
 
 ## [Unreleased]
 
+### Added
+- Text shared from other apps (a page, a selection) becomes a note in an "Inbox" notebook, or
+  in the notebook chosen in the settings
+- Deleting notes no longer asks first: the message offers to undo it; delete comes first in
+  the swipe actions
+- Move notes to any notebook, under the note of your choice, from the selection or from a note's
+  menu
+- Agenda: filters by notebook and by tag; swipe left to put a time off by a day, a week, or to
+  a date; notes of the same time are sorted by priority
+- Tables, source and example blocks, quotes and centered text show as such; drawers fold to
+  their name and open with a tap (the :LOGBOOK: shows as the clock's time)
+- List items with sub-items fold and unfold with a chevron at the end of their line
+- "Now" button in the date dialog of the keyboard toolbar: inserts the current time, inactive
+- Clocking: start and stop a clock on a note, with the time spent; it is written to the note's
+  :LOGBOOK: as in Emacs, and a running clock shows in the lists
+
 ## [0.8.0] - 2026-10-09
 
 ### Added

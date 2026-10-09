@@ -1,5 +1,6 @@
 package io.github.yighy.narwhal.ui
 
+import io.github.yighy.narwhal.core.Blocks
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.AlertDialog
@@ -130,23 +131,6 @@ fun NotebookScreen(
     DisposableEffect(Unit) { onDispose { commitPreface() } }
     // Closing the keyboard ends the preface editing (and saves it)
     ClearFocusWhenKeyboardHides()
-    // Note to delete from its swipe actions, once confirmed
-    var confirmDelete by remember { mutableStateOf<OrgNote?>(null) }
-    confirmDelete?.let { note ->
-        AlertDialog(
-            onDismissRequest = { confirmDelete = null },
-            title = { Text(pluralStringResource(R.plurals.delete_notes_title, 1, 1)) },
-            text = if (NoteTree.hasChildren(file.notes, note.index)) {
-                { Text(stringResource(R.string.delete_note_children)) }
-            } else {
-                null
-            },
-            confirmButton = {
-                TextButton(onClick = { confirmDelete = null; viewModel.deleteNote(note) }) { Text(stringResource(R.string.delete)) }
-            },
-            dismissButton = { TextButton(onClick = { confirmDelete = null }) { Text(stringResource(R.string.cancel)) } },
-        )
-    }
 
     Scaffold(
         modifier = Modifier
@@ -215,7 +199,7 @@ fun NotebookScreen(
                     spacing = settings.noteSpacing.padding.dp,
                     scrollConnection = scrollBehavior.nestedScrollConnection,
                     onAddNear = { note, placement -> viewModel.startNewNote(file.uri, note, placement) },
-                    onDelete = { confirmDelete = it },
+                    onDelete = viewModel::deleteNote,
                 )
             }
             if (selecting) {
@@ -442,9 +426,11 @@ private fun OutlineRow(
         onOpenChange = onSwipeOpenChange,
         swipeRightIcon = if (note.isDone) NarwhalIcons.Undo else NarwhalIcons.Check,
         onSwipeRight = onToggleDone,
-        actions = Placement.entries.map { placement ->
-            SwipeAction(placementIcon(placement), stringResource(newNoteTitle(placement))) { onAddNear(placement) }
-        } + SwipeAction(Icons.Default.Delete, stringResource(R.string.delete), onDelete),
+        // Delete first, away from the new-note actions
+        actions = listOf(SwipeAction(Icons.Default.Delete, stringResource(R.string.delete), onClick = onDelete)) +
+            Placement.entries.map { placement ->
+                SwipeAction(placementIcon(placement), stringResource(newNoteTitle(placement))) { onAddNear(placement) }
+            },
         modifier = Modifier.sharedContainer("note-$key", RectangleShape),
         enabled = !selecting,
     ) {
@@ -497,8 +483,8 @@ private fun OutlineRow(
                     onOpenLink = onOpenLink,
                     titleModifier = Modifier.sharedText(noteTitleKey(note)),
                 )
-                if (showContent && note.content.isNotBlank()) {
-                    LinkedText(
+                if (showContent && !Blocks.showsNothing(note.content)) {
+                    OrgContent(
                         note.content.trimIndent(),
                         MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
                         onOpenLink,

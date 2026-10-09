@@ -51,7 +51,6 @@ fun SelectionTopBar(viewModel: AppViewModel, library: NoteRepository.Library, fi
     val single = count == 1
     var pasteMenu by remember { mutableStateOf(false) }
     var moreMenu by remember { mutableStateOf(false) }
-    var confirmDelete by remember { mutableStateOf(false) }
     var pickNotebook by remember { mutableStateOf(false) }
 
     // Move mode: the actions give way to the move arrows, like in Orgzly
@@ -89,8 +88,8 @@ fun SelectionTopBar(viewModel: AppViewModel, library: NoteRepository.Library, fi
                         IconButton(onClick = { viewModel.moveSelection(AppViewModel.Move.Demote) }) {
                             Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, stringResource(R.string.demote))
                         }
-                        IconButton(enabled = library.files.size > 1, onClick = { pickNotebook = true }) {
-                            Icon(NarwhalIcons.ToNotebook, stringResource(R.string.move_to_notebook))
+                        IconButton(onClick = { pickNotebook = true }) {
+                            Icon(NarwhalIcons.ToNotebook, stringResource(R.string.move_to))
                         }
                     } else {
                         IconButton(onClick = viewModel::cutSelection) { Icon(NarwhalIcons.Cut, stringResource(R.string.cut)) }
@@ -120,7 +119,7 @@ fun SelectionTopBar(viewModel: AppViewModel, library: NoteRepository.Library, fi
                                 DropdownMenuItem(
                                     text = { Text(stringResource(R.string.delete)) },
                                     leadingIcon = { Icon(Icons.Default.Delete, null) },
-                                    onClick = { moreMenu = false; confirmDelete = true },
+                                    onClick = { moreMenu = false; viewModel.deleteSelection() },
                                 )
                             }
                         }
@@ -130,28 +129,14 @@ fun SelectionTopBar(viewModel: AppViewModel, library: NoteRepository.Library, fi
         },
     )
 
-    if (confirmDelete) {
-        AlertDialog(
-            onDismissRequest = { confirmDelete = false },
-            title = { Text(pluralStringResource(R.plurals.delete_notes_title, count, count)) },
-            text = { Text(stringResource(R.string.delete_notes_text)) },
-            confirmButton = {
-                TextButton(onClick = { confirmDelete = false; viewModel.deleteSelection() }) { Text(stringResource(R.string.delete)) }
-            },
-            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text(stringResource(R.string.cancel)) } },
-        )
-    }
-
     if (pickNotebook) {
-        val targets = library.files.filter { it.uri != file.uri }
-        ChoiceDialog(
-            title = stringResource(R.string.move_to_notebook),
-            options = targets.map { it.title },
-            selected = null,
+        RefileDialog(
+            library = library,
+            moving = viewModel.selectedNotes(),
             onDismiss = { pickNotebook = false },
-            onSelect = { title ->
+            onConfirm = { uri, parent ->
                 pickNotebook = false
-                targets.firstOrNull { it.title == title }?.let { viewModel.moveSelectionTo(it.uri) }
+                viewModel.refileSelection(uri, parent)
             },
         )
     }

@@ -1,5 +1,17 @@
 package io.github.yighy.narwhal.ui
 
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.horizontalScroll
 import io.github.yighy.narwhal.R
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -59,7 +71,15 @@ fun AgendaScreen(
     onAllowNotifications: () -> Unit,
 ) {
     val today = LocalDate.now()
-    val agenda = remember(library, today) { Agenda.build(library.notes, today, 7) }
+    // A notebook that went away no longer filters
+    val notebook = viewModel.agendaNotebook?.takeIf { library.file(it) != null }
+    val tag = viewModel.agendaTag
+    val agenda = remember(library, today, notebook, tag) {
+        val notes = library.notes.filter { n ->
+            (notebook == null || n.fileUri == notebook) && (tag == null || n.tags.any { it.equals(tag, ignoreCase = true) })
+        }
+        Agenda.build(notes, today, 7)
+    }
     val todayCount = agenda.overdue.size + agenda.days.first().entries.size
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
@@ -85,6 +105,32 @@ fun AgendaScreen(
                 ) {
                     if (!notificationsAllowed) {
                         item(key = "notifications") { NotificationsCard(onAllowNotifications) }
+                    }
+                    item(key = "filters") {
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState())
+                                .padding(horizontal = 16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            FilterMenu(
+                                label = notebook?.let { library.file(it)?.title } ?: stringResource(R.string.all_notebooks),
+                                allLabel = stringResource(R.string.all_notebooks),
+                                selected = notebook != null,
+                                options = library.files.map { it.uri to it.title },
+                                onSelect = { viewModel.agendaNotebook = it },
+                            )
+                            if (library.tags.isNotEmpty()) {
+                                FilterMenu(
+                                    label = tag?.let { "#$it" } ?: stringResource(R.string.all_tags),
+                                    allLabel = stringResource(R.string.all_tags),
+                                    selected = tag != null,
+                                    options = library.tags.map { it to "#$it" },
+                                    onSelect = { viewModel.agendaTag = it },
+                                )
+                            }
+                        }
                     }
                     agendaItems(viewModel, library, agenda, today)
                 }
@@ -150,7 +196,36 @@ private fun dayLabel(date: LocalDate, today: LocalDate): String = when (date) {
     else -> weekday(date) + " · " + date.format(shortDate)
 }
 
-/** Time, state and title of an agenda entry; swipe right toggles TODO / DONE. */
+/** A filter chip opening the list of its [options] (value to label), "all" first. */
+@Composable
+private fun FilterMenu(
+    label: String,
+    allLabel: String,
+    selected: Boolean,
+    options: List<Pair<String, String>>,
+    onSelect: (String?) -> Unit,
+) {
+    var open by remember { mutableStateOf(false) }
+    Box {
+        FilterChip(
+            selected = selected,
+            onClick = { open = true },
+            label = { Text(label, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+            trailingIcon = { Icon(Icons.Default.ArrowDropDown, null) },
+        )
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            DropdownMenuItem(text = { Text(allLabel) }, onClick = { open = false; onSelect(null) })
+            options.forEach { (value, text) ->
+                DropdownMenuItem(text = { Text(text) }, onClick = { open = false; onSelect(value) })
+            }
+        }
+    }
+}
+
+/**
+ * Time, state and title of an agenda entry; swipe right toggles TODO / DONE, swipe left puts
+ * a scheduled or deadline time off (a day, a week, or to a date chosen).
+ */
 @Composable
 private fun AgendaRow(
     viewModel: AppViewModel,
@@ -161,18 +236,42 @@ private fun AgendaRow(
 ) {
     val note = entry.note
     val key = (if (overdue) "agenda-overdue-" else "agenda-${entry.date}-") + entryKey(entry)
+    val timestamp = when (entry.kind) {
+        Agenda.Kind.Scheduled -> note.scheduled
+        Agenda.Kind.Deadline -> note.deadline
+        Agenda.Kind.Event -> null
+    }
+    var picking by remember { mutableStateOf(false) }
+    if (picking) {
+        TimestampDialog(
+            initial = timestamp,
+            onDismiss = { picking = false },
+            onConfirm = { t -> picking = false; viewModel.setPlanning(note, entry.kind, t) },
+        )
+    }
     SwipeRow(
         key = key,
         openKey = viewModel.openSwipeRow,
-        onOpenChange = {},
+        onOpenChange = { open -> viewModel.openSwipeRow = if (open) key else viewModel.openSwipeRow.takeIf { it != key } },
         swipeRightIcon = if (note.isDone) NarwhalIcons.Undo else NarwhalIcons.Check,
         onSwipeRight = { viewModel.toggleDone(note) },
-        actions = emptyList(),
+        actions = if (timestamp == null) emptyList() else listOf(
+            SwipeAction(Icons.Default.DateRange, stringResource(R.string.postpone_day), stringResource(R.string.plus_day)) {
+                viewModel.postpone(note, entry.kind, 1)
+            },
+            SwipeAction(Icons.Default.DateRange, stringResource(R.string.postpone_week), stringResource(R.string.plus_week)) {
+                viewModel.postpone(note, entry.kind, 7)
+            },
+            SwipeAction(Icons.Default.DateRange, stringResource(R.string.pick_date)) { picking = true },
+        ),
     ) {
         Row(
             Modifier
                 .fillMaxWidth()
-                .clickable { viewModel.openNote(note) }
+                .clickable {
+                    // A tap while a row shows its actions just closes it
+                    if (viewModel.openSwipeRow != null) viewModel.openSwipeRow = null else viewModel.openNote(note)
+                }
                 .heightIn(min = 56.dp)
                 .padding(horizontal = 16.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,

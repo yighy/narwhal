@@ -51,7 +51,8 @@ object Agenda {
             }
         }
 
-        val order = compareBy<Entry>({ it.time == null }, { it.time }, { it.kind != Kind.Deadline }, { it.note.title })
+        // By time, deadlines first, then by priority (none counts as B, as in Org)
+        val order = compareBy<Entry>({ it.time == null }, { it.time }, { it.kind != Kind.Deadline }, { priorityRank(it.note.priority) }, { it.note.title })
         return Result(
             overdue = overdue.sortedWith(compareBy<Entry> { it.date }.then(order)),
             days = (0 until dayCount).map { i ->
@@ -60,6 +61,9 @@ object Agenda {
             },
         )
     }
+
+    private fun priorityRank(priority: String?): Int =
+        priority?.uppercase()?.let { "ABC".indexOf(it) }?.takeIf { it >= 0 } ?: 1
 
     data class Reminder(val note: OrgNote, val kind: Kind, val at: LocalDateTime)
 

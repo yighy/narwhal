@@ -130,7 +130,7 @@ fun ChoiceDialog(
 
 /**
  * Picks a date, then an optional time and how it repeats. Calls [onConfirm] with an Org
- * timestamp, or null when the date is removed.
+ * timestamp, or null when the date is removed. Given [onNow], a button offers the current time.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -138,6 +138,7 @@ fun TimestampDialog(
     initial: String?,
     onDismiss: () -> Unit,
     onConfirm: (String?) -> Unit,
+    onNow: (() -> Unit)? = null,
 ) {
     val parts = remember(initial) { OrgTime.parts(initial) }
     var pickedDate by remember { mutableStateOf<LocalDate?>(null) }
@@ -169,6 +170,7 @@ fun TimestampDialog(
             },
             dismissButton = {
                 Row {
+                    if (onNow != null) TextButton(onClick = onNow) { Text(stringResource(R.string.now)) }
                     if (initial != null) TextButton(onClick = { onConfirm(null) }) { Text(stringResource(R.string.remove)) }
                     TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
                 }

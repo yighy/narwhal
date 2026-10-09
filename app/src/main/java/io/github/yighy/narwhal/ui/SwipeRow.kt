@@ -1,5 +1,8 @@
 package io.github.yighy.narwhal.ui
 
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.material3.Text
 import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
@@ -37,7 +40,8 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
-data class SwipeAction(val icon: ImageVector, val label: String, val onClick: () -> Unit)
+/** An action behind a row; [text], when given, shows in place of the [icon] (e.g. "+1d"). */
+data class SwipeAction(val icon: ImageVector, val label: String, val text: String? = null, val onClick: () -> Unit)
 
 /**
  * Row that reveals [actions] when swiped left, and runs [onSwipeRight] when swiped right
@@ -105,7 +109,18 @@ fun SwipeRow(
                         scope.launch { offset.animateTo(0f, spatial) }
                         currentOnOpenChange(false)
                         action.onClick()
-                    }) { Icon(action.icon, action.label, tint = MaterialTheme.colorScheme.onSurfaceVariant) }
+                    }) {
+                        if (action.text != null) {
+                            Text(
+                                action.text,
+                                style = MaterialTheme.typography.labelLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.semantics { contentDescription = action.label },
+                            )
+                        } else {
+                            Icon(action.icon, action.label, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
                 }
             }
         }
@@ -166,6 +181,8 @@ object NarwhalIcons {
     val SubNote: ImageVector by lazy {
         icon("SubNote", "M19,15l-6,6l-1.42,-1.42L15.17,16H4V4h2v10h9.17l-3.59,-3.58L13,9L19,15z")
     }
+
+    val Stop: ImageVector by lazy { icon("Stop", "M6,6h12v12H6z") }
 
     val Undo: ImageVector by lazy {
         icon(

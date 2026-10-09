@@ -1,5 +1,7 @@
 package io.github.yighy.narwhal.ui
 
+import java.time.LocalDateTime
+import io.github.yighy.narwhal.core.OrgTime
 import androidx.compose.foundation.layout.imeAnimationTarget
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import io.github.yighy.narwhal.R
@@ -196,6 +198,12 @@ fun EditToolbar(value: TextFieldValue, onChange: (TextFieldValue) -> Unit, histo
         TimestampDialog(
             initial = range?.let { value.text.substring(it) },
             onDismiss = { dateOpen = false },
+            // The current time, inactive as Org writes when something happened (not in the agenda)
+            onNow = {
+                dateOpen = false
+                val now = OrgTime.inactive(LocalDateTime.now())
+                if (range != null) apply { TextEditing.insert(TextEditing.Edit(it.text, range.first, range.last + 1), now) } else insertWord(now)
+            },
             onConfirm = { timestamp ->
                 dateOpen = false
                 when {

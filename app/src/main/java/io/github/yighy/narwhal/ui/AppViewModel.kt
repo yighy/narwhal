@@ -1,5 +1,12 @@
 package io.github.yighy.narwhal.ui
 
+import kotlinx.coroutines.flow.first
+import java.time.format.FormatStyle
+import java.time.format.DateTimeFormatter
+import java.time.LocalDate
+import io.github.yighy.narwhal.core.Sharing
+import io.github.yighy.narwhal.core.Clock
+import io.github.yighy.narwhal.core.Agenda
 import io.github.yighy.narwhal.data.FileNotSavedException
 import io.github.yighy.narwhal.data.NoteChangedException
 import io.github.yighy.narwhal.R
@@ -173,8 +180,15 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Folded notes in the notebook outline, by "fileUri#index". */
     private val folded = mutableStateMapOf<String, Boolean>()
 
-    private val _messages = MutableSharedFlow<String>(extraBufferCapacity = 4)
-    val messages: SharedFlow<String> = _messages
+    /** A message for the snackbar, with a button running [action] (e.g. undo) when [actionLabel] is set. */
+    data class Message(val text: String, val actionLabel: String? = null, val action: (() -> Unit)? = null)
+
+    private val _messages = MutableSharedFlow<Message>(extraBufferCapacity = 4)
+    val messages: SharedFlow<Message> = _messages
+
+    /** Agenda filters: a notebook (file URI) and a tag, null for all. */
+    var agendaNotebook by mutableStateOf<String?>(null)
+    var agendaTag by mutableStateOf<String?>(null)
 
     fun refresh() {
         viewModelScope.launch { repository.refresh() }
@@ -529,21 +543,89 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         return resumed
     }
 
+    /** With the settings on, a new note gets an ID and a CREATED property right away. */
+    private fun newNoteProperties(edit: NoteEdit) = buildList {
+        if (settings.value.addIdToNewNotes && edit.properties.none { it.first.equals("ID", true) }) {
+            add("ID" to UUID.randomUUID().toString().uppercase())
+        }
+        if (settings.value.addCreatedToNewNotes && edit.properties.none { it.first.equals(SearchQuery.CREATED_PROPERTY, true) }) {
+            add(SearchQuery.CREATED_PROPERTY to OrgTime.inactive(LocalDateTime.now()))
+        }
+    }
+
+    // ---- Text shared from other apps ----
+
+    fun setInboxNotebook(fileUri: String?) = appSettings.setInboxNotebook(fileUri)
+
+    /** Makes a note of text shared by another app, in the inbox notebook, and opens it. */
+    fun receiveShared(subject: String?, text: String?) {
+        val shared = Sharing.note(subject, text) ?: return
+        viewModelScope.launch {
+            // Once the folder has been read
+            val lib = library.first { it.loaded || it.folderUri == null }
+            if (lib.folderUri == null) {
+                message(R.string.msg_choose_folder_first)
+                return@launch
+            }
+            val note = attempt {
+                val uri = inboxUri(lib)
+                val created = repository.createNote(Uri.parse(uri), shared.title)
+                val edit = created.toEdit().copy(content = shared.content).let { it.copy(properties = it.properties + newNoteProperties(it)) }
+                if (edit != created.toEdit()) repository.saveNote(created, edit) else created
+            } ?: return@launch
+            openNote(note)
+            message(R.string.msg_shared_added, library.value.file(note.fileUri)?.title.orEmpty())
+        }
+    }
+
+    /** The notebook chosen for shared text, or the one named Inbox (made if there is none). */
+    private suspend fun inboxUri(lib: NoteRepository.Library): String =
+        settings.value.inboxNotebook?.takeIf { lib.file(it) != null }
+            ?: lib.files.firstOrNull { it.title.equals(INBOX, ignoreCase = true) || it.ref.name.equals("$INBOX.org", ignoreCase = true) }?.uri
+            ?: repository.createFile(INBOX).toString()
+
+    // ---- Clocking ----
+
+    /** Starts the clock on [note], stopping the one running on another note. */
+    fun clockIn(note: OrgNote) {
+        viewModelScope.launch {
+            val now = LocalDateTime.now()
+            library.value.notes
+                .filter { (it.fileUri != note.fileUri || it.index != note.index) && Clock.running(it.content) != null }
+                .forEach { other -> attempt { saveLatest(other) { it.toEdit().copy(content = Clock.clockOut(it.content, now)) } } }
+            attempt { saveLatest(note) { it.toEdit().copy(content = Clock.clockIn(it.content, now)) } }
+        }
+    }
+
+    fun clockOut(note: OrgNote) = update(note) { it.copy(content = Clock.clockOut(it.content, LocalDateTime.now())) }
+
+    // ---- Agenda ----
+
+    /** Sets [note]'s scheduled or deadline time ([kind]) to [timestamp] (null removes it). */
+    fun setPlanning(note: OrgNote, kind: Agenda.Kind, timestamp: String?) = update(note) {
+        when (kind) {
+            Agenda.Kind.Scheduled -> it.copy(scheduled = timestamp)
+            Agenda.Kind.Deadline -> it.copy(deadline = timestamp)
+            Agenda.Kind.Event -> it
+        }
+    }
+
+    /** Puts [note]'s time off by [days], from today if it is overdue; time of day and repeater stay. */
+    fun postpone(note: OrgNote, kind: Agenda.Kind, days: Long) {
+        val timestamp = (if (kind == Agenda.Kind.Scheduled) note.scheduled else note.deadline) ?: return
+        val parts = OrgTime.parts(timestamp) ?: return
+        val date = maxOf(parts.date, LocalDate.now()).plusDays(days)
+        setPlanning(note, kind, OrgTime.build(date, parts.time, timestamp))
+        message(R.string.msg_postponed, date.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)))
+    }
+
     private suspend fun saveDraft(edit: NoteEdit): OrgNote? {
         val screen = newNoteScreen ?: return null
         newNoteDraft = edit
         if (edit.title.isBlank()) {
             return draftNote(screen)
         }
-        // With the settings on, the new note gets an ID and a CREATED property right away
-        val added = buildList {
-            if (settings.value.addIdToNewNotes && edit.properties.none { it.first.equals("ID", true) }) {
-                add("ID" to UUID.randomUUID().toString().uppercase())
-            }
-            if (settings.value.addCreatedToNewNotes && edit.properties.none { it.first.equals(SearchQuery.CREATED_PROPERTY, true) }) {
-                add(SearchQuery.CREATED_PROPERTY to OrgTime.inactive(LocalDateTime.now()))
-            }
-        }
+        val added = newNoteProperties(edit)
         val full = if (added.isEmpty()) edit else edit.copy(properties = edit.properties + added)
         val note = attempt {
             val created = if (screen.anchor != null && screen.placement != null) {
@@ -671,27 +753,29 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun deleteSelection() = withSelection { notes ->
-        var deleted = 0
-        repository.modifyFile(notes.first().fileUri, notes) { doc, indices ->
-            deleted = Outline.roots(doc, indices).size
-            Outline.delete(doc, indices)
-        }
-        pluralMessage(R.plurals.msg_notes_deleted, deleted)
-    }
+    fun deleteSelection() = withSelection { notes -> deleteNotes(notes) }
 
     /** Deletes [note] with its sub-notes. */
     fun deleteNote(note: OrgNote) {
-        viewModelScope.launch {
-            attempt {
-                var deleted = 0
-                repository.modifyFile(note.fileUri, listOf(note)) { doc, indices ->
-                    deleted = Outline.roots(doc, indices).size
-                    Outline.delete(doc, indices)
-                }
-                pluralMessage(R.plurals.msg_notes_deleted, deleted)
-            }
+        viewModelScope.launch { attempt { deleteNotes(listOf(note)) } }
+    }
+
+    /** Deletes [notes] with their sub-notes; the message offers to put them back. */
+    private suspend fun deleteNotes(notes: List<OrgNote>) {
+        val uri = notes.first().fileUri
+        var deleted = emptyList<Pair<Int, Subtree>>()
+        repository.modifyFile(uri, notes) { doc, indices ->
+            deleted = Outline.roots(doc, indices).zip(Outline.extract(doc, indices))
+            Outline.delete(doc, indices)
         }
+        val app = getApplication<Application>()
+        _messages.tryEmit(
+            Message(app.resources.getQuantityString(R.plurals.msg_notes_deleted, deleted.size, deleted.size), app.getString(R.string.undo)) {
+                viewModelScope.launch {
+                    attempt { repository.modifyFile(uri, emptyList()) { doc, _ -> Outline.restore(doc, deleted) } }
+                }
+            },
+        )
     }
 
     enum class Move { Up, Down, Promote, Demote }
@@ -712,9 +796,23 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun moveSelectionTo(fileUri: String) = withSelection { notes ->
-        repository.moveToFile(notes, fileUri)
-        pluralMessage(R.plurals.msg_notes_moved, notes.size, library.value.file(fileUri)?.title.orEmpty())
+    /** Moves the selection under [parent], or to the end of the notebook [fileUri]. */
+    fun refileSelection(fileUri: String, parent: OrgNote?) = withSelection { notes -> refile(notes, fileUri, parent) }
+
+    /** Moves [note] under [parent], or to the end of the notebook [fileUri], and shows it there. */
+    fun refileNote(note: OrgNote, fileUri: String, parent: OrgNote?) {
+        viewModelScope.launch {
+            val index = attempt { refile(listOf(note), fileUri, parent) } ?: return@launch
+            val i = stack.indexOfLast { it is Screen.Note && it.fileUri == note.fileUri && it.index == note.index }
+            if (i >= 0) stack[i] = Screen.Note(fileUri, index)
+        }
+    }
+
+    private suspend fun refile(notes: List<OrgNote>, fileUri: String, parent: OrgNote?): Int {
+        val index = repository.refile(notes, fileUri, parent)
+        val where = parent?.let { displayTitle(it.title) } ?: library.value.file(fileUri)?.title.orEmpty()
+        pluralMessage(R.plurals.msg_notes_moved, notes.size, where)
+        return index
     }
 
     /** Applies [change] to every selected note in one write, keeping the selection. */
@@ -768,11 +866,14 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     companion object {
         /** Index of a note that is not in its file yet (being created). */
         const val DRAFT_INDEX = -1
+
+        /** Name of the notebook made for shared text when none is chosen. */
+        private const val INBOX = "Inbox"
         private val EMPTY_DRAFT = NoteEdit(title = "", state = null, tags = emptyList(), properties = emptyList(), content = "")
     }
 
     fun message(text: String) {
-        _messages.tryEmit(text)
+        _messages.tryEmit(Message(text))
     }
 
     fun message(@StringRes text: Int, vararg args: Any) = message(getApplication<Application>().getString(text, *args))

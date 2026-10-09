@@ -1,5 +1,6 @@
 package io.github.yighy.narwhal.ui
 
+import io.github.yighy.narwhal.core.Clock
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalContext
@@ -471,8 +472,9 @@ fun NoteLine(
         }
         // Timestamps are parsed once per note, not on every redraw of the list
         val resources = LocalResources.current
-        val details = remember(note.tags, note.scheduled, note.deadline, subtitle, resources) {
+        val details = remember(note.tags, note.scheduled, note.deadline, note.content, subtitle, resources) {
             buildList {
+                if (Clock.running(note.content) != null) add(resources.getString(R.string.clock_running))
                 if (note.tags.isNotEmpty()) add(note.tags.joinToString(" ") { "#$it" })
                 note.scheduled?.let { add(resources.getString(R.string.scheduled_at, displayTime(resources, it))) }
                 note.deadline?.let { add(resources.getString(R.string.deadline_at, displayTime(resources, it))) }

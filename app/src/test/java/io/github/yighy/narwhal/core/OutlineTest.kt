@@ -64,4 +64,21 @@ class OutlineTest {
         val updated = Outline.replaceSections(doc, mapOf(0 to "* X\n", 3 to "* Y\n"))
         assertEquals("#+TITLE: T\n\n* X\n** A1\n*** A1a\n* Y\n* C", updated.text)
     }
+
+    @Test
+    fun moveWithinFile() {
+        // B under A1 (as its last sub-note), at level 3
+        assertEquals("#+TITLE: T\n\n* A\na\n** A1\n*** A1a\n*** B\nb\n* C", Outline.moveWithin(doc, listOf(3), 3, 3).text)
+        // A (with its subtree) to the end, after C that has no final newline
+        assertEquals("#+TITLE: T\n\n* B\nb\n* C\n* A\na\n** A1\n*** A1a\n", Outline.moveWithin(doc, listOf(0), 5, 1).text)
+        // C up under A, right where its subtree ends
+        assertEquals("#+TITLE: T\n\n* A\na\n** A1\n*** A1a\n** C\n* B\nb\n", Outline.moveWithin(doc, listOf(4), 3, 2).text)
+    }
+
+    @Test
+    fun restoreDeleted() {
+        val deleted = Outline.roots(doc, listOf(1, 4)).zip(Outline.extract(doc, listOf(1, 4)))
+        val restored = Outline.restore(Outline.delete(doc, listOf(1, 4)), deleted)
+        assertEquals("#+TITLE: T\n\n* A\na\n** A1\n*** A1a\n* B\nb\n* C\n", restored.text)
+    }
 }

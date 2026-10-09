@@ -3,8 +3,11 @@
     <string name="add_tag">Ajouter une étiquette</string>
     <string name="agenda">Agenda</string>
     <string name="agenda_nothing_today">Rien aujourd’hui</string>
+    <string name="all_notebooks">Tous les carnets</string>
+    <string name="all_tags">Toutes les étiquettes</string>
     <string name="allow">Autoriser</string>
     <string name="allow_notifications_text">Autorisez les notifications pour recevoir les rappels aux heures planifiées et aux échéances.</string>
+    <string name="at_end_of_notebook">À la fin du carnet</string>
     <string name="back">Retour</string>
     <string name="back_to_actions">Retour aux actions</string>
     <string name="bold">Gras</string>
@@ -17,6 +20,10 @@
     <string name="choose_folder">Choisir le dossier</string>
     <string name="clear_search">Effacer la recherche</string>
     <string name="clear_selection">Désélectionner</string>
+    <string name="clock">Pointage</string>
+    <string name="clock_in">Démarrer le pointage</string>
+    <string name="clock_out">Arrêter le pointage</string>
+    <string name="clock_running">Pointage en cours</string>
     <string name="close">Fermer</string>
     <string name="close_search">Fermer la recherche</string>
     <string name="closed">Terminée</string>
@@ -33,9 +40,7 @@
     <string name="deadline">Échéance</string>
     <string name="deadline_at">Échéance %1$s</string>
     <string name="delete">Supprimer</string>
-    <string name="delete_note_children">Ses sous-notes sont supprimées aussi.</string>
     <string name="delete_notebooks_text">Ces fichiers sont supprimés du dossier, avec toutes leurs notes :</string>
-    <string name="delete_notes_text">Leurs sous-notes sont aussi supprimées.</string>
     <string name="demote">Descendre d’un niveau</string>
     <string name="done">Fait</string>
     <string name="done_moving">Fin du déplacement</string>
@@ -60,8 +65,9 @@
     <string name="more">Plus</string>
     <string name="move">Déplacer</string>
     <string name="move_down">Descendre</string>
-    <string name="move_to_notebook">Déplacer vers un carnet</string>
+    <string name="move_to">Déplacer vers…</string>
     <string name="move_up">Monter</string>
+    <string name="msg_choose_folder_first">Choisissez d\'abord le dossier de vos notes</string>
     <string name="msg_file_not_saved">Le fichier n’a pas été enregistré correctement</string>
     <string name="msg_id_copied">ID copié</string>
     <string name="msg_link_copied">Lien copié</string>
@@ -70,8 +76,10 @@
     <string name="msg_no_note_with_id">Aucune note avec l’ID %1$s</string>
     <string name="msg_note_changed">La note a été modifiée par une autre appli. Elle a été rechargée.</string>
     <string name="msg_note_moved_or_deleted">Cette note a été déplacée ou supprimée</string>
+    <string name="msg_postponed">Décalée au %1$s</string>
     <string name="msg_repeating_moved">Tâche répétée déplacée au %1$s</string>
     <string name="msg_search_saved">Recherche enregistrée</string>
+    <string name="msg_shared_added">Ajoutée à %1$s</string>
     <string name="name">Nom</string>
     <string name="new_note">Nouvelle note</string>
     <string name="new_note_above">Nouvelle note au-dessus</string>
@@ -93,6 +101,7 @@
     <string name="notification_done">Fait</string>
     <string name="notification_text">%1$s %2$s · %3$s</string>
     <string name="notification_tomorrow">Demain</string>
+    <string name="now">Maintenant</string>
     <string name="ok">OK</string>
     <string name="other_emoji">Autre émoji</string>
     <string name="outdent">Diminuer le retrait</string>
@@ -101,10 +110,15 @@
     <string name="paste_above">Coller au-dessus</string>
     <string name="paste_below">Coller en dessous</string>
     <string name="paste_under">Coller en sous-notes</string>
+    <string name="pick_date">Choisir une date</string>
+    <string name="plus_day">+1j</string>
+    <string name="plus_week">+7j</string>
     <string name="position_above">nouvelle note au-dessus de %1$s</string>
     <string name="position_below">nouvelle note en dessous de %1$s</string>
     <string name="position_end">nouvelle note à la fin</string>
     <string name="position_under">sous-note de %1$s</string>
+    <string name="postpone_day">Décaler d\'un jour</string>
+    <string name="postpone_week">Décaler d\'une semaine</string>
     <string name="preface_placeholder">Texte avant la première note. Une ligne comme #+TITLE: donne son nom au carnet.</string>
     <string name="priority">Priorité</string>
     <string name="promote">Remonter d’un niveau</string>
@@ -173,6 +187,8 @@
     <string name="settings_hidden_properties">Propriétés cachées</string>
     <string name="settings_hidden_properties_label">Noms, séparés par des espaces</string>
     <string name="settings_hidden_properties_summary">Pas affichées sur l’écran de la note ; gardées dans le fichier</string>
+    <string name="settings_inbox">Carnet pour les partages</string>
+    <string name="settings_inbox_default">Inbox (créé au besoin)</string>
     <string name="settings_keywords">Mots-clés d’état</string>
     <string name="settings_keywords_empty">Tapez au moins un mot-clé</string>
     <string name="settings_keywords_label">Mots-clés à faire | mots-clés faits</string>
@@ -240,11 +256,6 @@
         <item quantity="one">Supprimer ce carnet ?</item>
         <item quantity="many">Supprimer ces %1$d carnets ?</item>
         <item quantity="other">Supprimer ces %1$d carnets ?</item>
-    </plurals>
-    <plurals name="delete_notes_title" tools:ignore="ImpliedQuantity">
-        <item quantity="one">Supprimer cette note ?</item>
-        <item quantity="many">Supprimer ces %1$d notes ?</item>
-        <item quantity="other">Supprimer ces %1$d notes ?</item>
     </plurals>
     <plurals name="msg_links_updated">
         <item quantity="one">Lien mis à jour dans %1$d note</item>

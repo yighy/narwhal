@@ -1,5 +1,7 @@
 package io.github.yighy.narwhal.ui
 
+import androidx.compose.material3.SnackbarResult
+import androidx.compose.material3.SnackbarDuration
 import android.content.Context
 import io.github.yighy.narwhal.data.AppLanguage
 import io.github.yighy.narwhal.R
@@ -106,6 +108,8 @@ class MainActivity : ComponentActivity() {
             }
         }
         handleNotificationIntent(intent)
+        // Not again when the screen is recreated (rotation…)
+        if (savedInstanceState == null) handleShareIntent(intent)
         setContent {
             val settings by viewModel.settings.collectAsState()
             NarwhalTheme(settings.themeMode, settings.dynamicColor) {
@@ -119,6 +123,7 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         handleNotificationIntent(intent)
+        handleShareIntent(intent)
     }
 
     override fun onResume() {
@@ -140,6 +145,16 @@ class MainActivity : ComponentActivity() {
                 Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, packageName),
             )
         }
+    }
+
+    /** Text shared from another app becomes a note. */
+    private fun handleShareIntent(intent: Intent?) {
+        if (intent?.action != Intent.ACTION_SEND) return
+        viewModel.receiveShared(
+            intent.getStringExtra(Intent.EXTRA_SUBJECT),
+            intent.getCharSequenceExtra(Intent.EXTRA_TEXT)?.toString(),
+        )
+        intent.action = null
     }
 
     private fun handleNotificationIntent(intent: Intent?) {
@@ -205,7 +220,15 @@ fun NarwhalApp(viewModel: AppViewModel, notificationsAllowed: Boolean, onAllowNo
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
-        viewModel.messages.collect { snackbar.showSnackbar(it) }
+        viewModel.messages.collect { m ->
+            // A message with an action (undo) stays longer
+            val result = snackbar.showSnackbar(
+                m.text,
+                m.actionLabel,
+                duration = if (m.action != null) SnackbarDuration.Long else SnackbarDuration.Short,
+            )
+            if (result == SnackbarResult.ActionPerformed) m.action?.invoke()
+        }
     }
 
     val pickFolder = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->

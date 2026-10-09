@@ -50,6 +50,51 @@ object Outline {
         return doc.rebuild(sb.toString())
     }
 
+    /**
+     * Moves the subtrees of [indices] in one go to before section [atSection] (or the end), their
+     * first heading at [level]. [atSection] must not be inside one of them.
+     */
+    fun moveWithin(doc: OrgDocument, indices: Collection<Int>, atSection: Int, level: Int): OrgDocument {
+        val roots = roots(doc, indices)
+        val moved = roots.map { i -> Subtree(withNewline(doc.text.substring(range(doc, i))), doc.sections[i].level) }
+        val offset = doc.sections.getOrNull(atSection)?.start ?: doc.text.length
+        val cuts = roots.map { range(doc, it) }
+        require(cuts.none { offset > it.first && offset <= it.last }) { "Target inside a moved note" }
+
+        val sb = StringBuilder()
+        var pos = 0
+        var inserted = false
+        fun copyTo(end: Int) {
+            sb.append(doc.text, pos, end)
+            pos = end
+        }
+        fun insert() {
+            if (sb.isNotEmpty() && !sb.endsWith("\n")) sb.append('\n')
+            moved.forEach { sb.append(relevel(it.text, level - it.level)) }
+            inserted = true
+        }
+        for (cut in cuts) {
+            if (!inserted && offset <= cut.first) {
+                copyTo(offset)
+                insert()
+            }
+            copyTo(cut.first)
+            pos = cut.last + 1
+        }
+        if (!inserted) {
+            copyTo(offset)
+            insert()
+        }
+        copyTo(doc.text.length)
+        return doc.rebuild(sb.toString())
+    }
+
+    /** Puts deleted subtrees back where they were: each at its former section index. */
+    fun restore(doc: OrgDocument, deleted: List<Pair<Int, Subtree>>): OrgDocument =
+        deleted.sortedBy { it.first }.fold(doc) { d, (index, subtree) ->
+            insert(d, index.coerceAtMost(d.sections.size), subtree.level, listOf(subtree))
+        }
+
     /** Section index and level where [Placement] relative to note [index] puts new notes. */
     fun target(doc: OrgDocument, index: Int, placement: Placement): Pair<Int, Int> {
         val level = doc.sections[index].level

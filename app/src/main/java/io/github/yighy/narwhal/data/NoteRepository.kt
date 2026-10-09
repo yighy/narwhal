@@ -227,12 +227,34 @@ class NoteRepository(context: Context) {
         }
     }
 
-    /** Moves [notes] with their sub-notes to the end of another notebook, as top-level notes. */
-    suspend fun moveToFile(notes: List<OrgNote>, targetUri: String) {
+    /**
+     * Moves [notes] with their sub-notes under [parent] (after its sub-notes), or to the end of
+     * [targetUri] as top-level notes; the notebook can be theirs. Returns the new index of the
+     * first moved note.
+     */
+    suspend fun refile(notes: List<OrgNote>, targetUri: String, parent: OrgNote?): Int {
         val sourceUri = notes.first().fileUri
-        val subtrees = copySubtrees(sourceUri, notes)
-        modifyFile(targetUri, emptyList()) { doc, _ -> Outline.insert(doc, doc.sections.size, 1, subtrees) }
-        modifyFile(sourceUri, notes) { doc, indices -> Outline.delete(doc, indices) }
+        fun target(doc: OrgDocument, parentIndex: Int?) =
+            if (parentIndex == null) doc.sections.size to 1 else doc.subtreeEnd(parentIndex) to doc.sections[parentIndex].level + 1
+        var newIndex = 0
+        if (sourceUri == targetUri) {
+            modifyFile(sourceUri, notes + listOfNotNull(parent)) { doc, indices ->
+                val roots = Outline.roots(doc, indices.take(notes.size))
+                val (at, level) = target(doc, if (parent != null) indices.last() else null)
+                // The notes before the target leave their places, which moves it up
+                newIndex = at - roots.filter { it < at }.sumOf { doc.subtreeEnd(it) - it }
+                Outline.moveWithin(doc, roots, at, level)
+            }
+        } else {
+            val subtrees = copySubtrees(sourceUri, notes)
+            modifyFile(targetUri, listOfNotNull(parent)) { doc, indices ->
+                val (at, level) = target(doc, indices.firstOrNull())
+                newIndex = at
+                Outline.insert(doc, at, level, subtrees)
+            }
+            modifyFile(sourceUri, notes) { doc, indices -> Outline.delete(doc, indices) }
+        }
+        return newIndex
     }
 
     /**
