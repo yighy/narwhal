@@ -4,6 +4,10 @@ All notable changes to Narwhal. Versions follow [Semantic Versioning](https://se
 
 ## [Unreleased]
 
+### Fixed
+- A list item whose text goes on to the next line no longer gets a fold chevron; only items with
+  sub-items fold
+
 ## [0.10.0] - 2026-10-10
 
 ### Added

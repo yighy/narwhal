@@ -22,5 +22,7 @@ class ListFoldsTest {
     @Test
     fun flatListDoesNotFold() {
         assertFalse(ListFolds.hasFolds("- a\n- b\n  \n- c"))
+        // Text going on under an item is not a sub-item
+        assertFalse(ListFolds.hasFolds("- a long item\n  that goes on\n- b"))
     }
 }

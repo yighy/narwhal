@@ -44,7 +44,8 @@ object ListFolds {
                     if (lines[j].isNotBlank()) last = j
                     j++
                 }
-                if (last > i) {
+                // Only with sub-items: an item whose text just goes on to the next line does not fold
+                if (last > i && (i + 1..last).any { ITEM.matches(lines[it]) }) {
                     flush(i)
                     val childrenStart = starts[i + 1]
                     parts += Item(starts[i], lines[i], childrenStart, text.substring(childrenStart, starts[last] + lines[last].length))
