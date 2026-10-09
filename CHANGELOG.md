@@ -4,6 +4,10 @@ All notable changes to Narwhal. Versions follow [Semantic Versioning](https://se
 
 ## [Unreleased]
 
+### Changed
+- Once a shared note is moved elsewhere, the Inbox notebook is deleted if nothing is left in it
+  (not even a title line); the next share makes it again
+
 ### Fixed
 - A list item whose text goes on to the next line no longer gets a fold chevron; only items with
   sub-items fold

@@ -844,6 +844,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Moves [note] under [parent], or to the end of the notebook [fileUri], and shows it there. */
     fun refileNote(note: OrgNote, fileUri: String, parent: OrgNote?) {
+        val shared = sharedNote?.let { it.fileUri == note.fileUri && it.index == note.index } == true
         viewModelScope.launch {
             attempt {
                 // The screen follows the note before it leaves its notebook (else it would close)
@@ -851,7 +852,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     val i = stack.indexOfLast { it is Screen.Note && it.fileUri == note.fileUri && it.index == note.index }
                     if (i >= 0) stack[i] = Screen.Note(fileUri, index)
                     // A shared note moved can still be moved again from its screen
-                    if (sharedNote?.let { it.fileUri == note.fileUri && it.index == note.index } == true) sharedNote = Screen.Note(fileUri, index)
+                    if (shared) sharedNote = Screen.Note(fileUri, index)
+                }
+                // A shared note put away leaves no empty Inbox behind (the next share makes it
+                // again); one with anything else in it, even a title line, stays
+                if (shared && fileUri != note.fileUri && library.value.file(note.fileUri)?.doc?.text?.isBlank() == true) {
+                    repository.deleteFiles(listOf(note.fileUri))
                 }
             }
         }
