@@ -7,6 +7,8 @@ All notable changes to Narwhal. Versions follow [Semantic Versioning](https://se
 ### Changed
 - Once a shared note is moved elsewhere, the Inbox notebook is deleted if nothing is left in it
   (not even a title line); the next share makes it again
+- Libraries updated: Material 3 1.5.0-beta01 (out of alpha), Activity 1.13.0, Core 1.19.1,
+  coroutines 1.11.0
 
 ### Fixed
 - A list item whose text goes on to the next line no longer gets a fold chevron; only items with
