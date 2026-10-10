@@ -1,5 +1,7 @@
 package io.github.yighy.narwhal.ui
 
+import io.github.yighy.narwhal.core.Folding
+import androidx.compose.runtime.mutableIntStateOf
 import io.github.yighy.narwhal.data.AppSettings
 import io.github.yighy.narwhal.core.Guide
 import io.github.yighy.narwhal.core.InternalLinks
@@ -27,7 +29,6 @@ import android.app.Application
 import android.net.Uri
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
@@ -182,8 +183,34 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    /** Folded notes in the notebook outline, by "fileUri#index". */
-    private val folded = mutableStateMapOf<String, Boolean>()
+    // ---- Folded notes in the notebooks, kept in the settings by the notes' paths ----
+
+    private val foldsByFile = HashMap<String, Set<String>>()
+    /** Changes with the folds, for the screens showing them to follow. */
+    private var foldsVersion by mutableIntStateOf(0)
+    private val pathsByFile = HashMap<String, Pair<List<OrgNote>, List<String>>>()
+
+    private fun pathsOf(fileUri: String): List<String> {
+        val notes = library.value.file(fileUri)?.notes ?: return emptyList()
+        pathsByFile[fileUri]?.takeIf { it.first === notes }?.let { return it.second }
+        return NoteTree.titlePaths(notes).also { pathsByFile[fileUri] = notes to it }
+    }
+
+    /** The notebook's folded notes: as they were left, or else as Org shows the file (#+STARTUP, VISIBILITY). */
+    private fun foldsOf(fileUri: String): Set<String> {
+        foldsByFile[fileUri]?.let { return it }
+        val file = library.value.file(fileUri) ?: return emptySet()
+        val paths = pathsOf(fileUri)
+        val folds = appSettings.folds(fileUri) ?: Folding.initial(file.doc.preface, file.notes).mapTo(HashSet()) { paths[it] }
+        foldsByFile[fileUri] = folds
+        return folds
+    }
+
+    private fun setFolds(fileUri: String, folds: Set<String>) {
+        foldsByFile[fileUri] = folds
+        appSettings.setFolds(fileUri, folds)
+        foldsVersion++
+    }
 
     /** A message for the snackbar, with a button running [action] (e.g. undo) when [actionLabel] is set. */
     data class Message(val text: String, val actionLabel: String? = null, val action: (() -> Unit)? = null)
@@ -333,20 +360,25 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun isFolded(note: OrgNote) = folded[key(note)] == true
+    fun isFolded(note: OrgNote): Boolean {
+        // Read so that the screens follow the folds' changes
+        if (foldsVersion < 0) return false
+        val path = pathsOf(note.fileUri).getOrNull(note.index) ?: return false
+        return path in foldsOf(note.fileUri)
+    }
 
     fun toggleFold(note: OrgNote) {
-        folded[key(note)] = !isFolded(note)
+        val path = pathsOf(note.fileUri).getOrNull(note.index) ?: return
+        val folds = foldsOf(note.fileUri)
+        setFolds(note.fileUri, if (path in folds) folds - path else folds + path)
     }
 
-    /** Folds (or unfolds) every note that has children. */
+    /** Folds (or unfolds) every note of a notebook that has children. */
     fun setAllFolded(notes: List<OrgNote>, fold: Boolean) {
-        notes.forEachIndexed { i, note ->
-            if (NoteTree.hasChildren(notes, i)) folded[key(note)] = fold
-        }
+        val uri = notes.firstOrNull()?.fileUri ?: return
+        val paths = pathsOf(uri)
+        setFolds(uri, if (fold) notes.indices.filter { NoteTree.hasChildren(notes, it) }.mapNotNullTo(HashSet()) { paths.getOrNull(it) } else emptySet())
     }
-
-    private fun key(note: OrgNote) = note.fileUri + "#" + note.index
 
     private fun push(screen: Screen) {
         navigatedForward = true
@@ -770,10 +802,14 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 appSettings.setNotebookIcon(newUri, it)
                 appSettings.setNotebookIcon(uri, null)
             }
-            // And so does its tree view
+            // And so do its tree view and folds
             appSettings.treeState(uri)?.takeIf { newUri != uri }?.let {
                 appSettings.setTreeState(newUri, it)
                 appSettings.setTreeState(uri, null)
+            }
+            appSettings.folds(uri)?.takeIf { newUri != uri }?.let {
+                appSettings.setFolds(newUri, it)
+                appSettings.setFolds(uri, null)
             }
         }
     }
@@ -784,6 +820,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         uris.forEach {
             appSettings.setNotebookIcon(it, null)
             appSettings.setTreeState(it, null)
+            appSettings.setFolds(it, null)
         }
         viewModelScope.launch {
             attempt {
@@ -803,6 +840,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Notes cut or copied, with their sub-notes; can be pasted in any notebook. */
     var clipboard by mutableStateOf<List<Subtree>>(emptyList())
         private set
+
+    /** True while the clipboard holds notes cut and not pasted yet: they keep their IDs (they move), copies don't. */
+    private var clipboardCut = false
 
     fun toggleSelected(note: OrgNote) {
         val current = selection?.takeIf { it.fileUri == note.fileUri }
@@ -835,7 +875,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun copySelection() = withSelection { notes ->
-        clipboard = repository.copySubtrees(notes.first().fileUri, notes)
+        clipboard = repository.copySubtrees(notes.first().fileUri, notes).map { it.copy(text = Outline.withoutIds(it.text)) }
+        clipboardCut = false
         pluralMessage(R.plurals.msg_notes_copied, clipboard.size)
     }
 
@@ -846,6 +887,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             Outline.delete(doc, indices)
         }
         clipboard = cut
+        clipboardCut = true
         pluralMessage(R.plurals.msg_notes_cut, cut.size)
     }
 
@@ -855,9 +897,40 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             val (at, level) = Outline.target(doc, index, placement)
             Outline.insert(doc, at, level, subtrees)
         }
+        // Cut notes keep their IDs where they are first pasted; pasted again, they are copies
+        if (clipboardCut) {
+            clipboardCut = false
+            clipboard = subtrees.map { it.copy(text = Outline.withoutIds(it.text)) }
+        }
     }
 
     fun deleteSelection() = withSelection { notes -> deleteNotes(notes) }
+
+    fun archiveSelection() = withSelection { notes -> archiveNotes(notes) }
+
+    /** Archives [note], as it is once the edits being saved are (see archiveNotes). */
+    fun archiveNote(note: OrgNote) {
+        viewModelScope.launch {
+            saveLock.withLock {
+                val latest = library.value.note(note.fileUri, note.index) ?: note
+                // Its screen closes first, else it would show the note taking its place
+                if (stack.lastOrNull() == Screen.Note(latest.fileUri, latest.index)) back()
+                attempt { archiveNotes(listOf(latest)) }
+            }
+        }
+    }
+
+    /** Moves [notes] to their notebook's archive file (see NoteRepository.archive); the message offers to put them back. */
+    private suspend fun archiveNotes(notes: List<OrgNote>) {
+        val archived = repository.archive(notes, LocalDateTime.now())
+        val app = getApplication<Application>()
+        val count = archived.removed.size
+        _messages.tryEmit(
+            Message(app.resources.getQuantityString(R.plurals.msg_notes_archived, count, count), app.getString(R.string.undo)) {
+                viewModelScope.launch { attempt { repository.unarchive(archived) } }
+            },
+        )
+    }
 
     /** Deletes [note] with its sub-notes. */
     fun deleteNote(note: OrgNote) {

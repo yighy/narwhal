@@ -140,6 +140,19 @@ class AppSettings(context: Context) {
         }.apply()
     }
 
+    /** Folded notes of a notebook's outline, by their paths (see NoteTree.titlePaths); null until they first change. */
+    fun folds(fileUri: String): Set<String>? = runCatching {
+        val json = JSONArray(prefs.getString(FOLDS_PREFIX + fileUri, null) ?: return null)
+        List(json.length()) { json.getString(it) }.toSet()
+    }.getOrNull()
+
+    /** Keeps the notebook's folded notes (null forgets them). */
+    fun setFolds(fileUri: String, folds: Set<String>?) {
+        prefs.edit().apply {
+            if (folds == null) remove(FOLDS_PREFIX + fileUri) else putString(FOLDS_PREFIX + fileUri, JSONArray(folds.toList()).toString())
+        }.apply()
+    }
+
     private val _savedSearches = MutableStateFlow(readSearches())
     val savedSearches: StateFlow<List<SavedSearch>> = _savedSearches
 
@@ -225,6 +238,7 @@ class AppSettings(context: Context) {
         private const val KEY_SEARCHES = "saved_searches"
         private const val ICON_PREFIX = "icon:"
         private const val TREE_PREFIX = "tree:"
+        private const val FOLDS_PREFIX = "folds:"
         private const val KEY_ADD_ID = "add_id_to_new_notes"
         private const val KEY_HIDDEN_PROPERTIES = "hidden_properties"
         private const val KEY_ADD_CREATED = "add_created_to_new_notes"

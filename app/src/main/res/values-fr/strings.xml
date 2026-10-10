@@ -8,6 +8,7 @@
     <string name="all_tags">Toutes les étiquettes</string>
     <string name="allow">Autoriser</string>
     <string name="allow_notifications_text">Autorisez les notifications pour recevoir les rappels aux heures planifiées et aux échéances.</string>
+    <string name="archive">Archiver</string>
     <string name="at_end_of_notebook">À la fin du carnet</string>
     <string name="back">Retour</string>
     <string name="back_to_actions">Retour aux actions</string>
@@ -282,6 +283,11 @@
         <item quantity="one">Carnet supprimé</item>
         <item quantity="many">%1$d carnets supprimés</item>
         <item quantity="other">%1$d carnets supprimés</item>
+    </plurals>
+    <plurals name="msg_notes_archived">
+        <item quantity="one">%d note archivée</item>
+        <item quantity="many">%d notes archivées</item>
+        <item quantity="other">%d notes archivées</item>
     </plurals>
     <plurals name="msg_notes_copied">
         <item quantity="one">%1$d note copiée</item>

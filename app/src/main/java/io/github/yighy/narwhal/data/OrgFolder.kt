@@ -111,6 +111,19 @@ class OrgFolder(private val resolver: ContentResolver, val treeUri: Uri) {
     fun rename(uri: Uri, name: String): Uri =
         DocumentsContract.renameDocument(resolver, uri, name) ?: error("Cannot rename to $name")
 
+    /** Creates an empty file at [relativePath] ("notes/gtd.org_archive"), named as given, in a folder that exists. */
+    fun createFileAt(relativePath: String): Uri {
+        val dir = relativePath.substringBeforeLast('/', "")
+        val parent = if (dir.isEmpty()) {
+            DocumentsContract.buildDocumentUriUsingTree(treeUri, DocumentsContract.getTreeDocumentId(treeUri))
+        } else {
+            find(dir) ?: error("No folder $dir")
+        }
+        val name = relativePath.substringAfterLast('/')
+        // Generic MIME type so the provider keeps the name as given
+        return DocumentsContract.createDocument(resolver, parent, "application/octet-stream", name) ?: error("Cannot create $name")
+    }
+
     /** Creates an empty .org file at the root of the folder. */
     fun createFile(name: String): Uri {
         val parent = DocumentsContract.buildDocumentUriUsingTree(treeUri, DocumentsContract.getTreeDocumentId(treeUri))

@@ -4,6 +4,22 @@ All notable changes to Narwhal. Versions follow [Semantic Versioning](https://se
 
 ## [Unreleased]
 
+### Added
+- Archive a note (its ⋮ menu, or the selection's): it goes with its sub-notes to the end of the
+  notebook's archive file (gtd.org_archive, next to it), with the properties Emacs adds
+  (ARCHIVE_TIME, ARCHIVE_FILE, ARCHIVE_OLPATH, ARCHIVE_CATEGORY, ARCHIVE_TODO); the message
+  offers to undo it
+- Links in properties (:FATHER: [[id:…][Paul]]) show as links on the note screen and open with a
+  tap; a tap beside them edits the value
+
+### Changed
+- Folded notes stay folded when the app is closed; a notebook shown for the first time folds as
+  Org would show it, after its #+STARTUP (overview, show2levels…) and its notes' VISIBILITY
+
+### Fixed
+- A copied note, pasted, no longer keeps the ID of the note it was copied from (with two notes
+  of one ID, id: links could lead to either); cut notes keep it where they are first pasted
+
 ## [0.12.0] - 2026-10-10
 
 ### Added

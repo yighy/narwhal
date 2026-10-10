@@ -10,6 +10,7 @@
     <string name="all_tags">All tags</string>
     <string name="allow">Allow</string>
     <string name="allow_notifications_text">Allow notifications to get reminders at scheduled and deadline times.</string>
+    <string name="archive">Archive</string>
     <string name="at_end_of_notebook">At the end of the notebook</string>
     <string name="back">Back</string>
     <string name="back_to_actions">Back to actions</string>
@@ -278,6 +279,10 @@
     <plurals name="msg_notebooks_deleted">
         <item quantity="one">Notebook deleted</item>
         <item quantity="other">%1$d notebooks deleted</item>
+    </plurals>
+    <plurals name="msg_notes_archived">
+        <item quantity="one">%d note archived</item>
+        <item quantity="other">%d notes archived</item>
     </plurals>
     <plurals name="msg_notes_copied">
         <item quantity="one">%1$d note copied</item>

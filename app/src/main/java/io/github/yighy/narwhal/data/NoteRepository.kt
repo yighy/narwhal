@@ -1,5 +1,7 @@
 package io.github.yighy.narwhal.data
 
+import java.time.LocalDateTime
+import io.github.yighy.narwhal.core.Archive
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -128,6 +130,49 @@ class NoteRepository(context: Context) {
 
     suspend fun saveNote(note: OrgNote, edit: NoteEdit): OrgNote =
         modifySection(note) { doc, section -> SectionEditor.rewrite(section.raw, section.level, doc.keywords, edit) }
+
+    /** What archiving changed, to undo it: the notes taken out of [fileUri], and the archive file's text before and after. */
+    data class Archived(val fileUri: String, val removed: List<Pair<Int, Subtree>>, val archive: Uri, val before: String?, val after: String)
+
+    /**
+     * Moves [notes] (from one notebook, with their sub-notes) to the end of the notebook's archive
+     * file (gtd.org_archive, next to it), as Emacs' org-archive-subtree does.
+     */
+    suspend fun archive(notes: List<OrgNote>, now: LocalDateTime): Archived = withContext(Dispatchers.IO) {
+        writeLock.withLock {
+            val folder = folder() ?: error("No folder")
+            val uri = Uri.parse(notes.first().fileUri)
+            val ref = _library.value.files.first { it.ref.uri == uri }.ref
+            val doc = OrgDocument.parse(folder.read(uri), defaultKeywords)
+            val indices = notes.map { locate(folder, uri, doc, it) }
+            val roots = Outline.roots(doc, indices)
+            val removed = roots.zip(Outline.extract(doc, indices))
+            val path = Archive.path(ref.path)
+            val existing = folder.find(path)
+            val before = existing?.let(folder::read)
+            val after = Archive.append(before, ref.name, roots.map { Archive.entry(doc, it, ref.path, now) })
+            // The archive written first, so that the notes are always in one of the files
+            val archive = existing ?: folder.createFileAt(path)
+            folder.write(archive, after)
+            folder.write(uri, Outline.delete(doc, indices).toFileText())
+            reloadFile(folder, uri)
+            Archived(uri.toString(), removed, archive, before, after)
+        }
+    }
+
+    /** Puts archived notes back, and the archive file as it was if it has not changed since. */
+    suspend fun unarchive(archived: Archived) = withContext(Dispatchers.IO) {
+        writeLock.withLock {
+            val folder = folder() ?: error("No folder")
+            val uri = Uri.parse(archived.fileUri)
+            val doc = OrgDocument.parse(folder.read(uri), defaultKeywords)
+            folder.write(uri, Outline.restore(doc, archived.removed).toFileText())
+            if (runCatching { folder.read(archived.archive) }.getOrNull() == archived.after) {
+                if (archived.before == null) folder.delete(archived.archive) else folder.write(archived.archive, archived.before)
+            }
+            reloadFile(folder, uri)
+        }
+    }
 
     /** Returns the note's ID, adding a new one to its file if it has none. */
     suspend fun ensureId(note: OrgNote): Pair<String, OrgNote> {

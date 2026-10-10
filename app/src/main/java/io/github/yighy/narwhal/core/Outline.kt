@@ -31,6 +31,18 @@ object Outline {
     fun extract(doc: OrgDocument, indices: Collection<Int>): List<Subtree> =
         roots(doc, indices).map { i -> Subtree(withNewline(doc.text.substring(range(doc, i))), doc.sections[i].level) }
 
+    private val DRAWER = Regex("""^([ \t]*):PROPERTIES:[ \t]*\n(.*?)^[ \t]*:END:[ \t]*(\n|$)""", setOf(RegexOption.MULTILINE, RegexOption.DOT_MATCHES_ALL, RegexOption.IGNORE_CASE))
+    private val ID_LINE = Regex("""^[ \t]*:ID:.*(\n|$)""", setOf(RegexOption.MULTILINE, RegexOption.IGNORE_CASE))
+
+    /**
+     * [text] without the ID properties of its notes, for a copy: two notes with one ID would
+     * make id: links lead to either. A drawer left empty goes too.
+     */
+    fun withoutIds(text: String): String = DRAWER.replace(text) { m ->
+        val rest = ID_LINE.replace(m.groupValues[2], "")
+        if (rest.isBlank()) "" else m.value.replace(m.groupValues[2], rest)
+    }
+
     fun delete(doc: OrgDocument, indices: Collection<Int>): OrgDocument {
         val sb = StringBuilder(doc.text)
         roots(doc, indices).reversed().forEach { i ->

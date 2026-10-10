@@ -1,5 +1,7 @@
 package io.github.yighy.narwhal.ui
 
+import io.github.yighy.narwhal.core.Links
+import androidx.compose.ui.draw.alpha
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.PlayArrow
 import java.time.LocalDateTime
@@ -336,6 +338,11 @@ fun NoteScreen(
                                 onClick = { moreMenu = false; refiling = true },
                             )
                             DropdownMenuItem(
+                                text = { Text(stringResource(R.string.archive)) },
+                                leadingIcon = { Icon(NarwhalIcons.Archive, null) },
+                                onClick = { moreMenu = false; commit(); viewModel.archiveNote(note) },
+                            )
+                            DropdownMenuItem(
                                 text = { Text(stringResource(R.string.share)) },
                                 leadingIcon = { Icon(Icons.Default.Share, null) },
                                 trailingIcon = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) },
@@ -588,6 +595,7 @@ fun NoteScreen(
                                 onRemove = {
                                     viewModel.update(note) { e -> e.copy(properties = e.properties.filterNot { it.first.equals(name, ignoreCase = true) }) }
                                 },
+                                onOpenLink = viewModel::openLink,
                             )
                         }
                     }
@@ -607,6 +615,7 @@ fun NoteScreen(
                         taken = takenProperties,
                         onSave = { n, v -> addedProperty = n; viewModel.update(note) { e -> e.copy(properties = e.properties + (n to v)) } },
                         onRemove = { metaEdit = null },
+                        onOpenLink = viewModel::openLink,
                     )
                 }
             }
@@ -1084,6 +1093,7 @@ private fun PropertyRow(
     taken: Set<String>,
     onSave: (String, String) -> Unit,
     onRemove: () -> Unit,
+    onOpenLink: (String) -> Unit,
 ) {
     var n by remember(name) { mutableStateOf(name) }
     var v by remember(value) { mutableStateOf(value) }
@@ -1158,22 +1168,37 @@ private fun PropertyRow(
                     }
                 },
             )
-            BasicTextField(
-                value = v,
-                onValueChange = { v = it },
-                singleLine = true,
-                textStyle = fieldStyle(MaterialTheme.typography.bodyLarge, end = true),
-                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
-                modifier = Modifier.weight(1f).focusRequester(valueFocus).onFocusChanged { valueFocused = it.isFocused },
-                decorationBox = { field ->
-                    Box(contentAlignment = Alignment.CenterEnd) {
-                        if (v.isEmpty()) Text(stringResource(R.string.property_value), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        field()
-                    }
-                },
-            )
+            // Links show as links while the value is not edited: a tap on one opens it, beside them edits
+            val showLinks = !valueFocused && Links.find(v).isNotEmpty()
+            Box(Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) {
+                BasicTextField(
+                    value = v,
+                    onValueChange = { v = it },
+                    singleLine = true,
+                    textStyle = fieldStyle(MaterialTheme.typography.bodyLarge, end = true),
+                    cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
+                    modifier = Modifier.fillMaxWidth().alpha(if (showLinks) 0f else 1f).focusRequester(valueFocus).onFocusChanged { valueFocused = it.isFocused },
+                    decorationBox = { field ->
+                        Box(contentAlignment = Alignment.CenterEnd) {
+                            if (v.isEmpty()) Text(stringResource(R.string.property_value), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            field()
+                        }
+                    },
+                )
+                if (showLinks) {
+                    LinkedText(
+                        v,
+                        MaterialTheme.typography.bodyLarge.copy(textAlign = TextAlign.End),
+                        onOpenLink = onOpenLink,
+                        // As wide as its text: beside it, the field under takes the taps
+                        modifier = Modifier,
+                        maxLines = 2,
+                        onTextTap = { valueFocus.requestFocus() },
+                    )
+                }
+            }
             // Removing is offered while the property is being edited
             if (hasFocus) {
                 IconButton(onClick = { n = ""; focusManager.clearFocus(); save() }) { Icon(Icons.Default.Close, stringResource(R.string.remove_property)) }
