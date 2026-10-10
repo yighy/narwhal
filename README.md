@@ -5,6 +5,13 @@
 An Android app for [Org mode](https://orgmode.org) notes, inspired by
 [Orgzly](https://github.com/orgzly/orgzly-android).
 
+<p>
+  <img src="docs/screenshots/notebook.png" alt="A notebook" width="200">
+  <img src="docs/screenshots/note.png" alt="A note with a table and checkboxes" width="200">
+  <img src="docs/screenshots/tree.png" alt="The tree view" width="200">
+  <img src="docs/screenshots/agenda.png" alt="The agenda" width="200">
+</p>
+
 ## Features
 
 - **Your `.org` files, nothing else.** Narwhal works on a folder you pick. Changes made elsewhere
