@@ -584,14 +584,22 @@ fun LinkedText(
     // The text as shown, and how its parts map to the raw text (links, checkboxes, emphasis, cookies)
     val (annotated, ranges, boxes) = remember(text, linkStyle, showBoxes, codeBackground, struck) {
         val ranges = mutableListOf<ShownPart>()
-        val links = Links.find(text)
+        fun overlap(a: IntRange, b: IntRange) = a.first <= b.last && b.first <= a.last
+        val markup = Markup.find(text)
+        // Verbatim and code keep their text as written, an address in it included (=file:=)
+        val literal = markup.filter { it.style == Markup.Style.Verbatim || it.style == Markup.Style.Code }
+        val links = Links.find(text).filter { link -> link.description != null || literal.none { overlap(it.range, link.range) } }
         val boxes = if (showBoxes) Checkboxes.find(text).filter { b -> links.none { b.box in it.range } } else emptyList()
         // Emphasis around a link is left as written
-        val emphasis = Markup.find(text).filter { e -> links.none { it.range.first <= e.range.last && e.range.first <= it.range.last } }
+        val emphasis = markup.filter { e -> links.none { overlap(it.range, e.range) } }
         // Filled-in [2/3] and [66%] cookies, outside links
-        val cookies = Cookies.COOKIE.findAll(text)
-            .filter { m -> m.groupValues[1].isNotEmpty() && links.none { m.range.first in it.range } }
-            .toList()
+        val cookies = if ('[' !in text) {
+            emptyList()
+        } else {
+            Cookies.COOKIE.findAll(text)
+                .filter { m -> m.groupValues[1].isNotEmpty() && links.none { m.range.first in it.range } }
+                .toList()
+        }
         val segments = (links.map { it.range to it } + boxes.map { it.range to it } + emphasis.map { it.range to it } + cookies.map { it.range to it })
             .sortedBy { it.first.first }
         val shown = buildAnnotatedString {
@@ -616,7 +624,7 @@ fun LinkedText(
         Triple(shown, ranges, boxes)
     }
     val boxColor = MaterialTheme.colorScheme.primary
-    val cookieContent = Cookies.COOKIE.findAll(text).filter { it.groupValues[1].isNotEmpty() }.associate { m ->
+    val cookieContent = if ('[' !in text) emptyMap() else Cookies.COOKIE.findAll(text).filter { it.groupValues[1].isNotEmpty() }.associate { m ->
         "cookie:" + m.value to cookieInline(m, style)
     }
     val inlineContent = cookieContent + boxes.withIndex().associate { (i, box) ->

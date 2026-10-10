@@ -330,11 +330,7 @@ object TableFormulas {
 
     // ---- Layout ----
 
-    private fun parseRow(line: String): MutableList<String>? {
-        val t = line.trim()
-        if (t.startsWith("|-")) return null
-        return t.removePrefix("|").let { if (it.endsWith("|")) it.dropLast(1) else it }.split('|').map { it.trim() }.toMutableList()
-    }
+    private fun parseRow(line: String): MutableList<String>? = Blocks.tableRow(line)?.toMutableList()
 
     private fun indent(line: String) = line.takeWhile { it == ' ' || it == '\t' }
 
@@ -343,10 +339,7 @@ object TableFormulas {
         val columns = table.columns
         val data = table.rows.filterNotNull()
         val widths = (0 until columns).map { c -> data.maxOf { it.getOrElse(c) { "" }.length }.coerceAtLeast(1) }
-        val numeric = (0 until columns).map { c ->
-            val cells = data.map { it.getOrElse(c) { "" } }.filter { it.isNotEmpty() }
-            cells.isNotEmpty() && cells.count { it.toDoubleOrNull() != null } * 2 >= cells.size
-        }
+        val numeric = Blocks.numericColumns(data, columns)
         return table.rows.map { cells ->
             if (cells == null) {
                 indent + "|" + widths.joinToString("+") { "-".repeat(it + 2) } + "|"

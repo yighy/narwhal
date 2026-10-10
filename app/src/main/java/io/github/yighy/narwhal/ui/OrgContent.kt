@@ -178,7 +178,7 @@ private fun FoldableText(
                 )
                 is ListFolds.Item -> {
                     var open by rememberSaveable(start + part.start) { mutableStateOf(true) }
-                    val rotation by animateFloatAsState(if (open) 90f else 0f, MaterialTheme.motionScheme.fastSpatialSpec(), label = "item")
+                    val rotation = chevronRotation(open)
                     Row(verticalAlignment = Alignment.Top) {
                         LinkedText(
                             part.line,
@@ -200,12 +200,7 @@ private fun FoldableText(
                                 .rotate(rotation),
                         )
                     }
-                    val motion = MaterialTheme.motionScheme
-                    AnimatedVisibility(
-                        open,
-                        enter = expandVertically(motion.defaultSpatialSpec()) + fadeIn(motion.defaultEffectsSpec()),
-                        exit = shrinkVertically(motion.defaultSpatialSpec()) + fadeOut(motion.defaultEffectsSpec()),
-                    ) {
+                    Unfold(open) {
                         FoldableText(part.children, start + part.childrenStart, style, onOpenLink, tapFrom, toggleFrom)
                     }
                 }
@@ -218,7 +213,7 @@ private fun FoldableText(
 @Composable
 private fun FormulaBar(table: Blocks.Table, onRecalculate: (() -> Unit)?) {
     var open by rememberSaveable(table.range.first) { mutableStateOf(false) }
-    val rotation by animateFloatAsState(if (open) 90f else 0f, MaterialTheme.motionScheme.fastSpatialSpec(), label = "formulas")
+    val rotation = chevronRotation(open)
     val count = table.formulas.size
     Column(Modifier.padding(top = 4.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -246,12 +241,7 @@ private fun FormulaBar(table: Blocks.Table, onRecalculate: (() -> Unit)?) {
                 TextButton(onClick = onRecalculate) { Text(stringResource(R.string.recalculate)) }
             }
         }
-        val motion = MaterialTheme.motionScheme
-        AnimatedVisibility(
-            open,
-            enter = expandVertically(motion.defaultSpatialSpec()) + fadeIn(motion.defaultEffectsSpec()),
-            exit = shrinkVertically(motion.defaultSpatialSpec()) + fadeOut(motion.defaultEffectsSpec()),
-        ) {
+        Unfold(open) {
             Text(
                 table.formulas.joinToString("\n"),
                 style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
@@ -273,7 +263,7 @@ private fun DrawerBlock(
     onToggleCheckbox: ((Int) -> Unit)?,
 ) {
     var open by rememberSaveable(drawer.name, drawer.innerStart) { mutableStateOf(false) }
-    val rotation by animateFloatAsState(if (open) 90f else 0f, MaterialTheme.motionScheme.fastSpatialSpec(), label = "drawer")
+    val rotation = chevronRotation(open)
     Column {
         Row(
             Modifier
@@ -290,12 +280,7 @@ private fun DrawerBlock(
             )
             Text(drawer.name, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        val motion = MaterialTheme.motionScheme
-        AnimatedVisibility(
-            open,
-            enter = expandVertically(motion.defaultSpatialSpec()) + fadeIn(motion.defaultEffectsSpec()),
-            exit = shrinkVertically(motion.defaultSpatialSpec()) + fadeOut(motion.defaultEffectsSpec()),
-        ) {
+        Unfold(open) {
             LinkedText(
                 drawer.inner,
                 style,
@@ -317,6 +302,22 @@ private fun ElementName(name: String) {
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.padding(bottom = 4.dp),
     )
+}
+
+/** Rotation of a fold chevron: pointing down when [open], right when folded. */
+@Composable
+private fun chevronRotation(open: Boolean): Float =
+    animateFloatAsState(if (open) 90f else 0f, MaterialTheme.motionScheme.fastSpatialSpec(), label = "chevron").value
+
+/** [content] unfolding and folding away as [open] changes. */
+@Composable
+private fun Unfold(open: Boolean, content: @Composable () -> Unit) {
+    val motion = MaterialTheme.motionScheme
+    AnimatedVisibility(
+        open,
+        enter = expandVertically(motion.defaultSpatialSpec()) + fadeIn(motion.defaultEffectsSpec()),
+        exit = shrinkVertically(motion.defaultSpatialSpec()) + fadeOut(motion.defaultEffectsSpec()),
+    ) { content() }
 }
 
 /** A tap edits the text from [at] (no ripple, as on the text around). */
@@ -359,12 +360,7 @@ private fun OrgTable(table: Blocks.Table, style: TextStyle, onOpenLink: (String)
     val rows = table.rows.withIndex().mapNotNull { (i, cells) -> cells?.let { i to it } }
     val header = table.headerRows
     // Columns of numbers align right, as Emacs writes them
-    val numeric = remember(table) {
-        (0 until table.columns).map { c ->
-            val cells = rows.drop(header).map { it.second.getOrElse(c) { "" } }.filter { it.isNotEmpty() }
-            cells.isNotEmpty() && cells.count { it.toDoubleOrNull() != null } * 2 >= cells.size
-        }
-    }
+    val numeric = remember(table) { Blocks.numericColumns(rows.drop(header).map { it.second }, table.columns) }
     Row(
         modifier
             .horizontalScroll(rememberScrollState())

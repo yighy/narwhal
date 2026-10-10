@@ -487,7 +487,8 @@ private fun OutlineRow(
                     onOpenLink = onOpenLink,
                     titleModifier = Modifier.sharedText(noteTitleKey(note)),
                 )
-                if (showContent && !Blocks.showsNothing(note.content)) {
+                val hasContent = remember(note.content) { !Blocks.showsNothing(note.content) }
+                if (showContent && hasContent) {
                     OrgContent(
                         note.content.trimIndent(),
                         MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),

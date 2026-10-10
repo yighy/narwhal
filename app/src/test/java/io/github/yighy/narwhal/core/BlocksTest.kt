@@ -27,7 +27,7 @@ class BlocksTest {
 
     @Test
     fun unclosedBlockIsText() {
-        assertTrue(Blocks.isPlain("#+BEGIN_QUOTE\nno end"))
+        assertTrue(Blocks.parse("#+BEGIN_QUOTE\nno end").all { it is Blocks.Text })
         assertTrue(Blocks.showsNothing(":LOGBOOK:\nx\n:END:\n"))
         assertEquals(false, Blocks.showsNothing(":DETAILS:\nx\n:END:"))
     }

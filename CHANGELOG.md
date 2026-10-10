@@ -15,6 +15,7 @@ All notable changes to Narwhal. Versions follow [Semantic Versioning](https://se
   instead of a second time a moment later
 - The buttons behind a swiped note stay in the part of it on screen, also on a note with a long
   content and while scrolling
+- An address written as verbatim or code (=file:=, ~https://…~) shows as such, not as a broken link
 
 ## [0.10.0] - 2026-10-10
 

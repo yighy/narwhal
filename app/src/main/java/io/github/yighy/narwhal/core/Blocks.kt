@@ -2,7 +2,7 @@ package io.github.yighy.narwhal.core
 
 /**
  * A note's content split into what shows differently: plain text, tables, blocks
- * (#+BEGIN_SRC, #+BEGIN_QUOTE…) and drawers (:LOGBOOK:…:END:, not shown).
+ * (#+BEGIN_SRC, #+BEGIN_QUOTE…) and drawers (:LOGBOOK:…:END:, folded).
  * Each part has its [Block.range] of lines in the content.
  */
 object Blocks {
@@ -65,11 +65,10 @@ object Blocks {
     private val RULE = Regex("""^\|[-+:| ]*-[-+:| ]*\|?$""")
 
     fun parse(text: String): List<Block> {
-        // Lines with where they start
-        val starts = mutableListOf(0)
-        text.forEachIndexed { i, c -> if (c == '\n') starts += i + 1 }
-        val lines = starts.mapIndexed { i, s -> text.substring(s, if (i + 1 < starts.size) starts[i + 1] - 1 else text.length) }
-        fun end(line: Int) = starts[line] + lines[line].length - 1
+        val split = Lines(text)
+        val starts = split.starts
+        val lines = split.lines
+        fun end(line: Int) = split.end(line)
 
         val blocks = mutableListOf<Block>()
         var textFrom: Int? = null
@@ -132,7 +131,7 @@ object Blocks {
                 flushText(i)
                 var last = i
                 while (last + 1 < lines.size && TABLE_LINE.matches(lines[last + 1])) last++
-                val rows = (i..last).map { row(lines[it]) }
+                val rows = (i..last).map { tableRow(lines[it]) }
                 // Its formulas, on the lines right under it
                 var formulasEnd = last
                 while (formulasEnd + 1 < lines.size && TBLFM.matches(lines[formulasEnd + 1])) formulasEnd++
@@ -153,9 +152,6 @@ object Blocks {
         return blocks
     }
 
-    /** Whether [text] shows as plain text only (no table, block or drawer). */
-    fun isPlain(text: String): Boolean = parse(text).all { it is Text }
-
     /** Whether [text] shows nothing: blank, or only a logbook (shown as the clock's time). */
     fun showsNothing(text: String): Boolean = parse(text).all { it is Drawer && it.name == "LOGBOOK" }
 
@@ -165,7 +161,17 @@ object Blocks {
         return text.substring(table.tableStart, table.tableEnd).split('\n')
     }
 
-    private fun row(line: String): List<String>? {
+    /**
+     * Columns of numbers, which align right as Emacs writes them: those where at least half the
+     * fields filled are numbers.
+     */
+    fun numericColumns(rows: List<List<String>>, columns: Int): List<Boolean> = (0 until columns).map { c ->
+        val cells = rows.map { it.getOrElse(c) { "" } }.filter { it.isNotEmpty() }
+        cells.isNotEmpty() && cells.count { it.toDoubleOrNull() != null } * 2 >= cells.size
+    }
+
+    /** A table line's fields, or null for a rule (|---+---|). */
+    fun tableRow(line: String): List<String>? {
         val t = line.trim()
         if (RULE.matches(t)) return null
         return t.removePrefix("|").let { if (it.endsWith("|")) it.dropLast(1) else it }.split('|').map { it.trim() }

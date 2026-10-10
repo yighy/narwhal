@@ -666,7 +666,7 @@ fun NoteScreen(
                         .clickable(interactionSource = null, indication = null) { startEditing(Editing.Content) }
                         .padding(vertical = 8.dp),
                 ) {
-                    if (Blocks.showsNothing(content)) {
+                    if (remember(content) { Blocks.showsNothing(content) }) {
                         Text(contentPlaceholder, style = contentStyle, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     } else {
                         OrgContent(

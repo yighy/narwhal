@@ -19,9 +19,9 @@ object ListFolds {
     private val ITEM = Regex("""^([ \t]*)(?:[-+]|\d+[.)])[ \t]+\S.*$""")
 
     fun parse(text: String): List<Part> {
-        val starts = mutableListOf(0)
-        text.forEachIndexed { i, c -> if (c == '\n') starts += i + 1 }
-        val lines = starts.mapIndexed { i, s -> text.substring(s, if (i + 1 < starts.size) starts[i + 1] - 1 else text.length) }
+        val split = Lines(text)
+        val starts = split.starts
+        val lines = split.lines
         fun indent(line: String) = line.takeWhile { it == ' ' || it == '\t' }.length
 
         val parts = mutableListOf<Part>()
