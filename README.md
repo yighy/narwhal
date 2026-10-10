@@ -8,7 +8,7 @@ An Android app for [Org mode](https://orgmode.org) notes, inspired by
 <p>
   <img src="docs/screenshots/notebook.png" alt="A notebook" width="200">
   <img src="docs/screenshots/note.png" alt="A note with a table and checkboxes" width="200">
-  <img src="docs/screenshots/tree.png" alt="The tree view" width="200">
+  <img src="docs/screenshots/edit.png" alt="Editing a note, with the toolbar over the keyboard" width="200">
   <img src="docs/screenshots/agenda.png" alt="The agenda" width="200">
 </p>
 
