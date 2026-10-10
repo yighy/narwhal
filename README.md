@@ -7,25 +7,20 @@ An Android app for [Org mode](https://orgmode.org) notes, inspired by
 
 ## Features
 
-- **Your files as the only storage.** Narwhal reads and writes the `.org` files of a folder you
-  pick (for example one synced with Syncthing). Changes made elsewhere show up within seconds,
-  untouched text is written back byte for byte, and a note changed on disk is never overwritten.
-- **Notes that link to each other.** Type `id:` to pick a note by its title; Narwhal gives it an
-  `ID` if needed and inserts the link. Each note lists the notes that link to it, and links follow
-  when a note is renamed.
-  
-- **A toolbar over the keyboard.** Bold, italic, underline, strike-through and code; lists,
-  checkboxes, indent and outdent; a link to another note; a date with its time, end time and
-  repeat, or a change to the date at the cursor; undo and redo, always in view.
-- **Outline, agenda and search.** Notebooks as an outline that folds, swipe a note to mark it
-  done, multiple selection to move, cut, copy and paste notes; an agenda of the week with
-  repeating tasks; search with Orgzly's syntax (`s.today`, `t.work`, `i.todo`…) and saved
-  searches; Org links of any kind (web, mail, phone, maps, files).
-- **Reminders.** Exact alarms (optionally as alarm clock alarms), kept across reboots, with Done
-  and snooze buttons in the notification.
-- **Material 3 Expressive.** Smooth transitions, light and dark themes, colors from your
-  wallpaper.
-  
+- **Your `.org` files, nothing else.** Narwhal works on a folder you pick. Changes made elsewhere
+  show up within seconds, and what Narwhal doesn't change stays as it was, so the same files open
+  in Emacs.
+- **Outline and tree.** Notebooks fold as in Org (`#+STARTUP`, `VISIBILITY`) and stay as you
+  leave them; a tree view draws them as boxes to move around. Select notes to move, copy, archive
+  or refile them.
+- **Links.** `id:` links picked by title, internal links (`[[*Title]]`, `<<target>>`), and the
+  notes linking back to each one.
+- **Agenda and reminders.** The week ahead with repeating tasks, and exact reminders with Done and
+  snooze buttons.
+- **Org at hand.** Tables with formulas, checkboxes and `[/]` cookies, blocks and drawers,
+  clocking, archiving, search with Orgzly's syntax, sharing from other apps.
+- **A guide notebook** to try all this, offered on first start.
+
 ## Download
 
 Signed APKs are attached to each [release](https://github.com/yighy/narwhal/releases); see
