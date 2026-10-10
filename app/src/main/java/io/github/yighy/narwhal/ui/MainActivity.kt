@@ -417,6 +417,15 @@ private fun ScreenContent(
             }
         }
 
+        is Screen.Tree -> {
+            val file = library.file(screen.fileUri)
+            if (file != null) {
+                TreeScreen(viewModel, library, file, snackbar)
+            } else if (!library.loading) {
+                LaunchedEffect(screen) { viewModel.back() }
+            }
+        }
+
         is Screen.Note -> {
             val note = library.note(screen.fileUri, screen.index)
             if (note != null) {

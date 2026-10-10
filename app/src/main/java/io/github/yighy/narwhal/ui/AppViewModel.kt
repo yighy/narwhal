@@ -1,5 +1,7 @@
 package io.github.yighy.narwhal.ui
 
+import io.github.yighy.narwhal.core.TreeKeys
+import androidx.compose.ui.geometry.Offset
 import io.github.yighy.narwhal.core.Guide
 import io.github.yighy.narwhal.core.InternalLinks
 import io.github.yighy.narwhal.core.Cookies
@@ -57,6 +59,7 @@ sealed interface Screen {
     data object Notebooks : Screen
     data class Notebook(val fileUri: String) : Screen
     data class Note(val fileUri: String, val index: Int) : Screen
+    data class Tree(val fileUri: String) : Screen
     data object Settings : Screen
     data object Agenda : Screen
     data object Searches : Screen
@@ -370,6 +373,13 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun openNote(note: OrgNote) = push(Screen.Note(note.fileUri, note.index))
 
+    fun openTree(fileUri: String) = push(Screen.Tree(fileUri))
+
+    /** How a notebook's tree view was left (zoom, position, folded notes), for when it is shown again. */
+    class TreeView(val scale: Float, val offset: Offset, val folded: Set<String>, val keys: TreeKeys)
+
+    val treeViews = mutableMapOf<String, TreeView>()
+
     /**
      * Opens a link's target: id: a note, file: a notebook (.org) or a file of the folder, anything
      * else (https:, mailto:, tel:, sms:, geo:…) in the app Android picks.
@@ -423,6 +433,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val current = when (val screen = stack.lastOrNull()) {
             is Screen.Note -> screen.fileUri
             is Screen.Notebook -> screen.fileUri
+            is Screen.Tree -> screen.fileUri
             else -> null
         }
         val notes = library.value.notes.sortedBy { it.fileUri != current }

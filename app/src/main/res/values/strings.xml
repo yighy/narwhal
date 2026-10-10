@@ -246,6 +246,8 @@
     <string name="title_placeholder_new">Add a title to create the note</string>
     <string name="today_date">Today · %1$s</string>
     <string name="tomorrow_date">Tomorrow · %1$s</string>
+    <string name="tree_fit">Show the whole tree</string>
+    <string name="tree_view">Tree view</string>
     <string name="underline">Underline</string>
     <string name="undo">Undo</string>
     <string name="untitled">Untitled</string>

@@ -163,6 +163,11 @@ fun NotebookScreen(
                         leadingIcon = { Icon(Icons.Default.Edit, null) },
                         onClick = { dismiss(); editPreface() },
                     )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.tree_view)) },
+                        leadingIcon = { Icon(NarwhalIcons.Tree, null) },
+                        onClick = { dismiss(); viewModel.openTree(file.uri) },
+                    )
 
                 }
             }
@@ -506,7 +511,7 @@ private fun OutlineRow(
  * Keys of the outline rows that follow a note when it moves: its text without the heading stars
  * (so a change of level keeps it), numbered among identical ones.
  */
-private fun outlineKeys(notes: List<OrgNote>): List<String> {
+internal fun outlineKeys(notes: List<OrgNote>): List<String> {
     val seen = HashMap<String, Int>()
     return notes.map { note ->
         val text = note.raw.trimStart('*')

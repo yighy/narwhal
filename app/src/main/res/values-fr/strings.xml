@@ -244,6 +244,8 @@
     <string name="title_placeholder_new">Ajoutez un titre pour créer la note</string>
     <string name="today_date">Aujourd’hui · %1$s</string>
     <string name="tomorrow_date">Demain · %1$s</string>
+    <string name="tree_fit">Voir tout l’arbre</string>
+    <string name="tree_view">Vue en arbre</string>
     <string name="underline">Souligné</string>
     <string name="undo">Annuler</string>
     <string name="untitled">Sans titre</string>

@@ -4,6 +4,14 @@ All notable changes to Narwhal. Versions follow [Semantic Versioning](https://se
 
 ## [Unreleased]
 
+### Added
+- Tree view of a notebook (its ⋮ menu): the notes drawn as boxes from left to right, moved and
+  zoomed with the fingers; a tap opens a note, the round button at its side folds its sub-notes
+  and shows how many are hidden, and the view moves to show the ones unfolded; a button shows the
+  whole tree
+- In the tree view, a long press selects notes, with the same bars as in the notebook: notes
+  can be moved up, down, a level up or down, or to another notebook, and slide to their new places
+
 ## [0.11.0] - 2026-10-10
 
 ### Added

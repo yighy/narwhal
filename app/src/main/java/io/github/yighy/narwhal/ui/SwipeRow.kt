@@ -220,6 +220,16 @@ object NarwhalIcons {
 
     val Stop: ImageVector by lazy { icon("Stop", "M6,6h12v12H6z") }
 
+    val Tree: ImageVector by lazy { icon("Tree", "M22,11V3h-7v3H9V3H2v8h7V8h2v10h4v3h7v-8h-7v3h-2V8h2v3H22z") }
+
+    val FitScreen: ImageVector by lazy {
+        icon(
+            "FitScreen",
+            "M17,4h3c1.1,0 2,0.9 2,2v2h-2V6h-3V4zM4,8V6h3V4H4C2.9,4 2,4.9 2,6v2H4zM20,16v2h-3v2h3c1.1,0 2,-0.9 2,-2v-2H20z" +
+                "M7,18H4v-2H2v2c0,1.1 0.9,2 2,2h3V18zM18,8H6v8h12V8z",
+        )
+    }
+
     val Undo: ImageVector by lazy {
         icon(
             "Undo",
