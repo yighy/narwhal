@@ -19,7 +19,6 @@ An Android app for [Org mode](https://orgmode.org) notes, inspired by
   snooze buttons.
 - **Org at hand.** Tables with formulas, checkboxes and `[/]` cookies, blocks and drawers,
   clocking, archiving, search with Orgzly's syntax, sharing from other apps.
-- **A guide notebook** to try all this, offered on first start.
 
 ## Download
 
