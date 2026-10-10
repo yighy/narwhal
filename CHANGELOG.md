@@ -4,6 +4,8 @@ All notable changes to Narwhal. Versions follow [Semantic Versioning](https://se
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-10-10
+
 ### Added
 - Tree view of a notebook (its ⋮ menu): the notes drawn as boxes from left to right, moved and
   zoomed with the fingers; a tap opens a note, the round button at its side folds its sub-notes
@@ -210,7 +212,8 @@ All notable changes to Narwhal. Versions follow [Semantic Versioning](https://se
 - First prototype: notebooks from a folder of `.org` files, outline, note editing, search, tags,
   and `id:` links to other notes
 
-[Unreleased]: https://github.com/yighy/narwhal/compare/v0.11.0...HEAD
+[Unreleased]: https://github.com/yighy/narwhal/compare/v0.12.0...HEAD
+[0.12.0]: https://github.com/yighy/narwhal/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/yighy/narwhal/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/yighy/narwhal/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/yighy/narwhal/compare/v0.8.0...v0.9.0
