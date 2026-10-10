@@ -4,6 +4,8 @@ All notable changes to Narwhal. Versions follow [Semantic Versioning](https://se
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-10-10
+
 ### Added
 - Archive a note (its ⋮ menu, or the selection's): it goes with its sub-notes to the end of the
   notebook's archive file (gtd.org_archive, next to it), with the properties Emacs adds
@@ -15,6 +17,7 @@ All notable changes to Narwhal. Versions follow [Semantic Versioning](https://se
 ### Changed
 - Folded notes stay folded when the app is closed; a notebook shown for the first time folds as
   Org would show it, after its #+STARTUP (overview, show2levels…) and its notes' VISIBILITY
+- The guide notebook also explains the tree view and archiving, with a note to archive
 
 ### Fixed
 - A copied note, pasted, no longer keeps the ID of the note it was copied from (with two notes
@@ -228,7 +231,8 @@ All notable changes to Narwhal. Versions follow [Semantic Versioning](https://se
 - First prototype: notebooks from a folder of `.org` files, outline, note editing, search, tags,
   and `id:` links to other notes
 
-[Unreleased]: https://github.com/yighy/narwhal/compare/v0.12.0...HEAD
+[Unreleased]: https://github.com/yighy/narwhal/compare/v0.13.0...HEAD
+[0.13.0]: https://github.com/yighy/narwhal/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/yighy/narwhal/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/yighy/narwhal/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/yighy/narwhal/compare/v0.9.0...v0.10.0
