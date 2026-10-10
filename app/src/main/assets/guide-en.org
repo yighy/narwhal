@@ -21,7 +21,8 @@ Narwhal reads and writes the =.org= files of a folder on the phone (synced with 
 - The =+= button of a notebook adds a note at the end.
 - *Swipe a note left*: 🗑 delete, then new note above, as a sub-note or below.
 - *Swipe right*: to do ↔ done.
-- The chevrons fold the sub-notes; *Collapse all / Expand all* at the top of the notebook.
+- The chevrons fold the sub-notes; *Collapse all / Expand all* at the top of the notebook. Folds stay as you leave them, also after the app is closed.
+- The first time a notebook is shown, it folds as Emacs would show it: after a =#+STARTUP: overview= (or =show2levels=…) line at its top, and each note's =VISIBILITY= property (=folded=, =children=, =content=, =all=).
 - A deletion can be undone with the *Undo* button of the message.
 
 *** A sub-note
@@ -50,15 +51,18 @@ The deadline shows in the agenda on its date, in red, then under "Overdue" once 
 :PROPERTIES:
 :PLACE:    Lyon
 :BUDGET:   300
+:SEE:      [[*Formulas][Formulas]]
 :END:
 *Property* adds a name / value line. While you type, Narwhal suggests the names already used in your notebooks, then the values already given to that name.
 
+- A link in a value shows as a link, as =SEE= above: tap it to open it, tap beside it to edit the value.
 - *Settings → Hidden properties*: the ones not to show (ID, CREATED…); they stay in the file.
 - *Settings → Add an ID / a creation date to new notes*.
 
 ** The ⋮ menu of a note
 - *Copy link to this note*: an =[[id:…][Title]]= link to paste elsewhere.
 - *Move to…*: choose a notebook, then its end or a note to put it under.
+- *Archive*: see "Archiving" below.
 - *Share*: the note, its title or its content, to another app.
 - The =+= button at the bottom: new note above, as a sub-note or below this one.
 
@@ -247,10 +251,27 @@ Conditions combine: =it.todo t.guide o.p=. A dot in front negates one: =.t.guide
 * Multiple selection
 A *long press* on a note selects it; tap others to add them.
 
-- *Cut*, *Copy*, *Paste* (above, as a sub-note, below).
+- *Cut*, *Copy*, *Paste* (above, as a sub-note, below). A copy gets no ID, so that links to the note still lead to it; cut notes keep theirs.
 - *Move*: up, down, one level up or down, *Move to…*
 - Set the state, scheduled time or deadline of all of them at once.
-- *Select all*, *Delete* (with undo).
+- *Select all*, *Archive*, *Delete* (with undo).
+
+* Tree view
+In a notebook, *⋮ → Tree view* draws its notes as boxes from left to right.
+
+- Move it with a finger, zoom with two; a *double tap* between the boxes zooms in, then back to the whole tree.
+- A tap on a box opens the note; the round button at its side folds its sub-notes and shows how many are hidden.
+- *Collapse all / Expand all* and *Show the whole tree* at the top.
+- A *long press* selects notes, with the same bars as in the notebook: move them up, down, a level up or down, and they slide to their new places.
+- The tree comes back as you left it: zoom, place and folds.
+
+* Archiving
+*⋮ → Archive* on a note (or on a selection) moves it with its sub-notes to the end of the notebook's archive file, next to it: =narwhal-guide.org_archive= for this one. As in Emacs (=C-c C-x C-s=), it gets properties saying when and where from (=ARCHIVE_TIME=, =ARCHIVE_FILE=, =ARCHIVE_OLPATH=…).
+
+The archive file is not a notebook: archived notes leave the lists, the agenda and the search, and the notebook stays light. Open the file in Emacs to read them again. The message offers to undo it.
+
+** DONE Archive me
+Try it: open this note, then *⋮ → Archive*.
 
 * Sharing to Narwhal
 From another app (browser, notes…), *Share → Narwhal* makes a note in the *Inbox* notebook (made when needed): the page title as title, the link as content.
