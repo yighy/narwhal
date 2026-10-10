@@ -4,6 +4,8 @@ All notable changes to Narwhal. Versions follow [Semantic Versioning](https://se
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-10-10
+
 ### Added
 - A guide notebook (in English) explaining Narwhal with examples to try: offered once the
   folder is first chosen, and in Settings, About; its example dates are set around the day it
@@ -197,7 +199,8 @@ All notable changes to Narwhal. Versions follow [Semantic Versioning](https://se
 - First prototype: notebooks from a folder of `.org` files, outline, note editing, search, tags,
   and `id:` links to other notes
 
-[Unreleased]: https://github.com/yighy/narwhal/compare/v0.10.0...HEAD
+[Unreleased]: https://github.com/yighy/narwhal/compare/v0.11.0...HEAD
+[0.11.0]: https://github.com/yighy/narwhal/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/yighy/narwhal/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/yighy/narwhal/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/yighy/narwhal/compare/v0.7.1...v0.8.0
