@@ -23,7 +23,10 @@ An Android app for [Org mode](https://orgmode.org) notes, inspired by
 ## Download
 
 Signed APKs are attached to each [release](https://github.com/yighy/narwhal/releases); see
-[CHANGELOG.md](CHANGELOG.md) for what changed.
+[CHANGELOG.md](CHANGELOG.md) for what changed. [Obtainium](https://github.com/ImranR98/Obtainium)
+installs them and keeps the app up to date:
+
+[<img src="https://raw.githubusercontent.com/ImranR98/Obtainium/main/assets/graphics/badge_obtainium.png" alt="Get it on Obtainium" height="54">](https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/yighy/narwhal)
 
 ## Build
 
