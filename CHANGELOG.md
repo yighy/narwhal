@@ -4,6 +4,8 @@ All notable changes to Narwhal. Versions follow [Semantic Versioning](https://se
 
 ## [Unreleased]
 
+## [0.13.1] - 2026-10-11
+
 ### Fixed
 - Leaving a new note that has content, tags or dates but no title now warns first: a new note is
   saved once it has a title, so what was written would be lost; "Add a title" goes back to it
@@ -235,7 +237,8 @@ All notable changes to Narwhal. Versions follow [Semantic Versioning](https://se
 - First prototype: notebooks from a folder of `.org` files, outline, note editing, search, tags,
   and `id:` links to other notes
 
-[Unreleased]: https://github.com/yighy/narwhal/compare/v0.13.0...HEAD
+[Unreleased]: https://github.com/yighy/narwhal/compare/v0.13.1...HEAD
+[0.13.1]: https://github.com/yighy/narwhal/compare/v0.13.0...v0.13.1
 [0.13.0]: https://github.com/yighy/narwhal/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/yighy/narwhal/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/yighy/narwhal/compare/v0.10.0...v0.11.0
