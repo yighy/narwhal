@@ -1,5 +1,6 @@
 package io.github.yighy.narwhal.ui
 
+import io.github.yighy.narwhal.core.Guide
 import io.github.yighy.narwhal.core.InternalLinks
 import io.github.yighy.narwhal.core.Cookies
 import kotlinx.coroutines.flow.first
@@ -283,9 +284,51 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun setFolder(uri: Uri) {
-        viewModelScope.launch { repository.setFolder(uri) }
+        // The first time, a guide notebook is offered (unless the folder has it already)
+        val firstTime = !appSettings.guideOffered
+        if (firstTime) guideChoicePending = true
+        viewModelScope.launch {
+            repository.setFolder(uri)
+            if (firstTime) {
+                appSettings.guideOffered = true
+                if (guideFile() == null) offerGuide = true else guideChoicePending = false
+            }
+        }
         stack.clear()
         stack.add(Screen.Notebooks)
+    }
+
+    // ---- Guide notebook ----
+
+    /** Whether the guide notebook is being offered. */
+    var offerGuide by mutableStateOf(false)
+        private set
+
+    /** True from the folder's first choice until the guide is added or declined (other prompts wait). */
+    var guideChoicePending by mutableStateOf(false)
+        private set
+
+    fun dismissGuideOffer() {
+        offerGuide = false
+        guideChoicePending = false
+    }
+
+    private fun guideFile() = library.value.files.firstOrNull { it.ref.name.equals("${Guide.FILE_NAME}.org", ignoreCase = true) }
+
+    /** Adds the guide notebook to the folder and opens it (or opens the one already there). */
+    fun addGuide() {
+        offerGuide = false
+        guideChoicePending = false
+        guideFile()?.let { openNotebook(it.uri); return }
+        viewModelScope.launch {
+            val uri = attempt {
+                val app = getApplication<Application>()
+                val template = app.assets.open(Guide.ASSET).use { it.readBytes().toString(Charsets.UTF_8) }
+                repository.createFile(Guide.FILE_NAME, Guide.fill(template, LocalDate.now(), UUID.randomUUID().toString().uppercase()))
+            } ?: return@launch
+            openNotebook(uri.toString())
+            message(R.string.msg_guide_added)
+        }
     }
 
     fun isFolded(note: OrgNote) = folded[key(note)] == true

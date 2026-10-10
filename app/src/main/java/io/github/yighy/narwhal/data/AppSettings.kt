@@ -128,6 +128,11 @@ class AppSettings(context: Context) {
         List(json.length()) { i -> json.getJSONObject(i).let { SavedSearch(it.getString("name"), it.getString("query")) } }
     }.getOrDefault(emptyList())
 
+    /** Whether the guide notebook was already offered (once, when the folder is first chosen). */
+    var guideOffered: Boolean
+        get() = prefs.getBoolean(KEY_GUIDE_OFFERED, false)
+        set(value) = prefs.edit().putBoolean(KEY_GUIDE_OFFERED, value).apply()
+
     /** Whether the app already asked for the notification permission once. */
     var askedNotificationPermission: Boolean
         get() = prefs.getBoolean(KEY_ASKED_NOTIFICATIONS, false)
@@ -208,5 +213,6 @@ class AppSettings(context: Context) {
         private const val KEY_REMIND_ALL_DAY = "remind_all_day"
         private const val KEY_ALL_DAY_MINUTES = "all_day_minutes"
         private const val KEY_ASKED_NOTIFICATIONS = "asked_notifications"
+        private const val KEY_GUIDE_OFFERED = "guide_offered"
     }
 }

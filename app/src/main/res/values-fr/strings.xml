@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="add">Ajouter</string>
     <string name="add_tag">Ajouter une étiquette</string>
     <string name="agenda">Agenda</string>
     <string name="agenda_nothing_today">Rien aujourd’hui</string>
@@ -51,6 +52,8 @@
     <string name="event">Événement</string>
     <string name="expand">Déplier</string>
     <string name="expand_all">Tout déplier</string>
+    <string name="guide_offer_text">Il explique Narwhal avec des exemples à essayer, sous forme d’un carnet de votre dossier, que vous pouvez supprimer à tout moment. En anglais.</string>
+    <string name="guide_offer_title">Ajouter un carnet guide ?</string>
     <string name="indent">Augmenter le retrait</string>
     <string name="italic">Italique</string>
     <string name="item_selected">Sélectionné</string>
@@ -69,6 +72,7 @@
     <string name="move_up">Monter</string>
     <string name="msg_choose_folder_first">Choisissez d\'abord le dossier de vos notes</string>
     <string name="msg_file_not_saved">Le fichier n’a pas été enregistré correctement</string>
+    <string name="msg_guide_added">Carnet guide ajouté</string>
     <string name="msg_id_copied">ID copié</string>
     <string name="msg_link_copied">Lien copié</string>
     <string name="msg_link_not_found">Rien ne s’appelle « %1$s » dans les notes</string>
@@ -94,6 +98,7 @@
     <string name="no_notebooks">Aucun carnet pour l’instant. Touchez + pour en créer un.</string>
     <string name="no_notes">Aucune note pour l’instant. Touchez + pour en ajouter une.</string>
     <string name="no_saved_searches">Aucune recherche enregistrée. Enregistrez-en une avec le bouton signet pendant une recherche.</string>
+    <string name="no_thanks">Non merci</string>
     <string name="no_time">Sans heure</string>
     <string name="none">Aucun</string>
     <string name="not_checked">Non cochée</string>
@@ -166,6 +171,8 @@
     <string name="settings_about">À propos</string>
     <string name="settings_add_created">Ajouter une date de création aux nouvelles notes</string>
     <string name="settings_add_created_summary">Remplir la propriété CREATED à la création d’une note (recherche avec cr., tri avec o.cr)</string>
+    <string name="settings_add_guide">Ajouter le carnet guide</string>
+    <string name="settings_add_guide_summary">Explique Narwhal avec des exemples à essayer (en anglais)</string>
     <string name="settings_add_id">Ajouter un ID aux nouvelles notes</string>
     <string name="settings_add_id_summary">Remplir la propriété ID à la création d’une note ; une note en reçoit aussi un quand on crée un lien id: vers elle</string>
     <string name="settings_alarm_clock">Utiliser des alarmes de réveil</string>

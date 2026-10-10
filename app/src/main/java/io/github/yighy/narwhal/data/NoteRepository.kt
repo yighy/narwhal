@@ -183,6 +183,16 @@ class NoteRepository(context: Context) {
         folder.find(relativePath)?.let { it to folder.type(it) }
     }
 
+    /** Makes a notebook [name] (.org added) holding [text]. */
+    suspend fun createFile(name: String, text: String): Uri = withContext(Dispatchers.IO) {
+        val uri = writeLock.withLock {
+            val folder = folder() ?: error("No folder")
+            folder.createFile(name).also { folder.write(it, text) }
+        }
+        refresh()
+        uri
+    }
+
     suspend fun createFile(name: String): Uri = withContext(Dispatchers.IO) {
         val folder = folder() ?: error("No folder")
         folder.createFile(name).also { refresh() }

@@ -4,6 +4,11 @@ All notable changes to Narwhal. Versions follow [Semantic Versioning](https://se
 
 ## [Unreleased]
 
+### Added
+- A guide notebook (in English) explaining Narwhal with examples to try: offered once the
+  folder is first chosen, and in Settings, About; its example dates are set around the day it
+  is added, without times, so it rings no reminders
+
 ### Changed
 - Once a shared note is moved elsewhere, the Inbox notebook is deleted if nothing is left in it
   (not even a title line); the next share makes it again

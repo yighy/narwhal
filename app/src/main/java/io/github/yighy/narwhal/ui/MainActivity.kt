@@ -211,9 +211,11 @@ fun NarwhalApp(viewModel: AppViewModel, notificationsAllowed: Boolean, onAllowNo
     // A note requested from a notification opens once the notes are loaded
     LaunchedEffect(library.loaded) { viewModel.openPendingNote() }
 
-    // Ask once for notifications, so reminders work out of the box
-    LaunchedEffect(library.loaded) {
-        if (library.loaded && !notificationsAllowed && !viewModel.askedNotificationPermission) onAllowNotifications()
+    // Ask once for notifications, so reminders work out of the box (after the guide's offer)
+    LaunchedEffect(library.loaded, viewModel.guideChoicePending) {
+        if (library.loaded && !viewModel.guideChoicePending && !notificationsAllowed && !viewModel.askedNotificationPermission) {
+            onAllowNotifications()
+        }
     }
     val snackbar = remember { SnackbarHostState() }
     val drawer = rememberDrawerState(DrawerValue.Closed)
@@ -236,6 +238,16 @@ fun NarwhalApp(viewModel: AppViewModel, notificationsAllowed: Boolean, onAllowNo
     }
 
     BackHandler(enabled = viewModel.stack.size > 1) { viewModel.back() }
+
+    if (viewModel.offerGuide) {
+        AlertDialog(
+            onDismissRequest = viewModel::dismissGuideOffer,
+            title = { Text(stringResource(R.string.guide_offer_title)) },
+            text = { Text(stringResource(R.string.guide_offer_text)) },
+            confirmButton = { TextButton(onClick = viewModel::addGuide) { Text(stringResource(R.string.add)) } },
+            dismissButton = { TextButton(onClick = viewModel::dismissGuideOffer) { Text(stringResource(R.string.no_thanks)) } },
+        )
+    }
 
     if (library.folderUri == null) {
         WelcomeScreen(onPickFolder = { pickFolder.launch(null) })

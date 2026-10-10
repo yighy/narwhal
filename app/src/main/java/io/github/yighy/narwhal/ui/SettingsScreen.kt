@@ -245,6 +245,10 @@ fun SettingsScreen(
             ListItem(
                 supportingContent = { Text(stringResource(R.string.settings_version, version ?: "?")) },
             ) { Text(stringResource(R.string.app_name)) }
+            ListItem(
+                onClick = viewModel::addGuide,
+                supportingContent = { Text(stringResource(R.string.settings_add_guide_summary)) },
+            ) { Text(stringResource(R.string.settings_add_guide)) }
             fun open(url: String) = runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
             ListItem(
                 onClick = { open(SOURCE_URL) },

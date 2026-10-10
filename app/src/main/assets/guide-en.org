@@ -1,0 +1,263 @@
+#+TITLE: Narwhal guide
+#+TODO: TODO NEXT | DONE
+
+This notebook shows what Narwhal can do. Each note explains a feature and is also an example to try. Everything is written in Org: the same file opens in Emacs. Delete the notebook when you no longer need it (long press on it on the home screen).
+
+* Getting started
+** The notes folder
+Narwhal reads and writes the =.org= files of a folder on the phone (synced with Syncthing, Nextcloud…). There is no database: a file is a notebook, a heading (=*=) is a note.
+
+- Choose the folder in *Settings → Notes → Folder*.
+- Files changed by another app are read again within seconds.
+- Pull the list down to reload the folder.
+
+** Notebooks
+- *New notebook*: the =+= button on the home screen.
+- *Long press* on a notebook: selection, to rename or delete it.
+- A notebook can have an icon (an emoji) instead of its initial.
+- The text before the first note (the "preface") shows at the top of the notebook; tap it to edit it.
+
+** Notes and sub-notes
+- The =+= button of a notebook adds a note at the end.
+- *Swipe a note left*: 🗑 delete, then new note above, as a sub-note or below.
+- *Swipe right*: to do ↔ done.
+- The chevrons fold the sub-notes; *Collapse all / Expand all* at the top of the notebook.
+- A deletion can be undone with the *Undo* button of the message.
+
+*** A sub-note
+Fold and unfold "Notes and sub-notes" to see it go.
+
+* The note screen
+** Title and content
+Tap the title or the content to edit it where it is shown. There is no "Save" button: the note is saved when you leave the field, close the keyboard or go back.
+
+At the top, the path (notebook · parent notes) leads back to each of them.
+
+** TODO State, priority, tags                                          :example:guide:
+SCHEDULED: <{{date:+2}}>
+Under the title, the chips add what is missing: *Tags*, *State*, *Priority*, *Scheduled*, *Deadline*, *Property*, *Clock*. Tap a value to change it.
+
+- State: TODO, NEXT, DONE… (set in *Settings → State keywords*, or per notebook with a =#+TODO:= line, as at the top of this file).
+- Priority: A, B or C, shown as =#A= before the title.
+- Dates: day, time, end time, and repeater (=+1w=, =++1d=, =.+1m=).
+- A repeating task marked DONE moves on to its next date.
+
+** [#A] Important note with a deadline
+DEADLINE: <{{date:+5}}>
+The deadline shows in the agenda on its date, in red, then under "Overdue" once it has passed.
+
+** Properties
+:PROPERTIES:
+:PLACE:    Lyon
+:BUDGET:   300
+:END:
+*Property* adds a name / value line. While you type, Narwhal suggests the names already used in your notebooks, then the values already given to that name.
+
+- *Settings → Hidden properties*: the ones not to show (ID, CREATED…); they stay in the file.
+- *Settings → Add an ID / a creation date to new notes*.
+
+** The ⋮ menu of a note
+- *Copy link to this note*: an =[[id:…][Title]]= link to paste elsewhere.
+- *Move to…*: choose a notebook, then its end or a note to put it under.
+- *Share*: the note, its title or its content, to another app.
+- The =+= button at the bottom: new note above, as a sub-note or below this one.
+
+* Writing
+** Formatting
+Org is written as text and shown formatted: *bold*, /italic/, _underline_, +strike-through+, =verbatim= and ~code~.
+
+The *toolbar* over the keyboard (while editing the content) does bold, italic, underline, strike-through, code, list, checkbox, indent / outdent, =id:= and date. Undo and redo stay on the right.
+
+** Lists and checkboxes
+- [X] A checked box
+- [ ] A box to check: tap it
+- An item with sub-items folds with the chevron at the end of its line
+  - first sub-item
+  - second sub-item
+
+While you type, a list goes on by itself on the next line; an empty item ends it.
+
+** Progress cookies [1/3]
+A =[/]= or a =[%]= in a title or a list item counts what is done. Narwhal keeps it up to date as Emacs does, at each box checked:
+
+- [-] Luggage [33%]
+  - [X] Clothes
+  - [ ] Toiletries
+  - [ ] Chargers
+- [X] Train tickets
+- [ ] Passport
+
+The cookie of the title counts the top-level boxes. Without boxes, it counts the sub-notes done.
+
+** Project with steps [50%]
+*** DONE Step 1
+*** TODO Step 2
+Swipe this step right: the cookie of the project goes to 100%.
+
+** Dates in the text
+An active timestamp in the text is an *event* and shows in the agenda: meeting <{{date:+3}} 14:00-15:00>.
+
+An inactive timestamp just records a moment: [{{date:0}} 10:00]. The date button of the toolbar offers *Now* to insert one.
+
+* Links
+** Links to a note
+Type =id:= in the content, then a few letters of a title: Narwhal suggests the notes, and the one chosen becomes a link. The note linked to gets an ID if it had none.
+
+Example: [[id:{{id}}][The target note]].
+
+At the bottom of the note linked to, *Linked from* lists the notes that point to it.
+
+When a note is renamed, the links that still show the old title can be updated (*Settings → Links to a renamed note*).
+
+** The target note
+:PROPERTIES:
+:ID:       {{id}}
+:END:
+Open it: the note "Links to a note" shows under *Linked from*.
+
+** Links to a notebook, a website, a phone…
+- Type =file:= to link a notebook of the folder: [[file:narwhal-guide.org][this guide]].
+- Addresses open with a tap: https://orgmode.org, [[https://orgmode.org/manual/][the Org manual]].
+- Also =mailto:=, =tel:= and =geo:=.
+
+** Internal links
+Without a scheme, a link leads within the notes, as in Org:
+
+- to a target written in the text: [[meeting-point]];
+- to a table or block named with =#+NAME=: [[expenses]];
+- to a note by its title: [[*Tables and formulas]].
+
+** A target
+The link "meeting-point" leads here: <<meeting-point>> in front of the station.
+
+* Tables and formulas
+** A simple table
+| Fruit  | Quantity |
+|--------+----------|
+| Apples |        6 |
+| Pears  |        4 |
+
+Columns of numbers align right. Tap the table to edit its text.
+
+** Formulas
+Under a table, a =#+TBLFM:= line holds its formulas. The "ƒ formulas" line shows them; *Recalculate* computes them and realigns the table, as =C-c C-c= does in Emacs.
+
+#+NAME: expenses
+| Item       | Qty | Price | Total |
+|------------+-----+-------+-------|
+| Train      |   2 |    45 |       |
+| Hotel      |   3 |    80 |       |
+| Restaurant |   4 |    25 |       |
+|------------+-----+-------+-------|
+| Total      |     |       |       |
+#+TBLFM: $4=$2*$3::@>$4=vsum(@I..@II)
+
+Try it: tap *Recalculate*, change a quantity, then recalculate.
+
+- Column formula: =$4=$2*$3=; field formula: =@>$4=…= (last row, column 4).
+- References: =$2=, =@3$2=, =@<= / =@>= (first / last row), =@-1= (row above), ranges =@2..@-1=, =@I..@II= (between two rules).
+- Operations: =+ - * / ^=, parentheses, =vsum=, =vmean=, =vmin=, =vmax=, =vcount=, =abs=.
+- Formats: =;%.2f= (two decimals), =;%d= (whole number).
+- Lisp formulas and Calc's other functions are left as they are.
+
+** Reading another table
+=remote(name, reference)= reads a field of a named table, even in another note:
+
+| Total budget | Per person |
+|--------------+------------|
+|              |            |
+#+TBLFM: @2$1=remote(expenses, @>$4)::@2$2=@2$1/2;%.2f
+
+Recalculate "Formulas", then this one.
+
+* Blocks, quotes and drawers
+** Code and examples
+#+BEGIN_SRC kotlin
+fun main() = println("Hello Narwhal")
+#+END_SRC
+
+#+BEGIN_EXAMPLE
+Text kept as written: *no bold* here.
+#+END_EXAMPLE
+
+** Quote
+#+BEGIN_QUOTE
+The best way to predict the future is to invent it.
+#+END_QUOTE
+
+** Drawers
+A drawer keeps details folded under a name; tap "DETAILS" to open it.
+:DETAILS:
+Plate number: AB-123-CD
+Insurance: contract 456789
+:END:
+
+* Clocking
+** Write the report
+:LOGBOOK:
+CLOCK: [{{date:-1}} 09:00]--[{{date:-1}} 10:30] =>  1:30
+CLOCK: [{{date:-2}} 14:00]--[{{date:-2}} 14:45] =>  0:45
+:END:
+The *Clock* line shows the time spent (2:15 here). Tap ▶ to start, ■ to stop; it is written to the =:LOGBOOK:= as in Emacs.
+
+- Only one clock runs at a time: starting one stops the other.
+- "Clock running" shows under the note in the lists.
+
+* Agenda and reminders
+** The agenda
+Menu ☰ → *Agenda*: overdue tasks, today and the next six days. It gathers scheduled times, deadlines and the events in the text.
+
+- Filters at the top: *All notebooks*, *All tags*.
+- At the same time, notes are sorted by priority.
+- Swipe right: done. Swipe left: *+1d*, *+7d* or *Choose a date*.
+
+** TODO Water the plants
+SCHEDULED: <{{date:+1}}>
+A task for tomorrow, in the agenda. With a repeater such as =+3d=, it would come back every three days.
+
+** Reminders
+A notification rings at scheduled and deadline times (*Settings → Reminders*). It offers *Done*, a snooze (in 1 hour by default, set in *Settings → Snooze*) and *Tomorrow*.
+
+For reminders on time, see *Settings → Reliability*: notifications, exact alarms and no battery restriction; *Use alarm clock alarms* is the most reliable.
+
+* Search
+** Searching
+The magnifier searches the notebook shown, or everywhere from the home screen. Type words, or Orgzly's syntax:
+
+| Search          | Finds                                   |
+|-----------------+-----------------------------------------|
+| it.todo         | tasks to do                             |
+| it.done         | tasks done                              |
+| t.guide         | notes with the tag guide                |
+| p.A             | priority A                              |
+| s.today         | scheduled up to today                   |
+| d.3d            | deadline within 3 days                  |
+| s.none          | not scheduled                           |
+| e.eq.today      | events of the day                       |
+| cr.eq.today     | created today (CREATED property)        |
+| b.narwhal-guide | in this notebook (its file name)        |
+| ad.7            | the results as a 7-day agenda           |
+| o.p             | sort by priority (o.s, o.d, o.e, o.cr…) |
+
+Conditions combine: =it.todo t.guide o.p=. A dot in front negates one: =.t.guide= (without the tag guide). =or= and parentheses work, and =.o.p= sorts the other way. Durations are written =3d=, =2w=, =1m=; comparisons =eq=, =lt=, =ge=…
+
+** Saved searches
+*Save search* keeps the search in *Searches* (menu ☰), to run it again with a tap. They can be renamed, reordered and deleted.
+
+* Multiple selection
+A *long press* on a note selects it; tap others to add them.
+
+- *Cut*, *Copy*, *Paste* (above, as a sub-note, below).
+- *Move*: up, down, one level up or down, *Move to…*
+- Set the state, scheduled time or deadline of all of them at once.
+- *Select all*, *Delete* (with undo).
+
+* Sharing to Narwhal
+From another app (browser, notes…), *Share → Narwhal* makes a note in the *Inbox* notebook (made when needed): the page title as title, the link as content.
+
+On that new note, tap *Inbox ▾* at the top to put it in another notebook, under the note of your choice. An Inbox left empty goes away.
+
+* Useful settings
+- *Appearance*: light, dark or system theme; wallpaper colors; *Use English language*.
+- *Notes*: show note content in notebooks, strike through done notes, space between notes, state keywords, hidden properties.
+- *About*: version, source code, license, and *Add the guide notebook* to get this notebook back.
