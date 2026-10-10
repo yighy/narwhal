@@ -4,6 +4,10 @@ All notable changes to Narwhal. Versions follow [Semantic Versioning](https://se
 
 ## [Unreleased]
 
+### Fixed
+- Leaving a new note that has content, tags or dates but no title now warns first: a new note is
+  saved once it has a title, so what was written would be lost; "Add a title" goes back to it
+
 ## [0.13.0] - 2026-10-10
 
 ### Added

@@ -1,5 +1,7 @@
 package io.github.yighy.narwhal.ui
 
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.AlertDialog
 import io.github.yighy.narwhal.core.Links
 import androidx.compose.ui.draw.alpha
 import androidx.compose.material.icons.filled.ArrowDropDown
@@ -226,11 +228,35 @@ fun NoteScreen(
         context.startActivity(Intent.createChooser(send, null))
     }
 
-    BackHandler(enabled = editing != Editing.None) {
-        commit()
-        viewModel.back()
+    // A new note is written once it has a title: leaving it without one, after filling it, asks first
+    var untitledWarning by remember { mutableStateOf(false) }
+    fun leave() {
+        val untitled = (if (editing == Editing.Title) draft.text else title).isBlank()
+        val filled = (if (editing == Editing.Content) draft.text else content).isNotBlank() ||
+            note.state != null || note.priority != null || note.tags.isNotEmpty() || note.properties.isNotEmpty() ||
+            note.scheduled != null || note.deadline != null
+        if (newNote != null && untitled && filled) {
+            untitledWarning = true
+        } else {
+            commit()
+            viewModel.back()
+        }
     }
+    BackHandler(enabled = editing != Editing.None || newNote != null) { leave() }
     BackHandler(enabled = fabMenu) { fabMenu = false }
+    if (untitledWarning) {
+        AlertDialog(
+            onDismissRequest = { untitledWarning = false },
+            title = { Text(stringResource(R.string.untitled_note_title)) },
+            text = { Text(stringResource(R.string.untitled_note_text)) },
+            confirmButton = {
+                TextButton(onClick = { untitledWarning = false; startEditing(Editing.Title) }) { Text(stringResource(R.string.add_title)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { untitledWarning = false; commit(); viewModel.back() }) { Text(stringResource(R.string.discard)) }
+            },
+        )
+    }
     DisposableEffect(Unit) { onDispose { commit() } }
     // Closing the keyboard ends the editing (and saves), instead of leaving a cursor behind
     ClearFocusWhenKeyboardHides()
@@ -295,7 +321,7 @@ fun NoteScreen(
                 title = {},
                 colors = blendedTopBarColors(),
                 navigationIcon = {
-                    IconButton(onClick = { commit(); viewModel.back() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back)) }
+                    IconButton(onClick = ::leave) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back)) }
                 },
                 actions = {
                     // Nothing to link to until the note exists

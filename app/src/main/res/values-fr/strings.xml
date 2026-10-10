@@ -2,6 +2,7 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <string name="add">Ajouter</string>
     <string name="add_tag">Ajouter une étiquette</string>
+    <string name="add_title">Ajouter un titre</string>
     <string name="agenda">Agenda</string>
     <string name="agenda_nothing_today">Rien aujourd’hui</string>
     <string name="all_notebooks">Tous les carnets</string>
@@ -44,6 +45,7 @@
     <string name="delete">Supprimer</string>
     <string name="delete_notebooks_text">Ces fichiers sont supprimés du dossier, avec toutes leurs notes :</string>
     <string name="demote">Descendre d’un niveau</string>
+    <string name="discard">Abandonner</string>
     <string name="done">Fait</string>
     <string name="done_moving">Fin du déplacement</string>
     <string name="edit_preface">Modifier la préface</string>
@@ -250,6 +252,8 @@
     <string name="underline">Souligné</string>
     <string name="undo">Annuler</string>
     <string name="untitled">Sans titre</string>
+    <string name="untitled_note_text">Une nouvelle note est enregistrée une fois qu’elle a un titre. Sans titre, ce que vous avez écrit ici est perdu.</string>
+    <string name="untitled_note_title">Note sans titre</string>
     <string name="update">Mettre à jour</string>
     <string name="update_links_title">Mettre à jour les liens ?</string>
     <string name="use_initial">Utiliser l’initiale</string>

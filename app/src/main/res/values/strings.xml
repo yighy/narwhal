@@ -4,6 +4,7 @@
     <string name="app_name" translatable="false">Narwhal</string>
     <string name="add">Add</string>
     <string name="add_tag">Add tag</string>
+    <string name="add_title">Add a title</string>
     <string name="agenda">Agenda</string>
     <string name="agenda_nothing_today">Nothing for today</string>
     <string name="all_notebooks">All notebooks</string>
@@ -46,6 +47,7 @@
     <string name="delete">Delete</string>
     <string name="delete_notebooks_text">These files are deleted from the folder, with all their notes:</string>
     <string name="demote">Demote</string>
+    <string name="discard">Discard</string>
     <string name="done">Done</string>
     <string name="done_moving">Done moving</string>
     <string name="edit_preface">Edit preface</string>
@@ -252,6 +254,8 @@
     <string name="underline">Underline</string>
     <string name="undo">Undo</string>
     <string name="untitled">Untitled</string>
+    <string name="untitled_note_text">A new note is saved once it has a title. Without one, what you wrote here is lost.</string>
+    <string name="untitled_note_title">Note without a title</string>
     <string name="update">Update</string>
     <string name="update_links_title">Update links?</string>
     <string name="use_initial">Use initial</string>
