@@ -11,6 +11,9 @@ All notable changes to Narwhal. Versions follow [Semantic Versioning](https://se
   whole tree
 - In the tree view, a long press selects notes, with the same bars as in the notebook: notes
   can be moved up, down, a level up or down, or to another notebook, and slide to their new places
+- In the tree view, a double tap between the boxes zooms in around it, then back to the whole
+  tree; the tree is shown again as it was left (zoom, place, folded notes), also after the app
+  is closed
 
 ## [0.11.0] - 2026-10-10
 

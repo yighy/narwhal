@@ -41,6 +41,21 @@ object NoteTree {
         }
     }
 
+    /**
+     * For each note, its title after its ancestors' (without statistics cookies), numbered among
+     * notes of the same path: its place in the outline, kept when its content or state changes.
+     */
+    fun titlePaths(notes: List<OrgNote>): List<String> {
+        val stack = ArrayDeque<OrgNote>()
+        val seen = HashMap<String, Int>()
+        return notes.map { note ->
+            while (stack.isNotEmpty() && stack.last().level >= note.level) stack.removeLast()
+            stack.addLast(note)
+            val path = stack.joinToString("\u0001") { it.title.replace(Cookies.COOKIE, "").trim() }
+            "${seen.merge(path, 1, Int::plus)}\u0001$path"
+        }
+    }
+
     /** Notes not hidden under a folded ancestor. */
     fun visible(notes: List<OrgNote>, isFolded: (OrgNote) -> Boolean): List<OrgNote> {
         val result = mutableListOf<OrgNote>()

@@ -33,6 +33,21 @@ class NoteTreeTest {
     }
 
     @Test
+    fun titlePaths() {
+        val tasks = OrgNote.fromDocument(
+            OrgDocument.parse("* Project [1/2]\n** DONE One\n** TODO Two\n*** Detail\n* Project\n* Notes\n"),
+            "u",
+            "f",
+        )
+        // Cookies left out; the same path twice is numbered
+        val s = "\u0001"
+        assertEquals(
+            listOf("1${s}Project", "1${s}Project${s}One", "1${s}Project${s}Two", "1${s}Project${s}Two${s}Detail", "2${s}Project", "1${s}Notes"),
+            NoteTree.titlePaths(tasks),
+        )
+    }
+
+    @Test
     fun notebookInfo() {
         assertEquals("My notebook", Notebooks.title(doc, "file.org"))
         assertEquals("other", Notebooks.title(OrgDocument.parse("* x\n"), "other.org"))

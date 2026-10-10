@@ -1,5 +1,11 @@
 package io.github.yighy.narwhal.ui
 
+import androidx.compose.foundation.gestures.detectTapGestures
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.rememberUpdatedState
+import io.github.yighy.narwhal.data.AppSettings
 import kotlin.math.abs
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Job
@@ -15,7 +21,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.animate
-import androidx.compose.animation.core.VectorConverter
 import androidx.compose.animation.core.Animatable
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
@@ -94,18 +99,31 @@ private const val MAX_SCALE = 2.5f
 @Composable
 fun TreeScreen(viewModel: AppViewModel, library: NoteRepository.Library, file: NoteRepository.LoadedFile, snackbar: SnackbarHostState) {
     val notes = file.notes
-    // Where the tree was left, when coming back from a note
-    val saved = remember { viewModel.treeViews[file.uri] }
     // Notes are known by keys that follow them when they move or are changed (folds, animations)
-    val noteKeys = remember { saved?.keys ?: TreeKeys() }
+    val noteKeys = remember { TreeKeys() }
     val keys = remember(notes) { noteKeys.update(outlineKeys(notes)) }
-    var folded by remember { mutableStateOf(saved?.folded ?: emptySet()) }
+    // Where the tree was left (also in an earlier session), its folds kept by the notes' paths
+    val paths = remember(notes) { NoteTree.titlePaths(notes) }
+    val saved = remember { viewModel.treeState(file.uri) }
+    var folded by remember { mutableStateOf(keys.filterIndexedTo(HashSet()) { i, _ -> paths[i] in saved?.folded.orEmpty() }.toSet()) }
     var scale by remember { mutableFloatStateOf(saved?.scale ?: 1f) }
-    var offset by remember { mutableStateOf(saved?.offset) }
+    var offset by remember { mutableStateOf(saved?.let { Offset(it.x, it.y) }) }
     var viewport by remember { mutableStateOf(Size.Zero) }
-    DisposableEffect(Unit) {
-        onDispose { offset?.let { viewModel.treeViews[file.uri] = AppViewModel.TreeView(scale, it, folded, noteKeys) } }
+    val currentKeys by rememberUpdatedState(keys)
+    val currentPaths by rememberUpdatedState(paths)
+    fun save() {
+        val o = offset ?: return
+        val pathOf = currentKeys.zip(currentPaths).toMap()
+        viewModel.setTreeState(file.uri, AppSettings.TreeState(scale, o.x, o.y, folded.mapNotNullTo(HashSet()) { pathOf[it] }))
     }
+    // Saved once the view rests, and when leaving
+    LaunchedEffect(Unit) {
+        snapshotFlow { Triple(scale, offset, folded) }.collectLatest {
+            delay(SAVE_DELAY_MS)
+            save()
+        }
+    }
+    DisposableEffect(Unit) { onDispose { save() } }
     val selection = viewModel.selection?.takeIf { it.fileUri == file.uri }
     val selecting = selection != null
     BackHandler(enabled = selecting) { viewModel.clearSelection() }
@@ -141,29 +159,51 @@ fun TreeScreen(viewModel: AppViewModel, library: NoteRepository.Library, file: N
      * Shows the whole tree, as large as it fits up to its own size, centered; a tree too large to
      * be read that small shows from its top left, at the smallest readable size.
      */
-    fun fit(smallest: Float = MIN_SCALE) {
-        motion.scroll?.cancel()
-        scale = minOf(1f, viewport.width / size.width, viewport.height / size.height).coerceAtLeast(smallest)
-        offset = Offset(
-            maxOf(0f, (viewport.width - size.width * scale) / 2),
-            maxOf(0f, (viewport.height - size.height * scale) / 2),
-        )
+    fun fitted(smallest: Float = MIN_SCALE): Pair<Float, Offset> {
+        val s = minOf(1f, viewport.width / size.width, viewport.height / size.height).coerceAtLeast(smallest)
+        return s to Offset(maxOf(0f, (viewport.width - size.width * s) / 2), maxOf(0f, (viewport.height - size.height * s) / 2))
     }
-    // The first time, the whole tree when it can be read so
+    // The first time, the whole tree when it can be read so; else where it was left, within the tree
     LaunchedEffect(viewport) {
-        if (offset == null && viewport != Size.Zero) fit(smallest = READABLE_SCALE)
+        if (viewport == Size.Zero) return@LaunchedEffect
+        val o = offset
+        if (o == null) {
+            fitted(smallest = READABLE_SCALE).let { (s, at) -> scale = s; offset = at }
+        } else {
+            offset = inView(o, scale)
+        }
     }
 
     val scope = rememberCoroutineScope()
     val edge = with(density) { 16.dp.toPx() }
     val toolbarRoom = with(density) { 96.dp.toPx() }
-    /** Moves the view to [goal], smoothly (the fingers stop it). */
-    fun glide(goal: Offset) {
+    /** Moves the view to [goal], zoomed to [goalScale], smoothly (the fingers stop it). */
+    fun glide(goal: Offset, goalScale: Float = scale) {
         val o = offset ?: return
-        if (goal == o) return
+        val s = scale
+        if (goal == o && goalScale == s) return
         motion.scroll?.cancel()
         motion.scroll = scope.launch {
-            animate(Offset.VectorConverter, o, goal, animationSpec = tween(MOVE_MS)) { value, _ -> offset = value }
+            animate(0f, 1f, animationSpec = tween(MOVE_MS)) { t, _ ->
+                scale = s + (goalScale - s) * t
+                offset = lerp(o, goal, t)
+            }
+        }
+    }
+    /** Shows the whole tree (see fitted). */
+    fun fit() = fitted().let { (s, at) -> glide(at, s) }
+    /**
+     * Double tap: zooms in to full size around [point], or back to the whole tree; a tree that
+     * is already whole at full size zooms in twice as large.
+     */
+    fun zoomAt(point: Offset) {
+        val o = offset ?: return
+        fun around(s: Float) = glide(inView(point - (point - o) * (s / scale), s), s)
+        val (whole, at) = fitted()
+        when {
+            scale < 1f - ZOOM_SLACK -> around(1f)
+            whole < scale - ZOOM_SLACK -> glide(at, whole)
+            else -> around(DOUBLE_TAP_SCALE)
         }
     }
     /** Moves the view just enough to show the boxes of [shown] (their top left first when they don't fit). */
@@ -263,7 +303,9 @@ fun TreeScreen(viewModel: AppViewModel, library: NoteRepository.Library, file: N
                         offset = inView(centroid - (centroid - from) * (to / scale) + pan, to)
                         scale = to
                     }
-                },
+                }
+                // Between the boxes (a box takes taps for itself)
+                .pointerInput(size, viewport) { detectTapGestures(onDoubleTap = { zoomAt(it) }) },
         ) {
             val edgeColor = MaterialTheme.colorScheme.outlineVariant
             Box(
@@ -352,6 +394,9 @@ fun TreeScreen(viewModel: AppViewModel, library: NoteRepository.Library, file: N
 /** Key of the notebook's own box, apart from the notes' keys. */
 private const val ROOT = "\u0000root"
 private const val MOVE_MS = 300
+private const val SAVE_DELAY_MS = 500L
+private const val DOUBLE_TAP_SCALE = 2f
+private const val ZOOM_SLACK = 0.05f
 
 /**
  * Where the boxes are drawn while they slide: from where they were ([from]) to their places in

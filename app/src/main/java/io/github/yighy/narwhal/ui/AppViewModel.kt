@@ -1,7 +1,6 @@
 package io.github.yighy.narwhal.ui
 
-import io.github.yighy.narwhal.core.TreeKeys
-import androidx.compose.ui.geometry.Offset
+import io.github.yighy.narwhal.data.AppSettings
 import io.github.yighy.narwhal.core.Guide
 import io.github.yighy.narwhal.core.InternalLinks
 import io.github.yighy.narwhal.core.Cookies
@@ -375,10 +374,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun openTree(fileUri: String) = push(Screen.Tree(fileUri))
 
-    /** How a notebook's tree view was left (zoom, position, folded notes), for when it is shown again. */
-    class TreeView(val scale: Float, val offset: Offset, val folded: Set<String>, val keys: TreeKeys)
+    /** How a notebook's tree view was left, kept across sessions. */
+    fun treeState(fileUri: String) = appSettings.treeState(fileUri)
 
-    val treeViews = mutableMapOf<String, TreeView>()
+    fun setTreeState(fileUri: String, state: AppSettings.TreeState) = appSettings.setTreeState(fileUri, state)
 
     /**
      * Opens a link's target: id: a note, file: a notebook (.org) or a file of the folder, anything
@@ -771,13 +770,21 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 appSettings.setNotebookIcon(newUri, it)
                 appSettings.setNotebookIcon(uri, null)
             }
+            // And so does its tree view
+            appSettings.treeState(uri)?.takeIf { newUri != uri }?.let {
+                appSettings.setTreeState(newUri, it)
+                appSettings.setTreeState(uri, null)
+            }
         }
     }
 
     fun deleteSelectedNotebooks() {
         val uris = selectedNotebooks
         selectedNotebooks = emptySet()
-        uris.forEach { appSettings.setNotebookIcon(it, null) }
+        uris.forEach {
+            appSettings.setNotebookIcon(it, null)
+            appSettings.setTreeState(it, null)
+        }
         viewModelScope.launch {
             attempt {
                 repository.deleteFiles(uris)

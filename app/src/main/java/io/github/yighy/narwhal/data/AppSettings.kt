@@ -113,6 +113,33 @@ class AppSettings(context: Context) {
         _notebookIcons.update { if (emoji == null) it - fileUri else it + (fileUri to emoji) }
     }
 
+    /** How a notebook's tree view was left: zoom, position, and folded notes by their path (see NoteTree.titlePaths). */
+    data class TreeState(val scale: Float, val x: Float, val y: Float, val folded: Set<String>)
+
+    fun treeState(fileUri: String): TreeState? = runCatching {
+        val json = JSONObject(prefs.getString(TREE_PREFIX + fileUri, null) ?: return null)
+        val folded = json.getJSONArray("folded")
+        TreeState(
+            json.getDouble("scale").toFloat(),
+            json.getDouble("x").toFloat(),
+            json.getDouble("y").toFloat(),
+            List(folded.length()) { folded.getString(it) }.toSet(),
+        )
+    }.getOrNull()
+
+    /** Keeps the tree view's [state] (null forgets it). */
+    fun setTreeState(fileUri: String, state: TreeState?) {
+        prefs.edit().apply {
+            if (state == null) {
+                remove(TREE_PREFIX + fileUri)
+            } else {
+                val json = JSONObject().put("scale", state.scale.toDouble()).put("x", state.x.toDouble()).put("y", state.y.toDouble())
+                    .put("folded", JSONArray(state.folded.toList()))
+                putString(TREE_PREFIX + fileUri, json.toString())
+            }
+        }.apply()
+    }
+
     private val _savedSearches = MutableStateFlow(readSearches())
     val savedSearches: StateFlow<List<SavedSearch>> = _savedSearches
 
@@ -197,6 +224,7 @@ class AppSettings(context: Context) {
         private const val KEY_KEYWORDS = "keywords"
         private const val KEY_SEARCHES = "saved_searches"
         private const val ICON_PREFIX = "icon:"
+        private const val TREE_PREFIX = "tree:"
         private const val KEY_ADD_ID = "add_id_to_new_notes"
         private const val KEY_HIDDEN_PROPERTIES = "hidden_properties"
         private const val KEY_ADD_CREATED = "add_created_to_new_notes"
