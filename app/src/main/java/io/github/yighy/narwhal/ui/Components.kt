@@ -324,11 +324,13 @@ val LocalAnimatedVisibilityScope = staticCompositionLocalOf<AnimatedVisibilitySc
 
 /**
  * Container transform: an element with the same [key] on the next screen grows out of this one
- * (notebook card into notebook screen, note row into note screen).
+ * (notebook card into notebook screen, note row into note screen). With [scaleContent], the
+ * element's content is scaled with it rather than laid out again at each size (a tree box, whose
+ * content has a size of its own).
  */
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
-fun Modifier.sharedContainer(key: String, shape: Shape): Modifier {
+fun Modifier.sharedContainer(key: String, shape: Shape, scaleContent: Boolean = false): Modifier {
     if (LocalSharedCut.current.value) return this
     val shared = LocalSharedTransitionScope.current ?: return this
     val visibility = LocalAnimatedVisibilityScope.current ?: return this
@@ -338,6 +340,7 @@ fun Modifier.sharedContainer(key: String, shape: Shape): Modifier {
             animatedVisibilityScope = visibility,
             // Not too long: a card scrolled while coming back follows its place until it settles
             boundsTransform = { _, _ -> SharedBoundsSpec },
+            resizeMode = if (scaleContent) scaleToBounds(ContentScale.FillWidth, Alignment.Center) else SharedTransitionScope.ResizeMode.RemeasureToBounds,
             clipInOverlayDuringTransition = OverlayClip(shape),
         )
     }

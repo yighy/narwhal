@@ -7,6 +7,8 @@ All notable changes to Narwhal. Versions follow [Semantic Versioning](https://se
 ### Changed
 - New icon: the narwhal's head over a wave, its striped tusk up; the themed and notification icons
   follow it
+- In the tree view, a note opens out of its box and closes back into it, as from a notebook's
+  list
 
 ## [0.13.1] - 2026-10-11
 

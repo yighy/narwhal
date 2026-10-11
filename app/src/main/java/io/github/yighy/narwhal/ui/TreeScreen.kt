@@ -1,5 +1,8 @@
 package io.github.yighy.narwhal.ui
 
+import kotlin.math.roundToInt
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.layout.layout
 import androidx.compose.foundation.gestures.detectTapGestures
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
@@ -347,6 +350,11 @@ fun TreeScreen(viewModel: AppViewModel, library: NoteRepository.Library, file: N
                     }
                     drawPath(path, edgeColor, style = Stroke(1.5.dp.toPx()))
                 }
+            }
+            // The boxes at their size on screen, their content zoomed inside (not in the zoomed
+            // layer): a box opening a note grows from where and how big it is shown
+            Box(Modifier.fillMaxSize().graphicsLayer { alpha = if (offset == null) 0f else 1f }) {
+                fun onScreen(at: Offset) = (offset ?: Offset.Zero) + at * scale
                 for (node in nodes) {
                     val key = keyOf(node)
                     key(key) {
@@ -362,7 +370,10 @@ fun TreeScreen(viewModel: AppViewModel, library: NoteRepository.Library, file: N
                                 }
                             },
                             onLongClick = { if (note != null) viewModel.toggleSelected(note) },
-                            modifier = Modifier.offset { at(key, parent).round() },
+                            modifier = Modifier
+                                .offset { onScreen(at(key, parent)).round() }
+                                .then(if (note != null) Modifier.sharedContainer("note-${note.fileUri}#${note.index}", RoundedCornerShape(12.dp * scale), scaleContent = true) else Modifier)
+                                .zoomed { scale },
                         )
                         if (note != null && node.hasChildren) {
                             FoldButton(
@@ -375,10 +386,12 @@ fun TreeScreen(viewModel: AppViewModel, library: NoteRepository.Library, file: N
                                         folded = folded + key
                                     }
                                 },
-                                modifier = Modifier.offset {
-                                    val half = 12.dp.toPx()
-                                    (at(key, parent) + Offset(box.width - half, box.height / 2 - half)).round()
-                                },
+                                modifier = Modifier
+                                    .offset {
+                                        val half = 12.dp.toPx()
+                                        onScreen(at(key, parent) + Offset(box.width - half, box.height / 2 - half)).round()
+                                    }
+                                    .zoomed { scale },
                             )
                         }
                     }
@@ -387,6 +400,22 @@ fun TreeScreen(viewModel: AppViewModel, library: NoteRepository.Library, file: N
             if (selecting) {
                 SelectionToolbar(viewModel, file, Modifier.align(Alignment.BottomCenter).padding(bottom = 16.dp))
             }
+        }
+    }
+}
+
+/**
+ * Lays the content out at its own size and shows it zoomed by [scale], taking the zoomed size: its
+ * bounds are the ones on screen (a shared transition starts from them, a tap lands in them).
+ */
+private fun Modifier.zoomed(scale: () -> Float) = layout { measurable, _ ->
+    val s = scale()
+    val placeable = measurable.measure(Constraints())
+    layout((placeable.width * s).roundToInt(), (placeable.height * s).roundToInt()) {
+        placeable.placeWithLayer(0, 0) {
+            transformOrigin = TransformOrigin(0f, 0f)
+            scaleX = s
+            scaleY = s
         }
     }
 }
