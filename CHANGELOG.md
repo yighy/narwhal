@@ -4,6 +4,8 @@ All notable changes to Narwhal. Versions follow [Semantic Versioning](https://se
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-10-11
+
 ### Changed
 - Icon: the narwhal's head, now flat underneath, over a dot and a bar in white (a list's line)
   instead of the wave; its eyes are cut out in the background's green
@@ -258,7 +260,8 @@ All notable changes to Narwhal. Versions follow [Semantic Versioning](https://se
 - First prototype: notebooks from a folder of `.org` files, outline, note editing, search, tags,
   and `id:` links to other notes
 
-[Unreleased]: https://github.com/yighy/narwhal/compare/v0.15.0...HEAD
+[Unreleased]: https://github.com/yighy/narwhal/compare/v0.16.0...HEAD
+[0.16.0]: https://github.com/yighy/narwhal/compare/v0.15.0...v0.16.0
 [0.15.0]: https://github.com/yighy/narwhal/compare/v0.14.0...v0.15.0
 [0.14.0]: https://github.com/yighy/narwhal/compare/v0.13.1...v0.14.0
 [0.13.1]: https://github.com/yighy/narwhal/compare/v0.13.0...v0.13.1
