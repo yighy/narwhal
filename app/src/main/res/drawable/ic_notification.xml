@@ -3,10 +3,11 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
-    android:viewportWidth="40"
-    android:viewportHeight="40">
-    <group android:translateX="-34" android:translateY="-34">
-        <path android:fillColor="#FFFFFF" android:pathData="M51,57.6L57.6,56.4L58.8,36Z" />
-        <path android:fillColor="#FFFFFF" android:fillType="evenOdd" android:pathData="M37.2,72A16.8,16.8 0,0 1,70.8,72Z M48.6,64.8m-1.92,0a1.92,1.92 0,1 1,3.84 0a1.92,1.92 0,1 1,-3.84 0Z M59.4,64.8m-1.92,0a1.92,1.92 0,1 1,3.84 0a1.92,1.92 0,1 1,-3.84 0Z" />
+    android:viewportWidth="92"
+    android:viewportHeight="92">
+    <group android:translateX="-29" android:translateY="-28.5">
+        <path android:fillColor="#FFFFFF" android:pathData="M41.83,98A36,36 0,0 1,108.17,98Q110.1,104 104,106Q95.5,107.75 87,103.5Q75,97.5 63,103.5Q54.5,107.75 46,106Q39.9,104 41.83,98Z M53,92a5,5 0,1 0,10 0a5,5 0,1 0,-10 0Z M87,92a5,5 0,1 0,10 0a5,5 0,1 0,-10 0Z" android:fillType="evenOdd" />
+        <path android:fillColor="#FFFFFF" android:pathData="M69,84L92,30L81,84Q75,88.5 69,84Z" />
+        <path android:fillColor="#FFFFFF" android:pathData="M39,112Q39.35,107.2 45,108.75Q53.25,111 63,106.5Q75,100.5 87,106.5Q96,111 105,108.75Q110.65,107.2 111,112Q111,117.92 101.4,118.88Q94.2,119.6 87,116Q75,110 63,116Q55.8,119.6 48.6,118.88Q39,117.92 39,112Z" android:fillAlpha="0.6" />
     </group>
 </vector>

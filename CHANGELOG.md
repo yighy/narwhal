@@ -4,6 +4,10 @@ All notable changes to Narwhal. Versions follow [Semantic Versioning](https://se
 
 ## [Unreleased]
 
+### Changed
+- New icon: the narwhal's head over a wave, its striped tusk up; the themed and notification icons
+  follow it
+
 ## [0.13.1] - 2026-10-11
 
 ### Fixed
