@@ -4,6 +4,11 @@ All notable changes to Narwhal. Versions follow [Semantic Versioning](https://se
 
 ## [Unreleased]
 
+### Changed
+- Reminder notifications show the note's parent next to the time; opened, they show the whole
+  path (notebook › parents) and the start of the note's content as plain text: lists with
+  bullets, checkboxes as ☐ / ☑, a table's rows with their fields side by side
+
 ## [0.15.0] - 2026-10-11
 
 ### Changed

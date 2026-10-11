@@ -8,6 +8,8 @@ import android.content.Intent
 import io.github.yighy.narwhal.NarwhalApplication
 import io.github.yighy.narwhal.core.Keywords
 import io.github.yighy.narwhal.core.NoteStates
+import io.github.yighy.narwhal.core.NoteTree
+import io.github.yighy.narwhal.ui.displayTitle
 import kotlinx.coroutines.launch
 
 /**
@@ -63,8 +65,10 @@ class ReminderReceiver : BroadcastReceiver() {
             // Alarm, or boot / update / clock change: also shows reminders missed meanwhile
             else -> {
                 app.scheduler.takeDue(library.notes, options).forEach { reminder ->
-                    val notebook = library.file(reminder.note.fileUri)?.title ?: reminder.note.fileName
-                    ReminderNotifications.show(app, reminder, notebook)
+                    val file = library.file(reminder.note.fileUri)
+                    val notebook = file?.title ?: reminder.note.fileName
+                    val ancestors = file?.notes?.let { NoteTree.ancestors(it, reminder.note.index) }.orEmpty().map { displayTitle(it.title) }
+                    ReminderNotifications.show(app, reminder, notebook, ancestors)
                 }
             }
         }

@@ -220,7 +220,7 @@ SCHEDULED: <{{date:+1}}>
 A task for tomorrow, in the agenda. With a repeater such as =+3d=, it would come back every three days.
 
 ** Reminders
-A notification rings at scheduled and deadline times (*Settings → Reminders*). It offers *Done*, a snooze (in 1 hour by default, set in *Settings → Snooze*) and *Tomorrow*.
+A notification rings at scheduled and deadline times (*Settings → Reminders*). It offers *Done*, a snooze (in 1 hour by default, set in *Settings → Snooze*) and *Tomorrow*. Under the title it shows the note's parent; opened, the whole path and the start of the note.
 
 For reminders on time, see *Settings → Reliability*: notifications, exact alarms and no battery restriction; *Use alarm clock alarms* is the most reliable.
 
