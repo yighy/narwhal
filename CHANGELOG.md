@@ -4,9 +4,12 @@ All notable changes to Orgwhal (named Narwhal up to 0.16.0). Versions follow [Se
 
 ## [Unreleased]
 
+## [0.17.0] - 2026-10-11
+
 ### Changed
 - Narwhal is now Orgwhal, with the application ID `io.github.yighy.orgwhal`: it installs as a
-  new app, beside Narwhal (pick the notes folder again, then uninstall Narwhal)
+  new app, beside Narwhal (pick the notes folder again, then uninstall Narwhal), signed with a
+  new key of its own
 
 ## [0.16.0] - 2026-10-11
 
@@ -264,7 +267,8 @@ All notable changes to Orgwhal (named Narwhal up to 0.16.0). Versions follow [Se
 - First prototype: notebooks from a folder of `.org` files, outline, note editing, search, tags,
   and `id:` links to other notes
 
-[Unreleased]: https://github.com/yighy/orgwhal/compare/v0.16.0...HEAD
+[Unreleased]: https://github.com/yighy/orgwhal/compare/v0.17.0...HEAD
+[0.17.0]: https://github.com/yighy/orgwhal/compare/v0.16.0...v0.17.0
 [0.16.0]: https://github.com/yighy/orgwhal/compare/v0.15.0...v0.16.0
 [0.15.0]: https://github.com/yighy/orgwhal/compare/v0.14.0...v0.15.0
 [0.14.0]: https://github.com/yighy/orgwhal/compare/v0.13.1...v0.14.0
