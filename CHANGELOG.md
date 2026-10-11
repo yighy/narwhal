@@ -4,6 +4,8 @@ All notable changes to Orgwhal (named Narwhal up to 0.16.0). Versions follow [Se
 
 ## [Unreleased]
 
+## [0.18.1] - 2026-10-11
+
 ### Changed
 - Icon: on a teal blue, with the themed icon's bolder cuts (a wider gap around the tusk, its
   stripe cut through)
@@ -284,7 +286,8 @@ All notable changes to Orgwhal (named Narwhal up to 0.16.0). Versions follow [Se
 - First prototype: notebooks from a folder of `.org` files, outline, note editing, search, tags,
   and `id:` links to other notes
 
-[Unreleased]: https://github.com/yighy/orgwhal/compare/v0.18.0...HEAD
+[Unreleased]: https://github.com/yighy/orgwhal/compare/v0.18.1...HEAD
+[0.18.1]: https://github.com/yighy/orgwhal/compare/v0.18.0...v0.18.1
 [0.18.0]: https://github.com/yighy/orgwhal/compare/v0.17.1...v0.18.0
 [0.17.1]: https://github.com/yighy/orgwhal/compare/v0.17.0...v0.17.1
 [0.17.0]: https://github.com/yighy/orgwhal/compare/v0.16.0...v0.17.0
