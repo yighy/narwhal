@@ -4,6 +4,8 @@ All notable changes to Orgwhal (named Narwhal up to 0.16.0). Versions follow [Se
 
 ## [Unreleased]
 
+## [0.18.0] - 2026-10-11
+
 ### Added
 - Setting to recalculate tables with formulas as soon as a note shows them, in the notebook
   and on the note screen: never (the default, with the Recalculate button), on screen only
@@ -278,7 +280,8 @@ All notable changes to Orgwhal (named Narwhal up to 0.16.0). Versions follow [Se
 - First prototype: notebooks from a folder of `.org` files, outline, note editing, search, tags,
   and `id:` links to other notes
 
-[Unreleased]: https://github.com/yighy/orgwhal/compare/v0.17.1...HEAD
+[Unreleased]: https://github.com/yighy/orgwhal/compare/v0.18.0...HEAD
+[0.18.0]: https://github.com/yighy/orgwhal/compare/v0.17.1...v0.18.0
 [0.17.1]: https://github.com/yighy/orgwhal/compare/v0.17.0...v0.17.1
 [0.17.0]: https://github.com/yighy/orgwhal/compare/v0.16.0...v0.17.0
 [0.16.0]: https://github.com/yighy/orgwhal/compare/v0.15.0...v0.16.0
