@@ -4,6 +4,10 @@ All notable changes to Orgwhal (named Narwhal up to 0.16.0). Versions follow [Se
 
 ## [Unreleased]
 
+### Changed
+- Icon: on a teal blue, with the themed icon's bolder cuts (a wider gap around the tusk, its
+  stripe cut through)
+
 ## [0.18.0] - 2026-10-11
 
 ### Added

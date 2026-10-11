@@ -1,11 +1,22 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 150 150">
-  <rect width="150" height="150" rx="36" fill="#10776E"/>
+  <rect width="150" height="150" rx="36" fill="#0B5D7A"/>
+  <defs>
+    <mask id="tete">
+      <rect width="150" height="150" fill="#fff"/>
+      <path d="M69 84 L88.6 40.8 L81 84 Q75 88.5 69 84 Z" fill="#000" stroke="#000" stroke-width="6" stroke-linejoin="round"/>
+      <circle cx="58" cy="92" r="5" fill="#000"/>
+      <circle cx="92" cy="92" r="5" fill="#000"/>
+    </mask>
+    <mask id="defense">
+      <rect width="150" height="150" fill="#fff"/>
+      <line x1="74.87" y1="69.6" x2="85.61" y2="66.4" stroke="#000" stroke-width="2.5" stroke-linecap="round"/>
+    </mask>
+  </defs>
   <g transform="translate(75 75) scale(1.25) translate(-75 -82.65)">
-  <path d="M41.83 98 A36 36 0 0 1 108.17 98 Q110 105 103 105 H47 Q40 105 41.83 98 Z" fill="#FFFFFF"/>
-  <path d="M57.5 111 H106.5 A4.5 4.5 0 0 1 106.5 120 H57.5 A4.5 4.5 0 0 1 57.5 111 Z M39 115.5 a4.5 4.5 0 1 0 9 0 a4.5 4.5 0 1 0 -9 0 Z" fill="#FFFFFF"/>
-  <path d="M69 84 L88.6 40.8 L81 84 Q75 88.5 69 84 Z" fill="#FFFFFF" stroke="#10776E" stroke-width="3" stroke-linejoin="round" paint-order="stroke"/>
-  <line x1="74.87" y1="69.6" x2="85.61" y2="66.4" stroke="#10776E" stroke-width="2.5" stroke-linecap="round"/>
-  <circle cx="58" cy="92" r="5" fill="#10776E"/>
-  <circle cx="92" cy="92" r="5" fill="#10776E"/>
+  <g fill="#FFFFFF" mask="url(#tete)">
+    <path d="M41.83 98 A36 36 0 0 1 108.17 98 Q110 105 103 105 H47 Q40 105 41.83 98 Z"/>
+    <path d="M57.5 111 H106.5 A4.5 4.5 0 0 1 106.5 120 H57.5 A4.5 4.5 0 0 1 57.5 111 Z M39 115.5 a4.5 4.5 0 1 0 9 0 a4.5 4.5 0 1 0 -9 0 Z"/>
+  </g>
+  <path d="M69 84 L88.6 40.8 L81 84 Q75 88.5 69 84 Z" fill="#FFFFFF" mask="url(#defense)"/>
   </g>
 </svg>
