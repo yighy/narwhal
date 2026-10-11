@@ -72,6 +72,8 @@ fun OrgContent(
     onRecalculate: ((String?, Int) -> Unit)? = null,
     /** Lines of the table with this name (#+NAME, or a note's ID), for remote() in formulas. */
     tableNamed: (String) -> List<String>? = { null },
+    /** Tables with formulas show their values recalculated (the file keeps its own until saved). */
+    liveFormulas: Boolean = false,
 ) {
     val blocks = remember(text) { Blocks.parse(text) }
     // Plain text, the usual case, shows as written
@@ -98,9 +100,19 @@ fun OrgContent(
                 is Blocks.Text -> FoldableText(block.text, block.range.first, style, onOpenLink, ::tapFrom, ::toggleFrom)
                 is Blocks.Table -> Column {
                     block.name?.let { ElementName(it) }
-                    OrgTable(block, style, onOpenLink, Modifier.tapToEdit(onTextTap, block.range.first))
+                    // Recalculated, the table shows its new values; the button then saves them
+                    val fresh = if (liveFormulas && block.formulas.isNotEmpty()) {
+                        remember(text, block, tableNamed) {
+                            val lines = text.substring(block.tableStart, block.tableEnd).split('\n')
+                            val result = TableFormulas.recalculate(lines, block.formulas, tableNamed).lines
+                            if (result == lines) null else Blocks.parse(result.joinToString("\n")).filterIsInstance<Blocks.Table>().firstOrNull()
+                        }
+                    } else {
+                        null
+                    }
+                    OrgTable(fresh?.let { block.copy(rows = it.rows) } ?: block, style, onOpenLink, Modifier.tapToEdit(onTextTap, block.range.first))
                     if (block.formulaLines.isNotEmpty()) {
-                        FormulaBar(block, onRecalculate?.let { done ->
+                        FormulaBar(block, stale = fresh != null, onRecalculate?.let { done ->
                             {
                                 val lines = text.substring(block.tableStart, block.tableEnd).split('\n')
                                 val result = TableFormulas.recalculate(lines, block.formulas, tableNamed)
@@ -211,7 +223,7 @@ private fun FoldableText(
 
 /** A table's formulas, folded to "ƒ 2 formulas", with a button to recalculate the table. */
 @Composable
-private fun FormulaBar(table: Blocks.Table, onRecalculate: (() -> Unit)?) {
+private fun FormulaBar(table: Blocks.Table, stale: Boolean, onRecalculate: (() -> Unit)?) {
     var open by rememberSaveable(table.range.first) { mutableStateOf(false) }
     val rotation = chevronRotation(open)
     val count = table.formulas.size
@@ -238,7 +250,7 @@ private fun FormulaBar(table: Blocks.Table, onRecalculate: (() -> Unit)?) {
             }
             Spacer(Modifier.weight(1f))
             if (onRecalculate != null) {
-                TextButton(onClick = onRecalculate) { Text(stringResource(R.string.recalculate)) }
+                TextButton(onClick = onRecalculate) { Text(stringResource(if (stale) R.string.save_values else R.string.recalculate)) }
             }
         }
         Unfold(open) {

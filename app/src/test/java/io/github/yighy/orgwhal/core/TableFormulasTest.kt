@@ -64,4 +64,18 @@ class TableFormulasTest {
         assertEquals("budget", table.name)
         assertEquals(content.indexOf("| a"), table.tableStart)
     }
+
+    @Test
+    fun freshRemoteRecalculatesTheTablesReadFirst() {
+        // The budget's sum is out of date in its file: read fresh, it counts its rows again
+        val budget = "#+NAME: budget\n| A | 10 |\n| B | 15 |\n| Sum | 0 |\n#+TBLFM: @>\$2=vsum(@1..@-1)"
+        val find = { name: String -> Blocks.tableWithFormulas(budget, name) }
+        val note = "| Total | 0 |\n#+TBLFM: @1\$2=remote(budget, @>\$2)"
+        assertEquals("| Total | 25 |\n#+TBLFM: @1\$2=remote(budget, @>\$2)", Blocks.recalculated(note, TableFormulas.freshRemote(find)))
+        // As written, the sum stays the file's
+        assertEquals("| Total | 0 |\n#+TBLFM: @1\$2=remote(budget, @>\$2)", Blocks.recalculated(note) { find(it)?.first })
+        // Tables reading each other stop after a few rounds instead of looping
+        val loop = "#+NAME: a\n| 1 |\n#+TBLFM: @1\$1=remote(a, @1\$1)+1"
+        assertEquals(listOf("| 6 |"), TableFormulas.freshRemote({ Blocks.tableWithFormulas(loop, it) }, depth = 5)("a"))
+    }
 }

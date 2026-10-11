@@ -106,6 +106,20 @@ object TableFormulas {
         return Result(if (changed) align(table, indent(tableLines.first())) else tableLines, skipped)
     }
 
+    /**
+     * A remote() lookup whose tables are recalculated first, with the tables they read in turn, up
+     * to [depth] tables deep (tables reading each other stop there); [find] gives a table's lines and
+     * formulas by its name.
+     */
+    fun freshRemote(find: (String) -> Pair<List<String>, List<String>>?, depth: Int = 5): (String) -> List<String>? {
+        fun fresh(name: String, left: Int): List<String>? {
+            val (lines, formulas) = find(name) ?: return null
+            if (formulas.isEmpty() || left == 0) return lines
+            return recalculate(lines, formulas) { fresh(it, left - 1) }.lines
+        }
+        return { fresh(it, depth) }
+    }
+
     // ---- Targets and references ----
 
     private fun fieldTarget(table: Table, target: String): Pair<Int, Int> {

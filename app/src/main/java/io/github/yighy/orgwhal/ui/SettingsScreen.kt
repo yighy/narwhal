@@ -1,5 +1,6 @@
 package io.github.yighy.orgwhal.ui
 
+import io.github.yighy.orgwhal.data.TableRecalc
 import androidx.activity.compose.LocalActivity
 import io.github.yighy.orgwhal.data.AppLanguage
 import androidx.compose.ui.platform.LocalResources
@@ -69,6 +70,7 @@ fun SettingsScreen(
     var pickAllDayTime by remember { mutableStateOf(false) }
     var editKeywords by remember { mutableStateOf(false) }
     var pickLinkRenaming by remember { mutableStateOf(false) }
+    var pickTableRecalc by remember { mutableStateOf(false) }
     var pickTheme by remember { mutableStateOf(false) }
     val english = remember { AppLanguage.isEnglish(context) }
     val activity = LocalActivity.current
@@ -170,6 +172,10 @@ fun SettingsScreen(
                 onClick = { pickLinkRenaming = true },
                 supportingContent = { Text(stringResource(settings.linkRenaming.label) + "\n" + stringResource(R.string.settings_link_renaming_summary)) },
             ) { Text(stringResource(R.string.settings_link_renaming)) }
+            ListItem(
+                onClick = { pickTableRecalc = true },
+                supportingContent = { Text(stringResource(settings.tableRecalc.label) + "\n" + stringResource(R.string.settings_tables_summary)) },
+            ) { Text(stringResource(R.string.settings_tables)) }
 
             SectionHeader(stringResource(R.string.settings_reminders))
             SwitchItem(
@@ -324,6 +330,18 @@ fun SettingsScreen(
             onSelect = { label ->
                 pickLinkRenaming = false
                 LinkRenaming.entries.firstOrNull { resources.getString(it.label) == label }?.let(viewModel::setLinkRenaming)
+            },
+        )
+    }
+    if (pickTableRecalc) {
+        ChoiceDialog(
+            title = stringResource(R.string.settings_tables),
+            options = TableRecalc.entries.map { stringResource(it.label) },
+            selected = stringResource(settings.tableRecalc.label),
+            onDismiss = { pickTableRecalc = false },
+            onSelect = { label ->
+                pickTableRecalc = false
+                TableRecalc.entries.firstOrNull { resources.getString(it.label) == label }?.let(viewModel::setTableRecalc)
             },
         )
     }

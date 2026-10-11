@@ -1,5 +1,6 @@
 package io.github.yighy.orgwhal.ui
 
+import io.github.yighy.orgwhal.data.TableRecalc
 import io.github.yighy.orgwhal.core.Blocks
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.material3.TextButton
@@ -248,6 +249,8 @@ private fun NotebookOutline(
     onDelete: (OrgNote) -> Unit,
 ) {
     val shown = NoteTree.visible(file.notes, viewModel::isFolded).map { it.index }.toSet()
+    val library by viewModel.library.collectAsState()
+    val tableRecalc = viewModel.settings.collectAsState().value.tableRecalc
     val rowKeys = remember(file.notes) { outlineKeys(file.notes) }
     val stagger = remember { FoldStagger() }
     val delays = stagger.delays(shown)
@@ -363,6 +366,9 @@ private fun NotebookOutline(
                         onAddNear = { placement -> onAddNear(note, placement) },
                         onDelete = { onDelete(note) },
                         onToggleCheckbox = { n -> viewModel.update(note) { it.copy(content = Checkboxes.toggle(it.content, n)) } },
+                        tables = if (tableRecalc == TableRecalc.Never) { _ -> null } else remember(note.content, library, tableRecalc) { viewModel.tableLookup(note.content) },
+                        liveFormulas = tableRecalc != TableRecalc.Never,
+                        onTablesShown = if (tableRecalc == TableRecalc.Save) { { viewModel.saveShownTables(note) } } else null,
                     )
                 }
             }
@@ -418,6 +424,11 @@ private fun OutlineRow(
     onAddNear: (Placement) -> Unit,
     onDelete: () -> Unit,
     onToggleCheckbox: (Int) -> Unit,
+    /** remote() lookups for the note's tables, and whether they show recalculated. */
+    tables: (String) -> List<String>? = { null },
+    liveFormulas: Boolean = false,
+    /** Saves the note's tables recalculated, once its content is shown (when so set). */
+    onTablesShown: (() -> Unit)? = null,
 ) {
     val chevronRotation by animateFloatAsState(
         targetValue = if (folded) -90f else 0f,
@@ -494,12 +505,15 @@ private fun OutlineRow(
                 )
                 val hasContent = remember(note.content) { !Blocks.showsNothing(note.content) }
                 if (showContent && hasContent) {
+                    if (onTablesShown != null) LaunchedEffect(note.content, tables) { onTablesShown() }
                     OrgContent(
                         note.content.trimIndent(),
                         MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
                         onOpenLink,
                         Modifier.padding(top = 4.dp).sharedText(noteContentKey(note)),
                         onToggleCheckbox = onToggleCheckbox,
+                        tableNamed = tables,
+                        liveFormulas = liveFormulas,
                     )
                 }
             }

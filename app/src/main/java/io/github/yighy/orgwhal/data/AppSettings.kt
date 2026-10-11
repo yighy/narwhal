@@ -35,6 +35,16 @@ enum class LinkRenaming(@StringRes val label: Int) {
     Never(R.string.link_renaming_never),
 }
 
+/**
+ * Whether a note's tables with formulas are recalculated when they are shown: never (the
+ * Recalculate button does it), on screen only (the file keeps its values until saved), or saved.
+ */
+enum class TableRecalc(@StringRes val label: Int) {
+    Never(R.string.tables_never),
+    Show(R.string.tables_show),
+    Save(R.string.tables_save),
+}
+
 /** A search kept under a name, run from the drawer (as Orgzly's saved searches). */
 data class SavedSearch(val name: String, val query: String)
 
@@ -66,6 +76,8 @@ class AppSettings(context: Context) {
         val snoozeMinutes: Int = 60,
         /** What happens to links still showing a note's old title when it is renamed. */
         val linkRenaming: LinkRenaming = LinkRenaming.Ask,
+        /** Whether tables with formulas are recalculated when shown. */
+        val tableRecalc: TableRecalc = TableRecalc.Never,
         val themeMode: ThemeMode = ThemeMode.System,
         /** Colors taken from the wallpaper (Android 12+). */
         val dynamicColor: Boolean = true,
@@ -93,6 +105,7 @@ class AppSettings(context: Context) {
             snoozeMinutes = prefs.getInt(KEY_SNOOZE_MINUTES, 60),
             linkRenaming = LinkRenaming.entries.firstOrNull { it.name == prefs.getString(KEY_LINK_RENAMING, null) }
                 ?: LinkRenaming.Ask,
+            tableRecalc = TableRecalc.entries.firstOrNull { it.name == prefs.getString(KEY_TABLE_RECALC, null) } ?: TableRecalc.Never,
             themeMode = ThemeMode.entries.firstOrNull { it.name == prefs.getString(KEY_THEME, null) } ?: ThemeMode.System,
             dynamicColor = prefs.getBoolean(KEY_DYNAMIC_COLOR, true),
         ),
@@ -213,6 +226,8 @@ class AppSettings(context: Context) {
 
     fun setLinkRenaming(mode: LinkRenaming) = save({ putString(KEY_LINK_RENAMING, mode.name) }) { it.copy(linkRenaming = mode) }
 
+    fun setTableRecalc(mode: TableRecalc) = save({ putString(KEY_TABLE_RECALC, mode.name) }) { it.copy(tableRecalc = mode) }
+
     fun setThemeMode(mode: ThemeMode) = save({ putString(KEY_THEME, mode.name) }) { it.copy(themeMode = mode) }
 
     fun setDynamicColor(on: Boolean) = save({ putBoolean(KEY_DYNAMIC_COLOR, on) }) { it.copy(dynamicColor = on) }
@@ -245,6 +260,7 @@ class AppSettings(context: Context) {
         private const val KEY_ALARM_CLOCK = "use_alarm_clock"
         private const val KEY_SNOOZE_MINUTES = "snooze_minutes"
         private const val KEY_LINK_RENAMING = "link_renaming"
+        private const val KEY_TABLE_RECALC = "table_recalc"
         private const val KEY_THEME = "theme_mode"
         private const val KEY_DYNAMIC_COLOR = "dynamic_color"
         private const val KEY_SHOW_CONTENT = "show_content_in_notebook"

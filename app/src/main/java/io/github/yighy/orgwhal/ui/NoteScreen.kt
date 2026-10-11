@@ -1,5 +1,6 @@
 package io.github.yighy.orgwhal.ui
 
+import io.github.yighy.orgwhal.data.TableRecalc
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.AlertDialog
 import io.github.yighy.orgwhal.core.Links
@@ -705,6 +706,17 @@ fun NoteScreen(
                         .clickable(interactionSource = null, indication = null) { startEditing(Editing.Content) }
                         .padding(vertical = 8.dp),
                 ) {
+                    // Tables read with remote(), and recalculated as shown if so set
+                    val tables = remember(content, library, settings.tableRecalc) { viewModel.tableLookup(content) }
+                    if (settings.tableRecalc == TableRecalc.Save) {
+                        LaunchedEffect(tables) {
+                            val fresh = Blocks.recalculated(content, tables)
+                            if (fresh != content) {
+                                saved = Editing.Content to fresh
+                                viewModel.update(note) { it.copy(content = fresh) }
+                            }
+                        }
+                    }
                     if (remember(content) { Blocks.showsNothing(content) }) {
                         Text(contentPlaceholder, style = contentStyle, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     } else {
@@ -718,12 +730,8 @@ fun NoteScreen(
                                 saved = Editing.Content to Checkboxes.toggle(content, n)
                                 viewModel.update(note) { it.copy(content = Checkboxes.toggle(it.content, n)) }
                             },
-                            // Named tables of this note first, then of the others, or a note's first table by its ID
-                            tableNamed = { name ->
-                                Blocks.tableLines(content, name)
-                                    ?: library.notes.firstNotNullOfOrNull { Blocks.tableLines(it.content, name) }
-                                    ?: library.noteById(name)?.let { Blocks.tableLines(it.content, null) }
-                            },
+                            tableNamed = tables,
+                            liveFormulas = settings.tableRecalc != TableRecalc.Never,
                             onRecalculate = { recalculated, skipped ->
                                 if (recalculated != null) {
                                     saved = Editing.Content to recalculated

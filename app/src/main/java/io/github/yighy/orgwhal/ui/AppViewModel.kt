@@ -1,5 +1,8 @@
 package io.github.yighy.orgwhal.ui
 
+import io.github.yighy.orgwhal.core.TableFormulas
+import io.github.yighy.orgwhal.core.Blocks
+import io.github.yighy.orgwhal.data.TableRecalc
 import io.github.yighy.orgwhal.core.Folding
 import androidx.compose.runtime.mutableIntStateOf
 import io.github.yighy.orgwhal.data.AppSettings
@@ -266,6 +269,30 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun setSnoozeMinutes(minutes: Int) = appSettings.setSnoozeMinutes(minutes)
 
     fun setLinkRenaming(mode: LinkRenaming) = appSettings.setLinkRenaming(mode)
+
+    fun setTableRecalc(mode: TableRecalc) = appSettings.setTableRecalc(mode)
+
+    /**
+     * remote() lookups for the tables of [content]: named tables of [content] first, then of the
+     * other notes, or a note's first table by its ID; recalculated first when tables are
+     * recalculated as shown, as written otherwise.
+     */
+    fun tableLookup(content: String): (String) -> List<String>? {
+        val notes = library.value
+        val find = { name: String ->
+            Blocks.tableWithFormulas(content, name)
+                ?: notes.notes.firstNotNullOfOrNull { Blocks.tableWithFormulas(it.content, name) }
+                ?: notes.noteById(name)?.let { Blocks.tableWithFormulas(it.content, null) }
+        }
+        return if (settings.value.tableRecalc == TableRecalc.Never) { name -> find(name)?.first } else TableFormulas.freshRemote(find)
+    }
+
+    /** When tables are recalculated and saved as shown: writes [note]'s tables if their values changed. */
+    fun saveShownTables(note: OrgNote) {
+        if (settings.value.tableRecalc != TableRecalc.Save) return
+        val fresh = Blocks.recalculated(note.content, tableLookup(note.content))
+        if (fresh != note.content) update(note) { it.copy(content = fresh) }
+    }
 
     fun setThemeMode(mode: ThemeMode) = appSettings.setThemeMode(mode)
 

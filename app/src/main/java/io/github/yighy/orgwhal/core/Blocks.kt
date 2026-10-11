@@ -155,6 +155,24 @@ object Blocks {
     /** Whether [text] shows nothing: blank, or only a logbook (shown as the clock's time). */
     fun showsNothing(text: String): Boolean = parse(text).all { it is Drawer && it.name == "LOGBOOK" }
 
+    /** The table named [name] in [text] (#+NAME: name), or its first table if [name] is null: its lines and formulas. */
+    fun tableWithFormulas(text: String, name: String?): Pair<List<String>, List<String>>? {
+        val table = parse(text).filterIsInstance<Table>().firstOrNull { name == null || it.name == name } ?: return null
+        return text.substring(table.tableStart, table.tableEnd).split('\n') to table.formulas
+    }
+
+    /** [text] with each of its tables that has formulas recalculated; [remote] as for [TableFormulas.recalculate]. */
+    fun recalculated(text: String, remote: (String) -> List<String>?): String {
+        var out = text
+        // From the last table, so the ones above keep their places
+        parse(text).filterIsInstance<Table>().filter { it.formulas.isNotEmpty() }.asReversed().forEach { table ->
+            val lines = text.substring(table.tableStart, table.tableEnd).split('\n')
+            val result = TableFormulas.recalculate(lines, table.formulas, remote)
+            if (result.lines != lines) out = out.replaceRange(table.tableStart, table.tableEnd, result.lines.joinToString("\n"))
+        }
+        return out
+    }
+
     /** Lines of the table named [name] in [text] (#+NAME: name), or of its first table if [name] is null. */
     fun tableLines(text: String, name: String?): List<String>? {
         val table = parse(text).filterIsInstance<Table>().firstOrNull { name == null || it.name == name } ?: return null

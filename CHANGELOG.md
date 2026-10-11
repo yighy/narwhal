@@ -4,6 +4,12 @@ All notable changes to Orgwhal (named Narwhal up to 0.16.0). Versions follow [Se
 
 ## [Unreleased]
 
+### Added
+- Setting to recalculate tables with formulas as soon as a note shows them, in the notebook
+  and on the note screen: never (the default, with the Recalculate button), on screen only
+  (the file keeps its values until "Save values"), or recalculated and saved; tables read with
+  remote() are recalculated first, so a total read from another note is up to date
+
 ## [0.17.1] - 2026-10-11
 
 ### Changed
