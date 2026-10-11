@@ -4,6 +4,8 @@ All notable changes to Narwhal. Versions follow [Semantic Versioning](https://se
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-10-11
+
 ### Changed
 - New icon: the narwhal's head over a wave, its striped tusk up; the themed and notification icons
   follow it
@@ -243,7 +245,8 @@ All notable changes to Narwhal. Versions follow [Semantic Versioning](https://se
 - First prototype: notebooks from a folder of `.org` files, outline, note editing, search, tags,
   and `id:` links to other notes
 
-[Unreleased]: https://github.com/yighy/narwhal/compare/v0.13.1...HEAD
+[Unreleased]: https://github.com/yighy/narwhal/compare/v0.14.0...HEAD
+[0.14.0]: https://github.com/yighy/narwhal/compare/v0.13.1...v0.14.0
 [0.13.1]: https://github.com/yighy/narwhal/compare/v0.13.0...v0.13.1
 [0.13.0]: https://github.com/yighy/narwhal/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/yighy/narwhal/compare/v0.11.0...v0.12.0
