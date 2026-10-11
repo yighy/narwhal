@@ -1,11 +1,11 @@
-#+TITLE: Narwhal guide
+#+TITLE: Orgwhal guide
 #+TODO: TODO NEXT | DONE
 
-This notebook shows what Narwhal can do. Each note explains a feature and is also an example to try. Everything is written in Org: the same file opens in Emacs. Delete the notebook when you no longer need it (long press on it on the home screen).
+This notebook shows what Orgwhal can do. Each note explains a feature and is also an example to try. Everything is written in Org: the same file opens in Emacs. Delete the notebook when you no longer need it (long press on it on the home screen).
 
 * Getting started
 ** The notes folder
-Narwhal reads and writes the =.org= files of a folder on the phone (synced with Syncthing, Nextcloud…). There is no database: a file is a notebook, a heading (=*=) is a note.
+Orgwhal reads and writes the =.org= files of a folder on the phone (synced with Syncthing, Nextcloud…). There is no database: a file is a notebook, a heading (=*=) is a note.
 
 - Choose the folder in *Settings → Notes → Folder*.
 - Files changed by another app are read again within seconds.
@@ -53,7 +53,7 @@ The deadline shows in the agenda on its date, in red, then under "Overdue" once 
 :BUDGET:   300
 :SEE:      [[*Formulas][Formulas]]
 :END:
-*Property* adds a name / value line. While you type, Narwhal suggests the names already used in your notebooks, then the values already given to that name.
+*Property* adds a name / value line. While you type, Orgwhal suggests the names already used in your notebooks, then the values already given to that name.
 
 - A link in a value shows as a link, as =SEE= above: tap it to open it, tap beside it to edit the value.
 - *Settings → Hidden properties*: the ones not to show (ID, CREATED…); they stay in the file.
@@ -82,7 +82,7 @@ The *toolbar* over the keyboard (while editing the content) does bold, italic, u
 While you type, a list goes on by itself on the next line; an empty item ends it.
 
 ** Progress cookies [1/3]
-A =[/]= or a =[%]= in a title or a list item counts what is done. Narwhal keeps it up to date as Emacs does, at each box checked:
+A =[/]= or a =[%]= in a title or a list item counts what is done. Orgwhal keeps it up to date as Emacs does, at each box checked:
 
 - [-] Luggage [33%]
   - [X] Clothes
@@ -105,7 +105,7 @@ An inactive timestamp just records a moment: [{{date:0}} 10:00]. The date button
 
 * Links
 ** Links to a note
-Type =id:= in the content, then a few letters of a title: Narwhal suggests the notes, and the one chosen becomes a link. A parent's title (or the notebook's) also finds the notes under it, after the titles that match. The note linked to gets an ID if it had none.
+Type =id:= in the content, then a few letters of a title: Orgwhal suggests the notes, and the one chosen becomes a link. A parent's title (or the notebook's) also finds the notes under it, after the titles that match. The note linked to gets an ID if it had none.
 
 Example: [[id:{{id}}][The target note]].
 
@@ -120,7 +120,7 @@ When a note is renamed, the links that still show the old title can be updated (
 Open it: the note "Links to a note" shows under *Linked from*.
 
 ** Links to a notebook, a website, a phone…
-- Type =file:= to link a notebook of the folder: [[file:narwhal-guide.org][this guide]].
+- Type =file:= to link a notebook of the folder: [[file:orgwhal-guide.org][this guide]].
 - Addresses open with a tap: https://orgmode.org, [[https://orgmode.org/manual/][the Org manual]].
 - Also =mailto:=, =tel:= and =geo:=.
 
@@ -177,7 +177,7 @@ Recalculate "Formulas", then this one.
 * Blocks, quotes and drawers
 ** Code and examples
 #+BEGIN_SRC kotlin
-fun main() = println("Hello Narwhal")
+fun main() = println("Hello Orgwhal")
 #+END_SRC
 
 #+BEGIN_EXAMPLE
@@ -239,7 +239,7 @@ The magnifier searches the notebook shown, or everywhere from the home screen. T
 | s.none          | not scheduled                           |
 | e.eq.today      | events of the day                       |
 | cr.eq.today     | created today (CREATED property)        |
-| b.narwhal-guide | in this notebook (its file name)        |
+| b.orgwhal-guide | in this notebook (its file name)        |
 | ad.7            | the results as a 7-day agenda           |
 | o.p             | sort by priority (o.s, o.d, o.e, o.cr…) |
 
@@ -266,15 +266,15 @@ In a notebook, *⋮ → Tree view* draws its notes as boxes from left to right.
 - The tree comes back as you left it: zoom, place and folds.
 
 * Archiving
-*⋮ → Archive* on a note (or on a selection) moves it with its sub-notes to the end of the notebook's archive file, next to it: =narwhal-guide.org_archive= for this one. As in Emacs (=C-c C-x C-s=), it gets properties saying when and where from (=ARCHIVE_TIME=, =ARCHIVE_FILE=, =ARCHIVE_OLPATH=…).
+*⋮ → Archive* on a note (or on a selection) moves it with its sub-notes to the end of the notebook's archive file, next to it: =orgwhal-guide.org_archive= for this one. As in Emacs (=C-c C-x C-s=), it gets properties saying when and where from (=ARCHIVE_TIME=, =ARCHIVE_FILE=, =ARCHIVE_OLPATH=…).
 
 The archive file is not a notebook: archived notes leave the lists, the agenda and the search, and the notebook stays light. Open the file in Emacs to read them again. The message offers to undo it.
 
 ** DONE Archive me
 Try it: open this note, then *⋮ → Archive*.
 
-* Sharing to Narwhal
-From another app (browser, notes…), *Share → Narwhal* makes a note in the *Inbox* notebook (made when needed): the page title as title, the link as content.
+* Sharing to Orgwhal
+From another app (browser, notes…), *Share → Orgwhal* makes a note in the *Inbox* notebook (made when needed): the page title as title, the link as content.
 
 On that new note, tap *Inbox ▾* at the top to put it in another notebook, under the note of your choice. An Inbox left empty goes away.
 

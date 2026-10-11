@@ -1,4 +1,4 @@
-# Narwhal
+# Orgwhal
 
 <img src="docs/icon.svg" alt="" width="96">
 
@@ -14,8 +14,8 @@ An Android app for [Org mode](https://orgmode.org) notes, inspired by
 
 ## Features
 
-- **Your `.org` files, nothing else.** Narwhal works on a folder you pick. Changes made elsewhere
-  show up within seconds, and what Narwhal doesn't change stays as it was, so the same files open
+- **Your `.org` files, nothing else.** Orgwhal works on a folder you pick. Changes made elsewhere
+  show up within seconds, and what Orgwhal doesn't change stays as it was, so the same files open
   in Emacs.
 - **Outline and tree.** Notebooks fold as in Org (`#+STARTUP`, `VISIBILITY`) and stay as you
   leave them; a tree view draws them as boxes to move around. Select notes to move, copy, archive
@@ -29,7 +29,7 @@ An Android app for [Org mode](https://orgmode.org) notes, inspired by
 
 ## Download
 
-Signed APKs are attached to each [release](https://github.com/yighy/narwhal/releases); see
+Signed APKs are attached to each [release](https://github.com/yighy/orgwhal/releases); see
 [CHANGELOG.md](CHANGELOG.md) for what changed.
 
 ## Build

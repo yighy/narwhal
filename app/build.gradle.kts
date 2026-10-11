@@ -6,11 +6,11 @@ plugins {
 }
 
 android {
-    namespace = "io.github.yighy.narwhal"
+    namespace = "io.github.yighy.orgwhal"
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "io.github.yighy.narwhal"
+        applicationId = "io.github.yighy.orgwhal"
         minSdk = 26
         targetSdk = 36
         versionCode = 21
@@ -53,10 +53,10 @@ android {
     }
 }
 
-// Names the APK for the app and its version - narwhal-0.3.0-release.apk - so it can be
+// Names the APK for the app and its version - orgwhal-0.3.0-release.apk - so it can be
 // attached to a release as it comes out of the build, without renaming.
 base {
-    archivesName.set("narwhal-${android.defaultConfig.versionName}")
+    archivesName.set("orgwhal-${android.defaultConfig.versionName}")
 }
 
 dependencies {

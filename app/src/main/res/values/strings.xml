@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Texts of the app, in English (the default); values-*/strings.xml hold the translations. -->
 <resources>
-    <string name="app_name" translatable="false">Narwhal</string>
+    <string name="app_name" translatable="false">Orgwhal</string>
     <string name="add">Add</string>
     <string name="add_tag">Add tag</string>
     <string name="add_title">Add a title</string>
@@ -57,7 +57,7 @@
     <string name="event">Event</string>
     <string name="expand">Expand</string>
     <string name="expand_all">Expand all</string>
-    <string name="guide_offer_text">It explains Narwhal with examples to try, as a notebook of your folder that you can delete at any time. In English.</string>
+    <string name="guide_offer_text">It explains Orgwhal with examples to try, as a notebook of your folder that you can delete at any time. In English.</string>
     <string name="guide_offer_title">Add a guide notebook?</string>
     <string name="indent">Indent</string>
     <string name="italic">Italic</string>
@@ -177,7 +177,7 @@
     <string name="settings_add_created">Add a creation date to new notes</string>
     <string name="settings_add_created_summary">Fill the CREATED property when a note is created (searched with cr., sorted with o.cr)</string>
     <string name="settings_add_guide">Add the guide notebook</string>
-    <string name="settings_add_guide_summary">Explains Narwhal with examples to try (in English)</string>
+    <string name="settings_add_guide_summary">Explains Orgwhal with examples to try (in English)</string>
     <string name="settings_add_id">Add an ID to new notes</string>
     <string name="settings_add_id_summary">Fill the ID property when a note is created; a note also gets one when an id: link to it is made</string>
     <string name="settings_alarm_clock">Use alarm clock alarms</string>
@@ -259,7 +259,7 @@
     <string name="update">Update</string>
     <string name="update_links_title">Update links?</string>
     <string name="use_initial">Use initial</string>
-    <string name="welcome_text">Pick the folder that holds your .org files. They stay where they are: Narwhal reads and writes them directly.</string>
+    <string name="welcome_text">Pick the folder that holds your .org files. They stay where they are: Orgwhal reads and writes them directly.</string>
     <plurals name="agenda_today">
         <item quantity="one">%1$d for today</item>
         <item quantity="other">%1$d for today</item>

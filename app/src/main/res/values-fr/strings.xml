@@ -55,7 +55,7 @@
     <string name="event">Événement</string>
     <string name="expand">Déplier</string>
     <string name="expand_all">Tout déplier</string>
-    <string name="guide_offer_text">Il explique Narwhal avec des exemples à essayer, sous forme d’un carnet de votre dossier, que vous pouvez supprimer à tout moment. En anglais.</string>
+    <string name="guide_offer_text">Il explique Orgwhal avec des exemples à essayer, sous forme d’un carnet de votre dossier, que vous pouvez supprimer à tout moment. En anglais.</string>
     <string name="guide_offer_title">Ajouter un carnet guide ?</string>
     <string name="indent">Augmenter le retrait</string>
     <string name="italic">Italique</string>
@@ -175,7 +175,7 @@
     <string name="settings_add_created">Ajouter une date de création aux nouvelles notes</string>
     <string name="settings_add_created_summary">Remplir la propriété CREATED à la création d’une note (recherche avec cr., tri avec o.cr)</string>
     <string name="settings_add_guide">Ajouter le carnet guide</string>
-    <string name="settings_add_guide_summary">Explique Narwhal avec des exemples à essayer (en anglais)</string>
+    <string name="settings_add_guide_summary">Explique Orgwhal avec des exemples à essayer (en anglais)</string>
     <string name="settings_add_id">Ajouter un ID aux nouvelles notes</string>
     <string name="settings_add_id_summary">Remplir la propriété ID à la création d’une note ; une note en reçoit aussi un quand on crée un lien id: vers elle</string>
     <string name="settings_alarm_clock">Utiliser des alarmes de réveil</string>
@@ -257,7 +257,7 @@
     <string name="update">Mettre à jour</string>
     <string name="update_links_title">Mettre à jour les liens ?</string>
     <string name="use_initial">Utiliser l’initiale</string>
-    <string name="welcome_text">Choisissez le dossier qui contient vos fichiers .org. Ils restent où ils sont : Narwhal les lit et les écrit directement.</string>
+    <string name="welcome_text">Choisissez le dossier qui contient vos fichiers .org. Ils restent où ils sont : Orgwhal les lit et les écrit directement.</string>
     <plurals name="agenda_today">
         <item quantity="one">%1$d aujourd’hui</item>
         <item quantity="many">%1$d aujourd’hui</item>
