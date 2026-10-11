@@ -105,7 +105,7 @@ An inactive timestamp just records a moment: [{{date:0}} 10:00]. The date button
 
 * Links
 ** Links to a note
-Type =id:= in the content, then a few letters of a title: Narwhal suggests the notes, and the one chosen becomes a link. The note linked to gets an ID if it had none.
+Type =id:= in the content, then a few letters of a title: Narwhal suggests the notes, and the one chosen becomes a link. A parent's title (or the notebook's) also finds the notes under it, after the titles that match. The note linked to gets an ID if it had none.
 
 Example: [[id:{{id}}][The target note]].
 

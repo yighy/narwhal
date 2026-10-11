@@ -264,8 +264,12 @@ fun NoteScreen(
     // "id:" and "file:" completion while editing the title or the content, gone with the keyboard
     val typing = draft.takeIf { editing != Editing.None && it.selection.collapsed && keyboardShown() }
     val query = typing?.let { IdLinks.queryAt(it.text, it.selection.start) }
+    // Each note's notebook and ancestors, so that a parent's title also finds its sub-notes
+    val paths = remember(library) {
+        library.files.associate { file -> file.uri to NoteTree.ancestorTitles(file.notes).map { listOf(file.title) + it } }
+    }
     val suggestions = remember(query?.text, library) {
-        query?.let { IdLinks.suggestions(library.notes, it.text) }.orEmpty()
+        query?.let { q -> IdLinks.suggestions(library.notes, q.text) { paths[it.fileUri]?.getOrNull(it.index).orEmpty() } }.orEmpty()
     }
     val fileQuery = typing?.takeIf { query == null }?.let { IdLinks.queryAt(it.text, it.selection.start, "file:") }
     val fileSuggestions = remember(fileQuery?.text, library) {

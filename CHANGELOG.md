@@ -4,6 +4,10 @@ All notable changes to Narwhal. Versions follow [Semantic Versioning](https://se
 
 ## [Unreleased]
 
+### Changed
+- The `id:` suggestions also find notes by their notebook's and parents' titles: "Meals" offers
+  the note Meals, then the notes under it, and "meals rice" finds Rice under Meals
+
 ## [0.14.0] - 2026-10-11
 
 ### Changed

@@ -56,6 +56,15 @@ object NoteTree {
         }
     }
 
+    /** For each note, its ancestors' titles, the outermost first. */
+    fun ancestorTitles(notes: List<OrgNote>): List<List<String>> {
+        val stack = ArrayDeque<OrgNote>()
+        return notes.map { note ->
+            while (stack.isNotEmpty() && stack.last().level >= note.level) stack.removeLast()
+            stack.map { it.title }.also { stack.addLast(note) }
+        }
+    }
+
     /** Notes not hidden under a folded ancestor. */
     fun visible(notes: List<OrgNote>, isFolded: (OrgNote) -> Boolean): List<OrgNote> {
         val result = mutableListOf<OrgNote>()

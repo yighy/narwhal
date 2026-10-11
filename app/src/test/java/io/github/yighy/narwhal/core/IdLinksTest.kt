@@ -71,4 +71,19 @@ class IdLinksTest {
         assertEquals(listOf("Shopping list", "Weekly shopping"), IdLinks.suggestions(notes, "shop").map { it.title })
         assertEquals(3, IdLinks.suggestions(notes, "").size)
     }
+
+    @Test
+    fun suggestionsFindSubNotesByTheirParents() {
+        fun note(title: String, level: Int) = OrgNote("u", "f", 0, level, null, false, null, title, emptyList(), null, null, null, emptyList(), "", "")
+        val notes = listOf(note("Meals", 1), note("Chicken rice", 2), note("Sauce", 3), note("Rice pudding", 1))
+        val paths = NoteTree.ancestorTitles(notes).map { listOf("Kitchen") + it }
+        fun find(query: String) = IdLinks.suggestions(notes, query) { paths[notes.indexOf(it)] }.map { it.title }
+        // The note itself first, then its sub-notes, the nearest first
+        assertEquals(listOf("Meals", "Chicken rice", "Sauce"), find("meals"))
+        assertEquals(listOf("Chicken rice", "Sauce"), find("meals rice"))
+        // Titles before paths: Sauce is found by its parent's title
+        assertEquals(listOf("Rice pudding", "Chicken rice", "Sauce"), find("rice"))
+        // The notebook's name finds all its notes
+        assertEquals(4, find("kitchen").size)
+    }
 }
