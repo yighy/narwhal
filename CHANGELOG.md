@@ -5,6 +5,8 @@ All notable changes to Narwhal. Versions follow [Semantic Versioning](https://se
 ## [Unreleased]
 
 ### Changed
+- Icon: the narwhal's head, now flat underneath, over a dot and a bar in white (a list's line)
+  instead of the wave; its eyes are cut out in the background's green
 - Reminder notifications show the note's parent next to the time; opened, they show the whole
   path (notebook › parents) and the start of the note's content as plain text: lists with
   bullets, checkboxes as ☐ / ☑, a table's rows with their fields side by side
