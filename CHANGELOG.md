@@ -4,6 +4,9 @@ All notable changes to Orgwhal (named Narwhal up to 0.16.0). Versions follow [Se
 
 ## [Unreleased]
 
+### Changed
+- The icon's drawing sits a little higher, so it looks centered
+
 ## [0.17.0] - 2026-10-11
 
 ### Changed
