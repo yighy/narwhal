@@ -372,7 +372,7 @@ fun TreeScreen(viewModel: AppViewModel, library: NoteRepository.Library, file: N
                             onLongClick = { if (note != null) viewModel.toggleSelected(note) },
                             modifier = Modifier
                                 .offset { onScreen(at(key, parent)).round() }
-                                .then(if (note != null) Modifier.sharedContainer("note-${note.fileUri}#${note.index}", RoundedCornerShape(12.dp * scale), scaleContent = true) else Modifier)
+                                .then(if (note != null) Modifier.sharedContainer("note-${note.fileUri}#${note.index}", RoundedCornerShape(12.dp * scale)) else Modifier)
                                 .zoomed { scale },
                         )
                         if (note != null && node.hasChildren) {
