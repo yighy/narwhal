@@ -4,6 +4,8 @@ All notable changes to Orgwhal (named Narwhal up to 0.16.0). Versions follow [Se
 
 ## [Unreleased]
 
+## [0.17.1] - 2026-10-11
+
 ### Changed
 - The icon's drawing sits a little higher, so it looks centered
 
@@ -270,7 +272,8 @@ All notable changes to Orgwhal (named Narwhal up to 0.16.0). Versions follow [Se
 - First prototype: notebooks from a folder of `.org` files, outline, note editing, search, tags,
   and `id:` links to other notes
 
-[Unreleased]: https://github.com/yighy/orgwhal/compare/v0.17.0...HEAD
+[Unreleased]: https://github.com/yighy/orgwhal/compare/v0.17.1...HEAD
+[0.17.1]: https://github.com/yighy/orgwhal/compare/v0.17.0...v0.17.1
 [0.17.0]: https://github.com/yighy/orgwhal/compare/v0.16.0...v0.17.0
 [0.16.0]: https://github.com/yighy/orgwhal/compare/v0.15.0...v0.16.0
 [0.15.0]: https://github.com/yighy/orgwhal/compare/v0.14.0...v0.15.0
