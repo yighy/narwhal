@@ -4,6 +4,8 @@ All notable changes to Narwhal. Versions follow [Semantic Versioning](https://se
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-10-11
+
 ### Changed
 - The `id:` suggestions also find notes by their notebook's and parents' titles: "Meals" offers
   the note Meals, then the notes under it, and "meals rice" finds Rice under Meals
@@ -249,7 +251,8 @@ All notable changes to Narwhal. Versions follow [Semantic Versioning](https://se
 - First prototype: notebooks from a folder of `.org` files, outline, note editing, search, tags,
   and `id:` links to other notes
 
-[Unreleased]: https://github.com/yighy/narwhal/compare/v0.14.0...HEAD
+[Unreleased]: https://github.com/yighy/narwhal/compare/v0.15.0...HEAD
+[0.15.0]: https://github.com/yighy/narwhal/compare/v0.14.0...v0.15.0
 [0.14.0]: https://github.com/yighy/narwhal/compare/v0.13.1...v0.14.0
 [0.13.1]: https://github.com/yighy/narwhal/compare/v0.13.0...v0.13.1
 [0.13.0]: https://github.com/yighy/narwhal/compare/v0.12.0...v0.13.0
