@@ -4,6 +4,8 @@ All notable changes to Orgwhal (named Narwhal up to 0.16.0). Versions follow [Se
 
 ## [Unreleased]
 
+## [0.19.0] - 2026-10-12
+
 ### Added
 - While a clock runs, a silent notification shows the note, where it is and the time clocked,
   with a Stop button, and Done for a to-do note; it follows the files, so a clock started or
@@ -300,7 +302,8 @@ All notable changes to Orgwhal (named Narwhal up to 0.16.0). Versions follow [Se
 - First prototype: notebooks from a folder of `.org` files, outline, note editing, search, tags,
   and `id:` links to other notes
 
-[Unreleased]: https://github.com/yighy/orgwhal/compare/v0.18.1...HEAD
+[Unreleased]: https://github.com/yighy/orgwhal/compare/v0.19.0...HEAD
+[0.19.0]: https://github.com/yighy/orgwhal/compare/v0.18.1...v0.19.0
 [0.18.1]: https://github.com/yighy/orgwhal/compare/v0.18.0...v0.18.1
 [0.18.0]: https://github.com/yighy/orgwhal/compare/v0.17.1...v0.18.0
 [0.17.1]: https://github.com/yighy/orgwhal/compare/v0.17.0...v0.17.1
