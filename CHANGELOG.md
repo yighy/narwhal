@@ -4,6 +4,16 @@ All notable changes to Orgwhal (named Narwhal up to 0.16.0). Versions follow [Se
 
 ## [Unreleased]
 
+### Added
+- While a clock runs, a silent notification shows the note, where it is and the time clocked,
+  with a Stop button, and Done for a to-do note; it follows the files, so a clock started or
+  stopped elsewhere (Emacs, another device) shows or takes it away, and it comes back after a restart
+- Clock in button on reminder notifications, in place of Tomorrow, which a setting brings back
+  (Settings, Third button): the note's clock starts, stopping another one, and its notification
+  follows
+- Marking a note done stops its running clock, as Emacs does by default (also for a repeating
+  task, which stays to-do)
+
 ### Changed
 - New icon: the Org headline asterisk, its upper-right arm grown into a narwhal tusk with three spiral
   grooves; the themed and notification icons have the same drawing

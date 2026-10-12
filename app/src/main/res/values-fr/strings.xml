@@ -16,6 +16,8 @@
     <string name="bold">Gras</string>
     <string name="cancel">Annuler</string>
     <string name="change_icon">Changer l’icône</string>
+    <string name="channel_clock">Pointage en cours</string>
+    <string name="channel_clock_description">Notes en cours de pointage, avec un bouton pour arrêter le pointage</string>
     <string name="channel_reminders">Rappels</string>
     <string name="channel_reminders_description">Heures planifiées et échéances de vos notes</string>
     <string name="checkbox">Case à cocher</string>
@@ -109,7 +111,9 @@
     <string name="notebook_icon">Icône du carnet</string>
     <string name="notebooks">Carnets</string>
     <string name="nothing_planned">Rien de prévu</string>
+    <string name="notification_clock_in">Pointer</string>
     <string name="notification_done">Fait</string>
+    <string name="notification_stop_clock">Arrêter</string>
     <string name="notification_text">%1$s %2$s · %3$s</string>
     <string name="notification_tomorrow">Demain</string>
     <string name="now">Maintenant</string>
@@ -218,6 +222,8 @@
     <string name="settings_remind_deadline_summary">Notifier à l’heure de DEADLINE</string>
     <string name="settings_remind_scheduled">Aux heures planifiées</string>
     <string name="settings_remind_scheduled_summary">Notifier à l’heure de SCHEDULED</string>
+    <string name="settings_reminder_button">Troisième bouton</string>
+    <string name="settings_reminder_button_summary">Sur la notification de rappel, après Fait et le report</string>
     <string name="settings_reminders">Rappels</string>
     <string name="settings_show_content">Afficher le contenu des notes dans les carnets</string>
     <string name="settings_show_content_summary">Montrer le texte de chaque note sous son titre dans l’arborescence</string>

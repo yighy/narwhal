@@ -45,6 +45,12 @@ enum class TableRecalc(@StringRes val label: Int) {
     Save(R.string.tables_save),
 }
 
+/** The reminder notification's third button, after Done and the snooze: start the clock, or snooze until tomorrow. */
+enum class ReminderButton(@StringRes val label: Int) {
+    ClockIn(R.string.notification_clock_in),
+    Tomorrow(R.string.notification_tomorrow),
+}
+
 /** A search kept under a name, run from the drawer (as Orgzly's saved searches). */
 data class SavedSearch(val name: String, val query: String)
 
@@ -74,6 +80,8 @@ class AppSettings(context: Context) {
         val useAlarmClock: Boolean = false,
         /** How long the notification's snooze button puts a reminder off. */
         val snoozeMinutes: Int = 60,
+        /** The reminder notification's third button. */
+        val reminderButton: ReminderButton = ReminderButton.ClockIn,
         /** What happens to links still showing a note's old title when it is renamed. */
         val linkRenaming: LinkRenaming = LinkRenaming.Ask,
         /** Whether tables with formulas are recalculated when shown. */
@@ -103,6 +111,7 @@ class AppSettings(context: Context) {
             addCreatedToNewNotes = prefs.getBoolean(KEY_ADD_CREATED, false),
             useAlarmClock = prefs.getBoolean(KEY_ALARM_CLOCK, false),
             snoozeMinutes = prefs.getInt(KEY_SNOOZE_MINUTES, 60),
+            reminderButton = ReminderButton.entries.firstOrNull { it.name == prefs.getString(KEY_REMINDER_BUTTON, null) } ?: ReminderButton.ClockIn,
             linkRenaming = LinkRenaming.entries.firstOrNull { it.name == prefs.getString(KEY_LINK_RENAMING, null) }
                 ?: LinkRenaming.Ask,
             tableRecalc = TableRecalc.entries.firstOrNull { it.name == prefs.getString(KEY_TABLE_RECALC, null) } ?: TableRecalc.Never,
@@ -224,6 +233,8 @@ class AppSettings(context: Context) {
 
     fun setSnoozeMinutes(minutes: Int) = save({ putInt(KEY_SNOOZE_MINUTES, minutes) }) { it.copy(snoozeMinutes = minutes) }
 
+    fun setReminderButton(button: ReminderButton) = save({ putString(KEY_REMINDER_BUTTON, button.name) }) { it.copy(reminderButton = button) }
+
     fun setLinkRenaming(mode: LinkRenaming) = save({ putString(KEY_LINK_RENAMING, mode.name) }) { it.copy(linkRenaming = mode) }
 
     fun setTableRecalc(mode: TableRecalc) = save({ putString(KEY_TABLE_RECALC, mode.name) }) { it.copy(tableRecalc = mode) }
@@ -259,6 +270,7 @@ class AppSettings(context: Context) {
         private const val KEY_ADD_CREATED = "add_created_to_new_notes"
         private const val KEY_ALARM_CLOCK = "use_alarm_clock"
         private const val KEY_SNOOZE_MINUTES = "snooze_minutes"
+        private const val KEY_REMINDER_BUTTON = "reminder_button"
         private const val KEY_LINK_RENAMING = "link_renaming"
         private const val KEY_TABLE_RECALC = "table_recalc"
         private const val KEY_THEME = "theme_mode"

@@ -1,5 +1,6 @@
 package io.github.yighy.orgwhal.reminders
 
+import io.github.yighy.orgwhal.data.ReminderButton
 import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -82,7 +83,18 @@ object ReminderNotifications {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
 
-        val snoozeMinutes = (context.applicationContext as OrgwhalApplication).settings.values.value.snoozeMinutes
+        val settings = (context.applicationContext as OrgwhalApplication).settings.values.value
+        val snoozeMinutes = settings.snoozeMinutes
+        /** Starts the note's clock, its own request code as the snooze buttons have theirs. */
+        val clockIn = PendingIntent.getBroadcast(
+            context,
+            id + 3,
+            Intent(context, ReminderReceiver::class.java)
+                .setAction(ReminderReceiver.ACTION_CLOCK_IN)
+                .putNoteExtras(note.fileUri, note.index, note.title)
+                .putExtra(EXTRA_NOTIFICATION_ID, id),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
         val kind = context.getString(if (reminder.kind == Agenda.Kind.Deadline) R.string.deadline else R.string.scheduled)
         val time = reminder.at.toLocalTime().format(DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT))
         val expanded = buildString {
@@ -91,7 +103,7 @@ object ReminderNotifications {
             if (preview.isNotEmpty()) append("\n\n").append(preview.joinToString("\n"))
         }
 
-        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+        val builder = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(listOfNotNull(note.state, displayTitle(note.title)).joinToString(" "))
             .setContentText(context.getString(R.string.notification_text, kind, time, ancestors.lastOrNull() ?: notebook))
@@ -104,8 +116,12 @@ object ReminderNotifications {
             .setContentIntent(open)
             .addAction(0, context.getString(R.string.notification_done), done)
             .addAction(0, AppSettings.snoozeLabel(context.resources, snoozeMinutes), snooze(snoozeMinutes.toLong(), id + 1))
-            .addAction(0, context.getString(R.string.notification_tomorrow), snooze(24 * 60, id + 2))
-            .build()
+        // A third button as set: start the clock, or snooze until tomorrow
+        when (settings.reminderButton) {
+            ReminderButton.ClockIn -> builder.addAction(0, context.getString(R.string.notification_clock_in), clockIn)
+            ReminderButton.Tomorrow -> builder.addAction(0, context.getString(R.string.notification_tomorrow), snooze(24 * 60, id + 2))
+        }
+        val notification = builder.build()
 
         try {
             NotificationManagerCompat.from(context).notify(id, notification)

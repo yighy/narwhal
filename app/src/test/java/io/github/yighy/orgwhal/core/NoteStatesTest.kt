@@ -42,4 +42,18 @@ class NoteStatesTest {
         assertTrue(result.edit.scheduled!!.contains("+1w"))
         assertFalse(result.edit.scheduled!!.contains("2026-10-05"))
     }
+
+    @Test
+    fun doneStopsTheRunningClock() {
+        val now = java.time.LocalDateTime.of(2026, 10, 12, 11, 30)
+        val clocked = note("* TODO a\n:LOGBOOK:\nCLOCK: [2026-10-12 Mon 10:00]\n:END:\n").toEdit()
+        val done = NoteStates.apply(clocked, "DONE", Keywords.DEFAULT, now).edit
+        assertNull(Clock.running(done.content))
+        assertTrue(done.content.contains("--[2026-10-12 Mon 11:30] =>  1:30"))
+        // A repeating task stays to-do, its clock stopped all the same
+        val repeating = note("* TODO a\nSCHEDULED: <2026-10-05 Mon +1w>\n:LOGBOOK:\nCLOCK: [2026-10-12 Mon 10:00]\n:END:\n").toEdit()
+        assertNull(Clock.running(NoteStates.apply(repeating, "DONE", Keywords.DEFAULT, now).edit.content))
+        // Other states keep it running
+        assertNotNull(Clock.running(NoteStates.apply(clocked, "NEXT", Keywords.DEFAULT, now).edit.content))
+    }
 }

@@ -1,5 +1,6 @@
 package io.github.yighy.orgwhal.ui
 
+import io.github.yighy.orgwhal.data.ReminderButton
 import io.github.yighy.orgwhal.core.TableFormulas
 import io.github.yighy.orgwhal.core.Blocks
 import io.github.yighy.orgwhal.data.TableRecalc
@@ -271,6 +272,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun setLinkRenaming(mode: LinkRenaming) = appSettings.setLinkRenaming(mode)
 
     fun setTableRecalc(mode: TableRecalc) = appSettings.setTableRecalc(mode)
+
+    fun setReminderButton(button: ReminderButton) = appSettings.setReminderButton(button)
 
     /**
      * remote() lookups for the tables of [content]: named tables of [content] first, then of the

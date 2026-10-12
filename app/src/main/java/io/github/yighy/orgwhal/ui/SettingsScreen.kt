@@ -1,5 +1,6 @@
 package io.github.yighy.orgwhal.ui
 
+import io.github.yighy.orgwhal.data.ReminderButton
 import io.github.yighy.orgwhal.data.TableRecalc
 import androidx.activity.compose.LocalActivity
 import io.github.yighy.orgwhal.data.AppLanguage
@@ -75,6 +76,7 @@ fun SettingsScreen(
     val english = remember { AppLanguage.isEnglish(context) }
     val activity = LocalActivity.current
     var pickSnooze by remember { mutableStateOf(false) }
+    var pickReminderButton by remember { mutableStateOf(false) }
     var pickSpacing by remember { mutableStateOf(false) }
     var editHiddenProperties by remember { mutableStateOf(false) }
 
@@ -200,6 +202,10 @@ fun SettingsScreen(
                 onClick = { pickSnooze = true },
                 supportingContent = { Text(AppSettings.snoozeLabel(resources, settings.snoozeMinutes) + "\n" + stringResource(R.string.settings_snooze_summary)) },
             ) { Text(stringResource(R.string.settings_snooze)) }
+            ListItem(
+                onClick = { pickReminderButton = true },
+                supportingContent = { Text(stringResource(settings.reminderButton.label) + "\n" + stringResource(R.string.settings_reminder_button_summary)) },
+            ) { Text(stringResource(R.string.settings_reminder_button)) }
             SwitchItem(
                 title = stringResource(R.string.settings_all_day),
                 summary = stringResource(R.string.settings_all_day_summary, settings.allDayTime.format(DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT))),
@@ -306,6 +312,18 @@ fun SettingsScreen(
             onSelect = { label ->
                 pickSpacing = false
                 NoteSpacing.entries.firstOrNull { resources.getString(it.label) == label }?.let(viewModel::setNoteSpacing)
+            },
+        )
+    }
+    if (pickReminderButton) {
+        ChoiceDialog(
+            title = stringResource(R.string.settings_reminder_button),
+            options = ReminderButton.entries.map { stringResource(it.label) },
+            selected = stringResource(settings.reminderButton.label),
+            onDismiss = { pickReminderButton = false },
+            onSelect = { label ->
+                pickReminderButton = false
+                ReminderButton.entries.firstOrNull { resources.getString(it.label) == label }?.let(viewModel::setReminderButton)
             },
         )
     }

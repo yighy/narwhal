@@ -5,6 +5,7 @@ import io.github.yighy.orgwhal.data.AppLanguage
 import android.app.Application
 import io.github.yighy.orgwhal.data.AppSettings
 import io.github.yighy.orgwhal.data.NoteRepository
+import io.github.yighy.orgwhal.reminders.ClockNotifications
 import io.github.yighy.orgwhal.reminders.ReminderNotifications
 import io.github.yighy.orgwhal.reminders.ReminderScheduler
 import kotlinx.coroutines.CoroutineScope
@@ -20,7 +21,7 @@ import kotlinx.coroutines.launch
 
 /**
  * Holds the app-wide repository and settings, shared by the UI and the reminder receiver,
- * and keeps the next reminder alarm in sync with the notes.
+ * and keeps the next reminder alarm and the running clocks' notifications in sync with the notes.
  */
 class OrgwhalApplication : Application() {
 
@@ -37,6 +38,7 @@ class OrgwhalApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         ReminderNotifications.createChannel(this)
+        ClockNotifications.createChannel(this)
 
         // Default state keywords before any file is read, then follow the setting
         repository.defaultKeywords = settings.values.value.keywords
@@ -52,6 +54,14 @@ class OrgwhalApplication : Application() {
                 .distinctUntilChanged()
                 .debounce(500)
                 .collect { (notes, options, alarmClock) -> scheduler.reschedule(notes, options, alarmClock) }
+        }
+
+        // A notification for each running clock, as the files say (started or stopped anywhere)
+        scope.launch {
+            repository.library.filter { it.loaded }
+                .map { ClockNotifications.running(it) }
+                .distinctUntilChanged()
+                .collect { ClockNotifications.show(this@OrgwhalApplication, it) }
         }
     }
 }

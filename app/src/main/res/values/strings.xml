@@ -18,6 +18,8 @@
     <string name="bold">Bold</string>
     <string name="cancel">Cancel</string>
     <string name="change_icon">Change icon</string>
+    <string name="channel_clock">Clock running</string>
+    <string name="channel_clock_description">Notes being clocked, with a button to stop the clock</string>
     <string name="channel_reminders">Reminders</string>
     <string name="channel_reminders_description">Scheduled and deadline times of your notes</string>
     <string name="checkbox">Checkbox</string>
@@ -111,7 +113,9 @@
     <string name="notebook_icon">Notebook icon</string>
     <string name="notebooks">Notebooks</string>
     <string name="nothing_planned">Nothing planned</string>
+    <string name="notification_clock_in">Clock in</string>
     <string name="notification_done">Done</string>
+    <string name="notification_stop_clock">Stop</string>
     <string name="notification_text">%1$s %2$s · %3$s</string>
     <string name="notification_tomorrow">Tomorrow</string>
     <string name="now">Now</string>
@@ -220,6 +224,8 @@
     <string name="settings_remind_deadline_summary">Notify at the time of DEADLINE</string>
     <string name="settings_remind_scheduled">At scheduled times</string>
     <string name="settings_remind_scheduled_summary">Notify at the time of SCHEDULED</string>
+    <string name="settings_reminder_button">Third button</string>
+    <string name="settings_reminder_button_summary">On the reminder notification, after Done and the snooze</string>
     <string name="settings_reminders">Reminders</string>
     <string name="settings_show_content">Show note content in notebooks</string>
     <string name="settings_show_content_summary">Display each note\'s text under its title in the outline</string>

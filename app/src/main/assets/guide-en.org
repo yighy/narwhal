@@ -208,6 +208,8 @@ The *Clock* line shows the time spent (2:15 here). Tap ▶ to start, ■ to stop
 
 - Only one clock runs at a time: starting one stops the other.
 - "Clock running" shows under the note in the lists.
+- Marking a note done stops its clock, as in Emacs.
+- While a clock runs, a notification shows its time, with *Stop* and, for a to-do note, *Done*; it follows the file, so a clock stopped in Emacs takes it away.
 
 * Agenda and reminders
 ** The agenda
@@ -222,7 +224,7 @@ SCHEDULED: <{{date:+1}}>
 A task for tomorrow, in the agenda. With a repeater such as =+3d=, it would come back every three days.
 
 ** Reminders
-A notification rings at scheduled and deadline times (*Settings → Reminders*). It offers *Done*, a snooze (in 1 hour by default, set in *Settings → Snooze*) and *Tomorrow*. Under the title it shows the note's parent; opened, the whole path and the start of the note.
+A notification rings at scheduled and deadline times (*Settings → Reminders*). It offers *Done*, a snooze (in 1 hour by default, set in *Settings → Snooze*) and *Clock in*, which starts the note's clock; *Settings → Third button* puts *Tomorrow* in its place. Under the title it shows the note's parent; opened, the whole path and the start of the note.
 
 For reminders on time, see *Settings → Reliability*: notifications, exact alarms and no battery restriction; *Use alarm clock alarms* is the most reliable.
 
