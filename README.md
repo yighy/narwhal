@@ -22,10 +22,11 @@ An Android app for [Org mode](https://orgmode.org) notes, inspired by
   or refile them.
 - **Links.** `id:` links picked by title, internal links (`[[*Title]]`, `<<target>>`), and the
   notes linking back to each one.
-- **Agenda and reminders.** The week ahead with repeating tasks, and exact reminders with Done and
-  snooze buttons.
+- **Agenda and reminders.** The week ahead with repeating tasks, and exact reminders you can mark
+  done, snooze or start clocking from.
 - **Org at hand.** Tables with formulas, checkboxes and `[/]` cookies, blocks and drawers,
-  clocking, archiving, search with Orgzly's syntax, sharing from other apps.
+  clocking (with a notification while the clock runs), archiving, search with Orgzly's syntax,
+  sharing from other apps.
 
 ## Download
 
