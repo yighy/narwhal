@@ -4,6 +4,10 @@ All notable changes to Orgwhal (named Narwhal up to 0.16.0). Versions follow [Se
 
 ## [Unreleased]
 
+### Changed
+- New icon: the Org headline asterisk, its upper-right arm grown into a narwhal tusk with three spiral
+  grooves; the themed and notification icons have the same drawing
+
 ## [0.18.1] - 2026-10-11
 
 ### Changed
