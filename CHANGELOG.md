@@ -4,6 +4,15 @@ All notable changes to Orgwhal (named Narwhal up to 0.16.0). Versions follow [Se
 
 ## [Unreleased]
 
+## [0.20.1] - 2026-10-14
+
+### Fixed
+- A fling ending at the top of a notebook no longer leaves the list drifting slowly there, the
+  large top bar half open, for over a second
+- While selecting, scrolling to the top no longer opens the folded top bar again, which left an
+  empty space under the selection bar
+- When a note moves, its highlight no longer jumps to the neighbouring note for a moment
+
 ## [0.20.0] - 2026-10-14
 
 ### Added
@@ -320,7 +329,8 @@ All notable changes to Orgwhal (named Narwhal up to 0.16.0). Versions follow [Se
 - First prototype: notebooks from a folder of `.org` files, outline, note editing, search, tags,
   and `id:` links to other notes
 
-[Unreleased]: https://github.com/yighy/orgwhal/compare/v0.20.0...HEAD
+[Unreleased]: https://github.com/yighy/orgwhal/compare/v0.20.1...HEAD
+[0.20.1]: https://github.com/yighy/orgwhal/compare/v0.20.0...v0.20.1
 [0.20.0]: https://github.com/yighy/orgwhal/compare/v0.19.0...v0.20.0
 [0.19.0]: https://github.com/yighy/orgwhal/compare/v0.18.1...v0.19.0
 [0.18.1]: https://github.com/yighy/orgwhal/compare/v0.18.0...v0.18.1
