@@ -273,6 +273,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun setTableRecalc(mode: TableRecalc) = appSettings.setTableRecalc(mode)
 
+    fun setEditCells(on: Boolean) = appSettings.setEditCells(on)
+
     fun setReminderButton(button: ReminderButton) = appSettings.setReminderButton(button)
 
     /**

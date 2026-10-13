@@ -732,6 +732,14 @@ fun NoteScreen(
                             },
                             tableNamed = tables,
                             liveFormulas = settings.tableRecalc != TableRecalc.Never,
+                            onEditCell = if (settings.editCells) {
+                                { cell ->
+                                    saved = Editing.Content to Blocks.withCell(content, cell)
+                                    viewModel.update(note) { it.copy(content = Blocks.withCell(it.content, cell)) }
+                                }
+                            } else {
+                                null
+                            },
                             onRecalculate = { recalculated, skipped ->
                                 if (recalculated != null) {
                                     saved = Editing.Content to recalculated

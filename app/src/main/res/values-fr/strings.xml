@@ -235,6 +235,8 @@
     <string name="settings_strike_done_summary">Leurs titres, liens compris</string>
     <string name="settings_tables">Formules des tableaux</string>
     <string name="settings_tables_summary">Recalculer les tableaux à formules quand une note les affiche</string>
+    <string name="settings_edit_cells">Modifier les cellules au toucher</string>
+    <string name="settings_edit_cells_summary">Dans une note, un appui sur une valeur la modifie dans le tableau ; les valeurs calculées par une formule restent telles quelles</string>
     <string name="settings_theme">Thème</string>
     <string name="settings_title">Paramètres</string>
     <string name="settings_version">Version %1$s</string>

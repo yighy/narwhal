@@ -1,5 +1,6 @@
 package io.github.yighy.orgwhal.ui
 
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.material3.TopAppBarState
 import androidx.compose.animation.core.animate
 import androidx.compose.ui.text.style.LineHeightStyle
@@ -782,6 +783,8 @@ fun InPlaceField(
     placeholder: String? = null,
     onFocusLost: (() -> Unit)? = null,
     onDone: (() -> Unit)? = null,
+    keyboardType: KeyboardType = KeyboardType.Text,
+    singleLine: Boolean = false,
 ) {
     val focus = remember { FocusRequester() }
     var focused by remember { mutableStateOf(false) }
@@ -791,8 +794,9 @@ fun InPlaceField(
         value = value,
         onValueChange = onValueChange,
         textStyle = textStyle,
+        singleLine = singleLine,
         cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-        keyboardOptions = if (onDone != null) KeyboardOptions(imeAction = ImeAction.Done) else KeyboardOptions.Default,
+        keyboardOptions = KeyboardOptions(keyboardType = keyboardType, imeAction = if (onDone != null) ImeAction.Done else ImeAction.Default),
         keyboardActions = KeyboardActions(onDone = { onDone?.invoke() }),
         modifier = modifier
             .focusRequester(focus)

@@ -152,6 +152,17 @@ object Blocks {
         return blocks
     }
 
+    /** A new value for a table field: the [table]th table of a note (from 0), its [line] and [column] (from 0). */
+    data class CellEdit(val table: Int, val line: Int, val column: Int, val value: String)
+
+    /** [text] with [edit] made: the field set, its table realigned. Unchanged if the table is not there. */
+    fun withCell(text: String, edit: CellEdit): String {
+        val table = parse(text).filterIsInstance<Table>().getOrNull(edit.table) ?: return text
+        val lines = text.substring(table.tableStart, table.tableEnd).split('\n')
+        val updated = TableFormulas.setCell(lines, edit.line, edit.column, edit.value)
+        return text.replaceRange(table.tableStart, table.tableEnd, updated.joinToString("\n"))
+    }
+
     /** Whether [text] shows nothing: blank, or only a logbook (shown as the clock's time). */
     fun showsNothing(text: String): Boolean = parse(text).all { it is Drawer && it.name == "LOGBOOK" }
 

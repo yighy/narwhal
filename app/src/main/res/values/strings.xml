@@ -182,7 +182,7 @@
     <string name="settings_add_created">Add a creation date to new notes</string>
     <string name="settings_add_created_summary">Fill the CREATED property when a note is created (searched with cr., sorted with o.cr)</string>
     <string name="settings_add_guide">Add the guide notebook</string>
-    <string name="settings_add_guide_summary">Explains Orgwhal with examples to try (in English)</string>
+    <string name="settings_add_guide_summary">Explains Orgwhal with examples to try</string>
     <string name="settings_add_id">Add an ID to new notes</string>
     <string name="settings_add_id_summary">Fill the ID property when a note is created; a note also gets one when an id: link to it is made</string>
     <string name="settings_alarm_clock">Use alarm clock alarms</string>
@@ -237,6 +237,8 @@
     <string name="settings_strike_done_summary">Their titles, links included</string>
     <string name="settings_tables">Table formulas</string>
     <string name="settings_tables_summary">Recalculate tables with formulas when a note shows them</string>
+    <string name="settings_edit_cells">Edit table cells on tap</string>
+    <string name="settings_edit_cells_summary">In a note, a tap on a value edits it in the table; values a formula computes stay as they are</string>
     <string name="settings_theme">Theme</string>
     <string name="settings_title">Settings</string>
     <string name="settings_version">Version %1$s</string>

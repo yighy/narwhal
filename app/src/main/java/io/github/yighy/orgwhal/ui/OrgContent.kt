@@ -1,5 +1,18 @@
 package io.github.yighy.orgwhal.ui
 
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.foundation.relocation.bringIntoViewRequester
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.material3.TextButton
 import io.github.yighy.orgwhal.core.TableFormulas
@@ -74,6 +87,8 @@ fun OrgContent(
     tableNamed: (String) -> List<String>? = { null },
     /** Tables with formulas show their values recalculated (the file keeps its own until saved). */
     liveFormulas: Boolean = false,
+    /** Given, a tap on a table field opens it for editing (not those a formula computes). */
+    onEditCell: ((Blocks.CellEdit) -> Unit)? = null,
 ) {
     val blocks = remember(text) { Blocks.parse(text) }
     // Plain text, the usual case, shows as written
@@ -110,7 +125,69 @@ fun OrgContent(
                     } else {
                         null
                     }
-                    OrgTable(fresh?.let { block.copy(rows = it.rows) } ?: block, style, onOpenLink, Modifier.tapToEdit(onTextTap, block.range.first))
+                    // Fields as the file has them, those a formula computes left out
+                    val tableIndex = blocks.filterIsInstance<Blocks.Table>().indexOfFirst { it === block }
+                    val computed = remember(text, block) {
+                        TableFormulas.computedCells(text.substring(block.tableStart, block.tableEnd).split('\n'), block.formulas)
+                    }
+                    // The field being edited in place, and its text
+                    var editing by remember(text) { mutableStateOf<Pair<Int, Int>?>(null) }
+                    var draft by remember(text) { mutableStateOf(TextFieldValue()) }
+                    fun stored(line: Int, column: Int) = block.rows.getOrNull(line)?.getOrNull(column).orEmpty()
+                    /** Saves the field being edited, if it changed. */
+                    fun commit() {
+                        val (line, column) = editing ?: return
+                        editing = null
+                        if (draft.text.trim() != stored(line, column)) onEditCell?.invoke(Blocks.CellEdit(tableIndex, line, column, draft.text))
+                    }
+                    OrgTable(
+                        fresh?.let { block.copy(rows = it.rows) } ?: block,
+                        style,
+                        onOpenLink,
+                        Modifier.tapToEdit(onTextTap, block.range.first),
+                        onCellTap = onEditCell?.let {
+                            { line, column ->
+                                if ((line to column) in computed || editing == line to column) {
+                                    null
+                                } else {
+                                    {
+                                        commit()
+                                        val value = stored(line, column)
+                                        draft = TextFieldValue(value, TextRange(0, value.length))
+                                        editing = line to column
+                                    }
+                                }
+                            }
+                        },
+                        editing = editing,
+                        editor = { line, column, cellStyle ->
+                            // Kept in view above the keyboard as it comes up, with the field's
+                            // padding and border under it
+                            val bring = remember { BringIntoViewRequester() }
+                            val density = LocalDensity.current
+                            val ime = WindowInsets.ime
+                            var size by remember { mutableStateOf(IntSize.Zero) }
+                            LaunchedEffect(Unit) {
+                                val margin = with(density) { 16.dp.toPx() }
+                                snapshotFlow { ime.getBottom(density) }.collect {
+                                    bring.bringIntoView(Rect(0f, -margin, size.width.toFloat(), size.height + margin))
+                                }
+                            }
+                            InPlaceField(
+                                value = draft,
+                                // Only while this field is the one edited: losing the focus, it
+                                // sends its text again, which would go into the next field
+                                onValueChange = { if (editing == line to column) draft = it },
+                                style = cellStyle,
+                                onFocusLost = { if (editing == line to column) commit() },
+                                onDone = ::commit,
+                                keyboardType = if (TableFormulas.isNumber(stored(line, column))) KeyboardType.Decimal else KeyboardType.Text,
+                                // A field is one line: Enter saves it
+                                singleLine = true,
+                                modifier = Modifier.width(IntrinsicSize.Min).bringIntoViewRequester(bring).onSizeChanged { size = it },
+                            )
+                        },
+                    )
                     if (block.formulaLines.isNotEmpty()) {
                         FormulaBar(block, stale = fresh != null, onRecalculate?.let { done ->
                             {
@@ -365,7 +442,17 @@ private fun CodeBlock(block: Blocks.Begin, style: TextStyle, modifier: Modifier)
 
 /** A table in a grid that scrolls sideways; rows above the first rule are the header. */
 @Composable
-private fun OrgTable(table: Blocks.Table, style: TextStyle, onOpenLink: (String) -> Unit, modifier: Modifier) {
+private fun OrgTable(
+    table: Blocks.Table,
+    style: TextStyle,
+    onOpenLink: (String) -> Unit,
+    modifier: Modifier,
+    /** Given, the action of a tap on the field at a line of the table and a column, if it has one. */
+    onCellTap: ((Int, Int) -> (() -> Unit)?)? = null,
+    /** The field shown by [editor] instead of its text, with the style it would have. */
+    editing: Pair<Int, Int>? = null,
+    editor: @Composable (Int, Int, TextStyle) -> Unit = { _, _, _ -> },
+) {
     val line = MaterialTheme.colorScheme.outlineVariant
     val headerColor = MaterialTheme.colorScheme.surfaceContainerHigh
     val shape = RoundedCornerShape(8.dp)
@@ -387,17 +474,18 @@ private fun OrgTable(table: Blocks.Table, style: TextStyle, onOpenLink: (String)
                     Box(
                         Modifier
                             .fillMaxWidth()
+                            .then(onCellTap?.invoke(i, c)?.let { Modifier.clickable(onClick = it) } ?: Modifier)
                             .background(if (isHeader) headerColor else Color.Transparent)
-                            .border(0.5.dp, line)
+                            .border(if (editing == i to c) 2.dp else 0.5.dp, if (editing == i to c) MaterialTheme.colorScheme.primary else line)
                             .padding(horizontal = 10.dp, vertical = 6.dp),
                         contentAlignment = if (numeric[c] && !isHeader) Alignment.CenterEnd else Alignment.CenterStart,
                     ) {
-                        LinkedText(
-                            cells.getOrElse(c) { "" },
-                            if (isHeader) style.copy(fontWeight = FontWeight.Bold) else style,
-                            onOpenLink,
-                            maxLines = 1,
-                        )
+                        val cellStyle = if (isHeader) style.copy(fontWeight = FontWeight.Bold) else style
+                        if (editing == i to c) {
+                            editor(i, c, if (numeric[c] && !isHeader) cellStyle.copy(textAlign = TextAlign.End) else cellStyle)
+                        } else {
+                            LinkedText(cells.getOrElse(c) { "" }, cellStyle, onOpenLink, maxLines = 1)
+                        }
                     }
                 }
             }

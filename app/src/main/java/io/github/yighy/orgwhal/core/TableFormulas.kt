@@ -120,6 +120,47 @@ object TableFormulas {
         return { fresh(it, depth) }
     }
 
+    /**
+     * Fields of [tableLines] that [formulas] compute, as (line in the table, column from 0): a
+     * value written there would be replaced at the next recalculation. Formulas whose target is not
+     * understood count for nothing.
+     */
+    fun computedCells(tableLines: List<String>, formulas: List<String>): Set<Pair<Int, Int>> {
+        val table = Table(tableLines.map { parseRow(it) }.toMutableList())
+        if (table.dataRows.isEmpty()) return emptySet()
+        val rules = table.rows.indices.filter { table.rows[it] == null }
+        val firstBody = rules.firstOrNull()?.takeIf { r -> table.dataRows.any { it < r } && table.dataRows.any { it > r } }
+            ?.let { r -> table.number(table.dataRows.first { it > r }) } ?: 1
+        return formulas.flatMap { f ->
+            val target = f.substringBefore('=', "").trim()
+            runCatching {
+                if (target.startsWith("$")) {
+                    val col = column(table, target.removePrefix("$"), current = null)
+                    (firstBody..table.dataRows.size).map { table.dataRows[it - 1] to col - 1 }
+                } else {
+                    val (row, col) = fieldTarget(table, target)
+                    listOf(table.dataRows[row - 1] to col - 1)
+                }
+            }.getOrDefault(emptyList())
+        }.toSet()
+    }
+
+    /**
+     * [tableLines] with the field at [line] (in the table) and [column] (from 0) set to [value],
+     * realigned as Emacs writes the table. A | in [value] is written \vert, as Org reads it.
+     */
+    fun setCell(tableLines: List<String>, line: Int, column: Int, value: String): List<String> {
+        val table = Table(tableLines.map { parseRow(it) }.toMutableList())
+        val cells = table.rows.getOrNull(line) ?: return tableLines
+        val field = value.replace('\n', ' ').replace("|", "\\vert").trim()
+        while (cells.size <= column) cells += ""
+        cells[column] = field
+        return align(table, indent(tableLines.first()))
+    }
+
+    /** Whether a field holds a number (edited with a keyboard of digits). */
+    fun isNumber(value: String): Boolean = value.trim().toBigDecimalOrNull() != null
+
     // ---- Targets and references ----
 
     private fun fieldTarget(table: Table, target: String): Pair<Int, Int> {

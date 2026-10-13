@@ -86,6 +86,8 @@ class AppSettings(context: Context) {
         val linkRenaming: LinkRenaming = LinkRenaming.Ask,
         /** Whether tables with formulas are recalculated when shown. */
         val tableRecalc: TableRecalc = TableRecalc.Never,
+        /** Whether a tap on a table field opens it for editing. */
+        val editCells: Boolean = true,
         val themeMode: ThemeMode = ThemeMode.System,
         /** Colors taken from the wallpaper (Android 12+). */
         val dynamicColor: Boolean = true,
@@ -115,6 +117,7 @@ class AppSettings(context: Context) {
             linkRenaming = LinkRenaming.entries.firstOrNull { it.name == prefs.getString(KEY_LINK_RENAMING, null) }
                 ?: LinkRenaming.Ask,
             tableRecalc = TableRecalc.entries.firstOrNull { it.name == prefs.getString(KEY_TABLE_RECALC, null) } ?: TableRecalc.Never,
+            editCells = prefs.getBoolean(KEY_EDIT_CELLS, true),
             themeMode = ThemeMode.entries.firstOrNull { it.name == prefs.getString(KEY_THEME, null) } ?: ThemeMode.System,
             dynamicColor = prefs.getBoolean(KEY_DYNAMIC_COLOR, true),
         ),
@@ -239,6 +242,8 @@ class AppSettings(context: Context) {
 
     fun setTableRecalc(mode: TableRecalc) = save({ putString(KEY_TABLE_RECALC, mode.name) }) { it.copy(tableRecalc = mode) }
 
+    fun setEditCells(on: Boolean) = save({ putBoolean(KEY_EDIT_CELLS, on) }) { it.copy(editCells = on) }
+
     fun setThemeMode(mode: ThemeMode) = save({ putString(KEY_THEME, mode.name) }) { it.copy(themeMode = mode) }
 
     fun setDynamicColor(on: Boolean) = save({ putBoolean(KEY_DYNAMIC_COLOR, on) }) { it.copy(dynamicColor = on) }
@@ -273,6 +278,7 @@ class AppSettings(context: Context) {
         private const val KEY_REMINDER_BUTTON = "reminder_button"
         private const val KEY_LINK_RENAMING = "link_renaming"
         private const val KEY_TABLE_RECALC = "table_recalc"
+        private const val KEY_EDIT_CELLS = "edit_cells"
         private const val KEY_THEME = "theme_mode"
         private const val KEY_DYNAMIC_COLOR = "dynamic_color"
         private const val KEY_SHOW_CONTENT = "show_content_in_notebook"

@@ -178,6 +178,12 @@ fun SettingsScreen(
                 onClick = { pickTableRecalc = true },
                 supportingContent = { Text(stringResource(settings.tableRecalc.label) + "\n" + stringResource(R.string.settings_tables_summary)) },
             ) { Text(stringResource(R.string.settings_tables)) }
+            SwitchItem(
+                title = stringResource(R.string.settings_edit_cells),
+                summary = stringResource(R.string.settings_edit_cells_summary),
+                checked = settings.editCells,
+                onCheckedChange = viewModel::setEditCells,
+            )
 
             SectionHeader(stringResource(R.string.settings_reminders))
             SwitchItem(
