@@ -15,6 +15,7 @@ import androidx.compose.ui.platform.LocalContext
 import android.provider.Settings
 import io.github.yighy.orgwhal.core.Checkboxes
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.foundation.interaction.DragInteraction
 import kotlinx.coroutines.delay
 import io.github.yighy.orgwhal.core.Notebooks
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -23,6 +24,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.VisibilityThreshold
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -138,7 +140,7 @@ fun NotebookScreen(
             .sharedContainer("notebook-${file.uri}", NotebookCardShape)
             .imePadding(),
         topBar = {
-            TopBarWithSelection(selecting, selectionBar = { SelectionTopBar(viewModel, library, file) }) {
+            TopBarWithSelection(selecting, selectionBar = { SelectionTopBar(viewModel, library, file) }, largeBar = scrollBehavior.state) {
                 SearchableTopBar(
                     title = file.title,
                     subtitle = {
@@ -257,7 +259,22 @@ private fun NotebookOutline(
     // Rows slide to their new place only when notes move: when folding, the rows below already
     // follow the ones that grow or shrink, and sliding as well would move them a second time
     val motion = remember { OutlineMotion() }
-    val slide = motion.slide(shown, rowKeys)
+    val moved = motion.slide(shown, rowKeys)
+    // Only while the moved notes travel: afterwards, rows measured again as they come back into
+    // view (scrolling up) would slide too, jumping about. Dragging the list ends it at once, else
+    // pulling it right after a move sets the rows sliding further and further off
+    val move = motion.moves
+    val currentMove by rememberUpdatedState(move)
+    var settledMove by remember { mutableStateOf(0) }
+    val listState = rememberLazyListState()
+    LaunchedEffect(move) {
+        delay(MOVE_SETTLE_MS)
+        settledMove = move
+    }
+    LaunchedEffect(listState) {
+        listState.interactionSource.interactions.collect { if (it is DragInteraction.Start) settledMove = currentMove }
+    }
+    val slide = moved && settledMove != move
     // The cascade follows the system's animation speed (none when animations are off)
     val context = LocalContext.current
     val animationScale = remember {
@@ -267,7 +284,6 @@ private fun NotebookOutline(
     val selecting = selected.isNotEmpty()
 
     PullToRefresh(viewModel) {
-        val listState = rememberLazyListState()
         LazyColumn(
             state = listState,
             contentPadding = PaddingValues(bottom = 120.dp),
@@ -329,8 +345,10 @@ private fun NotebookOutline(
                 }
                 AnimatedVisibility(
                     visible = visible,
-                    // A moved note slides to its new place
-                    modifier = Modifier.animateItem(fadeInSpec = null, fadeOutSpec = null, placementSpec = if (slide) MoveSpec else null),
+                    // A moved note slides to its new place; otherwise rows go to theirs at once, but
+                    // still with a spec: without one, their places are not kept, and the next move
+                    // would bring them in from the end of the list
+                    modifier = Modifier.animateItem(fadeInSpec = null, fadeOutSpec = null, placementSpec = if (slide) MoveSpec else NoMoveSpec),
                     enter = expandVertically(FoldSpatialSpec) + fadeIn(FoldEffectsSpec),
                     exit = shrinkVertically(FoldSpatialSpec) + fadeOut(FoldEffectsSpec),
                 ) {
@@ -544,9 +562,15 @@ private class OutlineMotion {
     private var keys: List<String>? = null
     private var moved = false
 
+    /** How many times notes moved: the same notes read again (once saved) are no move. */
+    var moves = 0
+        private set
+
     fun slide(shown: Set<Int>, keys: List<String>): Boolean {
-        if (this.keys != null && keys != this.keys) moved = true
-        else if (this.shown != null && shown != this.shown) moved = false
+        if (this.keys != null && keys != this.keys) {
+            moved = true
+            moves++
+        } else if (this.shown != null && shown != this.shown) moved = false
         this.shown = shown
         this.keys = keys
         return moved
@@ -587,6 +611,10 @@ private const val FOLD_SPATIAL_STIFFNESS = 380f * 4
 private val FoldSpatialSpec = spring(FOLD_SPATIAL_DAMPING, FOLD_SPATIAL_STIFFNESS, IntSize.VisibilityThreshold)
 private val FoldEffectsSpec = spring<Float>(1f, 1600f * 4)
 private val MoveSpec = spring(FOLD_SPATIAL_DAMPING, FOLD_SPATIAL_STIFFNESS, IntOffset.VisibilityThreshold)
+private val NoMoveSpec = snap<IntOffset>()
+
+/** How long a moved note may take to reach its new place, after which rows no longer slide. */
+private const val MOVE_SETTLE_MS = 800L
 
 /** Start padding of a note at [level] in the outline. */
 private fun indent(level: Int) = 4.dp + 24.dp * (level - 1).coerceIn(0, 6)

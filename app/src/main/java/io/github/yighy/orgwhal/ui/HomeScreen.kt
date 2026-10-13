@@ -148,7 +148,7 @@ fun HomeScreen(
                 )
             }
             val tasks = library.files.sumOf { it.openTasks }
-            TopBarWithSelection(selecting, selectionBar) {
+            TopBarWithSelection(selecting, selectionBar, largeBar = scrollBehavior.state) {
                 SearchableTopBar(
                     title = stringResource(R.string.notebooks),
                     subtitle = if (tasks > 0) {

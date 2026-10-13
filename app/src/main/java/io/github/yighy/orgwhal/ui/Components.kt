@@ -1,5 +1,7 @@
 package io.github.yighy.orgwhal.ui
 
+import androidx.compose.material3.TopAppBarState
+import androidx.compose.animation.core.animate
 import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.unit.isSpecified
 import io.github.yighy.orgwhal.core.Cookies
@@ -149,10 +151,31 @@ fun blendedTopBarColors() = TopAppBarDefaults.topAppBarColors(
 
 /**
  * The screen's own top [bar], with [selectionBar] laid over it while [selecting]: the bar keeps
- * its height, so the list under it does not jump.
+ * its height, so the list under it does not jump, except a large bar, which folds away smoothly.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TopBarWithSelection(selecting: Boolean, selectionBar: @Composable () -> Unit, bar: @Composable () -> Unit) {
+fun TopBarWithSelection(
+    selecting: Boolean,
+    selectionBar: @Composable () -> Unit,
+    /** A large bar's state: selecting folds it away, then opens it again if it was open. */
+    largeBar: TopAppBarState? = null,
+    bar: @Composable () -> Unit,
+) {
+    if (largeBar != null) {
+        // The selection bar is a small one: what shows of the large bar under it would be empty
+        val spec = MaterialTheme.motionScheme.defaultSpatialSpec<Float>()
+        var restore by remember { mutableStateOf<Float?>(null) }
+        LaunchedEffect(selecting) {
+            val target = if (selecting) {
+                restore = largeBar.heightOffset
+                largeBar.heightOffsetLimit
+            } else {
+                restore?.also { restore = null } ?: return@LaunchedEffect
+            }
+            animate(largeBar.heightOffset, target, animationSpec = spec) { value, _ -> largeBar.heightOffset = value }
+        }
+    }
     Box {
         bar()
         if (selecting) {
