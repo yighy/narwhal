@@ -989,9 +989,14 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     enum class Move { Up, Down, Promote, Demote }
 
+    /** Counts the moves asked for, as soon as asked: the outline gets ready to slide its rows. */
+    var moveRequests by mutableIntStateOf(0)
+        private set
+
     fun moveSelection(move: Move) {
         val notes = selectedNotes()
         if (notes.isEmpty()) return
+        moveRequests++
         var newIndex: Int? = null
         withSelection(keep = { list -> newIndex?.let { setOf(it) } ?: list.map { it.index }.toSet() }) {
             repository.modifyFile(notes.first().fileUri, notes) { doc, indices ->

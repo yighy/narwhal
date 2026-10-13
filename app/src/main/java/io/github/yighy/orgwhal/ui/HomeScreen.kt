@@ -106,9 +106,9 @@ fun HomeScreen(
     var renaming by remember { mutableStateOf<NoteRepository.LoadedFile?>(null) }
     var selectionMenu by remember { mutableStateOf(false) }
     val icons by viewModel.notebookIcons.collectAsState()
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val selected = viewModel.selectedNotebooks
     val selecting = selected.isNotEmpty()
+    val scrollBehavior = largeBarScrollBehavior(selecting)
 
     BackHandler(enabled = viewModel.searchActive) { viewModel.setSearch(false) }
     BackHandler(enabled = selecting) { viewModel.clearNotebookSelection() }

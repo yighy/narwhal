@@ -151,6 +151,17 @@ fun blendedTopBarColors() = TopAppBarDefaults.topAppBarColors(
 )
 
 /**
+ * A large bar's scroll behavior (collapsing as the list scrolls), still while [selecting]: the
+ * bar is then folded away under the selection bar, and scrolling up must not open it again.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun largeBarScrollBehavior(selecting: Boolean): TopAppBarScrollBehavior {
+    val current by rememberUpdatedState(selecting)
+    return TopAppBarDefaults.exitUntilCollapsedScrollBehavior(canScroll = remember { { !current } })
+}
+
+/**
  * The screen's own top [bar], with [selectionBar] laid over it while [selecting]: the bar keeps
  * its height, so the list under it does not jump, except a large bar, which folds away smoothly.
  */
