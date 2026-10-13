@@ -4,6 +4,24 @@ All notable changes to Orgwhal (named Narwhal up to 0.16.0). Versions follow [Se
 
 ## [Unreleased]
 
+## [0.20.0] - 2026-10-14
+
+### Added
+- Table fields edit in place in a note: a tap turns a field into a text field right in the
+  table, its value selected (a keyboard of digits for a number); Enter, another field or closing
+  the keyboard saves it, and the table realigns as Emacs writes it. Fields a formula computes do
+  not open. A setting turns it off (Settings, Edit table cells on tap)
+
+### Changed
+- Selecting notes folds the large top bar away instead of leaving its empty space under the
+  selection bar, and opens it again afterwards if it was open
+
+### Fixed
+- Pulling the notebook down right after moving notes no longer sends the whole list sliding off
+  the screen
+- The first move of a note slides it from where it was, instead of bringing it in from the end
+  of the list
+
 ## [0.19.0] - 2026-10-12
 
 ### Added
@@ -302,7 +320,8 @@ All notable changes to Orgwhal (named Narwhal up to 0.16.0). Versions follow [Se
 - First prototype: notebooks from a folder of `.org` files, outline, note editing, search, tags,
   and `id:` links to other notes
 
-[Unreleased]: https://github.com/yighy/orgwhal/compare/v0.19.0...HEAD
+[Unreleased]: https://github.com/yighy/orgwhal/compare/v0.20.0...HEAD
+[0.20.0]: https://github.com/yighy/orgwhal/compare/v0.19.0...v0.20.0
 [0.19.0]: https://github.com/yighy/orgwhal/compare/v0.18.1...v0.19.0
 [0.18.1]: https://github.com/yighy/orgwhal/compare/v0.18.0...v0.18.1
 [0.18.0]: https://github.com/yighy/orgwhal/compare/v0.17.1...v0.18.0
