@@ -4,6 +4,17 @@ All notable changes to Orgwhal (named Narwhal up to 0.16.0). Versions follow [Se
 
 ## [Unreleased]
 
+## [0.21.0] - 2026-10-14
+
+### Added
+- In a table field edited in place, Enter goes on to the field below, as in Emacs; on the last
+  row it adds a new row (the formulas' row references follow)
+- In a note, the :LOGBOOK: drawer folds like the others: a tap shows each time clocked, the
+  Clock line still giving the total
+
+### Fixed
+- Tapping beside a table while editing a field no longer loses the value typed
+
 ## [0.20.1] - 2026-10-14
 
 ### Fixed
@@ -329,7 +340,8 @@ All notable changes to Orgwhal (named Narwhal up to 0.16.0). Versions follow [Se
 - First prototype: notebooks from a folder of `.org` files, outline, note editing, search, tags,
   and `id:` links to other notes
 
-[Unreleased]: https://github.com/yighy/orgwhal/compare/v0.20.1...HEAD
+[Unreleased]: https://github.com/yighy/orgwhal/compare/v0.21.0...HEAD
+[0.21.0]: https://github.com/yighy/orgwhal/compare/v0.20.1...v0.21.0
 [0.20.1]: https://github.com/yighy/orgwhal/compare/v0.20.0...v0.20.1
 [0.20.0]: https://github.com/yighy/orgwhal/compare/v0.19.0...v0.20.0
 [0.19.0]: https://github.com/yighy/orgwhal/compare/v0.18.1...v0.19.0
