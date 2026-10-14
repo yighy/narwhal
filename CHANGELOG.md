@@ -4,6 +4,19 @@ All notable changes to Orgwhal (named Narwhal up to 0.16.0). Versions follow [Se
 
 ## [Unreleased]
 
+## [0.22.0] - 2026-10-14
+
+### Added
+- A long press on a table field in a note adds a row above or below, a column left or right,
+  or deletes its row or column; the formulas' references follow, as in Emacs
+- Setting to show notes' content in a fixed-width font (Settings, Fixed-width font), as in Emacs
+- While a note's text is edited, its table lines show in a fixed-width font, so that they line up
+
+### Fixed
+- A tap on nothing in a note saves the table field being edited, which stayed open
+- A tap right after editing a table field no longer opens the note's text, which could write the
+  old value back
+
 ## [0.21.0] - 2026-10-14
 
 ### Added
@@ -340,7 +353,8 @@ All notable changes to Orgwhal (named Narwhal up to 0.16.0). Versions follow [Se
 - First prototype: notebooks from a folder of `.org` files, outline, note editing, search, tags,
   and `id:` links to other notes
 
-[Unreleased]: https://github.com/yighy/orgwhal/compare/v0.21.0...HEAD
+[Unreleased]: https://github.com/yighy/orgwhal/compare/v0.22.0...HEAD
+[0.22.0]: https://github.com/yighy/orgwhal/compare/v0.21.0...v0.22.0
 [0.21.0]: https://github.com/yighy/orgwhal/compare/v0.20.1...v0.21.0
 [0.20.1]: https://github.com/yighy/orgwhal/compare/v0.20.0...v0.20.1
 [0.20.0]: https://github.com/yighy/orgwhal/compare/v0.19.0...v0.20.0
