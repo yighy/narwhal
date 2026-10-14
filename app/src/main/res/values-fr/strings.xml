@@ -236,6 +236,12 @@
     <string name="settings_tables">Formules des tableaux</string>
     <string name="settings_tables_summary">Recalculer les tableaux à formules quand une note les affiche</string>
     <string name="settings_edit_cells">Modifier les cellules au toucher</string>
+    <string name="table_row_above">Ligne au-dessus</string>
+    <string name="table_row_below">Ligne en dessous</string>
+    <string name="table_column_left">Colonne à gauche</string>
+    <string name="table_column_right">Colonne à droite</string>
+    <string name="table_delete_row">Supprimer la ligne</string>
+    <string name="table_delete_column">Supprimer la colonne</string>
     <string name="settings_edit_cells_summary">Dans une note, un appui sur une valeur la modifie dans le tableau ; les valeurs calculées par une formule restent telles quelles</string>
     <string name="settings_theme">Thème</string>
     <string name="settings_title">Paramètres</string>

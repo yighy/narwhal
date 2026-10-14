@@ -163,18 +163,37 @@ object Blocks {
         return text.replaceRange(table.tableStart, table.tableEnd, updated.joinToString("\n"))
     }
 
+    /** A row or column put into a table or taken out, next to a field. */
+    enum class TableChange { RowAbove, RowBelow, ColumnLeft, ColumnRight, DeleteRow, DeleteColumn }
+
     /**
-     * [text] with an empty row put under the row at [line] of its [table]th table (from 0),
-     * realigned, its formulas' row references moved past it, as Emacs does.
+     * [text] with [change] made to its [table]th table (from 0), next to the field at [line] and
+     * [column] (from 0): realigned, its formulas' references moved past the row or column put in
+     * or taken out, as Emacs does.
      */
-    fun withRowBelow(text: String, table: Int, line: Int): String {
+    fun withTableChange(text: String, table: Int, line: Int, column: Int, change: TableChange): String {
         val block = parse(text).filterIsInstance<Table>().getOrNull(table) ?: return text
         val lines = text.substring(block.tableStart, block.tableEnd).split('\n')
-        val (rows, number) = TableFormulas.insertRowBelow(lines, line)
+        val (updated, shift: (String) -> String) = when (change) {
+            TableChange.RowAbove, TableChange.RowBelow -> {
+                val (rows, number) = TableFormulas.insertRow(lines, line, below = change == TableChange.RowBelow)
+                rows to { f: String -> TableFormulas.shiftRows(f, number, 1) }
+            }
+            TableChange.ColumnLeft, TableChange.ColumnRight -> {
+                val right = change == TableChange.ColumnRight
+                TableFormulas.insertColumn(lines, column, right) to { f: String -> TableFormulas.shiftColumns(f, column + if (right) 2 else 1, 1) }
+            }
+            TableChange.DeleteRow -> {
+                val (rows, number) = TableFormulas.deleteRow(lines, line)
+                rows to { f: String -> TableFormulas.shiftRows(f, number + 1, -1) }
+            }
+            TableChange.DeleteColumn ->
+                TableFormulas.deleteColumn(lines, column) to { f: String -> TableFormulas.shiftColumns(f, column + 2, -1) }
+        }
         // The #+TBLFM lines, after the table's own
         val formulas = text.substring(block.tableEnd, block.range.last + 1).split('\n')
-            .joinToString("\n") { if (TBLFM.matches(it)) TableFormulas.shiftRows(it, number, 1) else it }
-        return text.replaceRange(block.tableStart, block.range.last + 1, rows.joinToString("\n") + formulas)
+            .joinToString("\n") { if (TBLFM.matches(it)) shift(it) else it }
+        return text.replaceRange(block.tableStart, block.range.last + 1, updated.joinToString("\n") + formulas)
     }
 
     /** Whether [text] shows nothing: blank, or only a logbook (shown as the clock's time). */

@@ -1,5 +1,7 @@
 package io.github.yighy.orgwhal.ui
 
+import androidx.compose.runtime.mutableLongStateOf
+import android.os.SystemClock
 import io.github.yighy.orgwhal.data.TableRecalc
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.AlertDialog
@@ -460,12 +462,15 @@ fun NoteScreen(
         snackbarHost = { SnackbarHost(snackbar) },
     ) { padding ->
         val scrollState = rememberScrollState()
+        val screenFocus = LocalFocusManager.current
         Column(
             Modifier
                 .fillMaxSize()
                 .padding(padding)
                 // A swipe during the screen transition cuts it short
                 .cutTransitionOnScroll()
+                // A tap on nothing (under the content) ends the editing in place, saving it
+                .clickable(interactionSource = null, indication = null) { screenFocus.clearFocus() }
                 .verticalScroll(scrollState)
                 .padding(horizontal = 16.dp),
         ) {
@@ -701,14 +706,17 @@ fun NoteScreen(
                 )
             } else {
                 // A table field being edited: a tap elsewhere in the content only saves it (the
-                // text editor, opened from the text as it was, would write the field back)
+                // text editor, opened from the text as it was, would write the field back). The
+                // tap can take the focus from the field first, ending its editing just before
                 var cellEditing by remember { mutableStateOf(false) }
+                var cellEditEnded by remember { mutableLongStateOf(0L) }
+                fun editingCell() = cellEditing || SystemClock.uptimeMillis() - cellEditEnded < CELL_TAP_MS
                 val focusManager = LocalFocusManager.current
                 Box(
                     Modifier
                         .fillMaxWidth()
                         .clickable(interactionSource = null, indication = null) {
-                            if (cellEditing) focusManager.clearFocus() else startEditing(Editing.Content)
+                            if (editingCell()) focusManager.clearFocus() else startEditing(Editing.Content)
                         }
                         .padding(vertical = 8.dp),
                 ) {
@@ -731,8 +739,11 @@ fun NoteScreen(
                             contentStyle,
                             viewModel::openLink,
                             Modifier.sharedText(noteContentKey(note)),
-                            onTextTap = { if (cellEditing) focusManager.clearFocus() else startEditing(Editing.Content, it) },
-                            onCellEditing = { cellEditing = it },
+                            onTextTap = { if (editingCell()) focusManager.clearFocus() else startEditing(Editing.Content, it) },
+                            onCellEditing = { editing ->
+                                cellEditing = editing
+                                if (!editing) cellEditEnded = SystemClock.uptimeMillis()
+                            },
                             onToggleCheckbox = { n ->
                                 saved = Editing.Content to Checkboxes.toggle(content, n)
                                 viewModel.update(note) { it.copy(content = Checkboxes.toggle(it.content, n)) }
@@ -1317,3 +1328,6 @@ private fun positionLabel(screen: Screen.NewNote): String {
         Placement.Below, null -> stringResource(R.string.position_below, anchor)
     }
 }
+
+/** How soon after a table field stops being edited a tap still counts as ending its editing. */
+private const val CELL_TAP_MS = 500L

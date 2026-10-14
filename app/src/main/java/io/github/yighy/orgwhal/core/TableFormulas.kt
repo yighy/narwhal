@@ -159,28 +159,61 @@ object TableFormulas {
     }
 
     /**
-     * [tableLines] with an empty row put under the row at [line] (in the table), realigned; its
-     * data row number, which formulas' references from it on move past.
+     * [tableLines] with an empty row put above or [below] the row at [line] (in the table),
+     * realigned; its data row number, which formulas' references from it on move past.
      */
-    fun insertRowBelow(tableLines: List<String>, line: Int): Pair<List<String>, Int> {
+    fun insertRow(tableLines: List<String>, line: Int, below: Boolean): Pair<List<String>, Int> {
         val table = Table(tableLines.map { parseRow(it) }.toMutableList())
-        val at = (line + 1).coerceIn(0, table.rows.size)
+        val at = (if (below) line + 1 else line).coerceIn(0, table.rows.size)
         val number = table.rows.take(at).count { it != null } + 1
         table.rows.add(at, MutableList(table.columns) { "" })
         return align(table, indent(tableLines.first())) to number
     }
 
+    /** [tableLines] without the row at [line], realigned; its data row number. */
+    fun deleteRow(tableLines: List<String>, line: Int): Pair<List<String>, Int> {
+        val table = Table(tableLines.map { parseRow(it) }.toMutableList())
+        val number = table.rows.take(line + 1).count { it != null }
+        table.rows.removeAt(line)
+        return align(table, indent(tableLines.first())) to number
+    }
+
+    /** [tableLines] without [column] (from 0), realigned. */
+    fun deleteColumn(tableLines: List<String>, column: Int): List<String> {
+        val table = Table(tableLines.map { parseRow(it) }.toMutableList())
+        table.rows.filterNotNull().forEach { cells -> if (column < cells.size) cells.removeAt(column) }
+        return align(table, indent(tableLines.first()))
+    }
+
+    /** [tableLines] with an empty column put left or [right] of [column] (from 0), realigned. */
+    fun insertColumn(tableLines: List<String>, column: Int, right: Boolean): List<String> {
+        val table = Table(tableLines.map { parseRow(it) }.toMutableList())
+        val at = if (right) column + 1 else column
+        table.rows.filterNotNull().forEach { cells ->
+            while (cells.size < at) cells += ""
+            cells.add(at, "")
+        }
+        return align(table, indent(tableLines.first()))
+    }
+
     private val REMOTE = Regex("""remote\([^)]*\)""", RegexOption.IGNORE_CASE)
     private val ROW_REF = Regex("""(?<![\w@])@(\d+)""")
+    // After a row (@3$2) as well as alone
+    private val COLUMN_REF = Regex("""(?<![\p{L}_$])\$(\d+)""")
 
     /**
      * A #+TBLFM line with its absolute row references (@3) from [from] on moved by [by], as Emacs
      * does when rows come or go; those inside remote() are another table's, left alone.
      */
-    fun shiftRows(formulaLine: String, from: Int, by: Int): String {
-        fun moved(part: String) = ROW_REF.replace(part) { m ->
+    fun shiftRows(formulaLine: String, from: Int, by: Int): String = shift(formulaLine, ROW_REF, '@', from, by)
+
+    /** A #+TBLFM line with its column references ($3) from [from] on moved by [by]. */
+    fun shiftColumns(formulaLine: String, from: Int, by: Int): String = shift(formulaLine, COLUMN_REF, '$', from, by)
+
+    private fun shift(formulaLine: String, ref: Regex, sign: Char, from: Int, by: Int): String {
+        fun moved(part: String) = ref.replace(part) { m ->
             val n = m.groupValues[1].toInt()
-            if (n >= from) "@${n + by}" else m.value
+            if (n >= from) "$sign${n + by}" else m.value
         }
         val out = StringBuilder()
         var at = 0

@@ -1,5 +1,12 @@
 package io.github.yighy.orgwhal.ui
 
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.layout.onSizeChanged
@@ -92,7 +99,8 @@ fun OrgContent(
     liveFormulas: Boolean = false,
     /**
      * Given, a tap on a table field edits it in place (not those a formula computes), Enter going
-     * on to the field below: it is given the change to make to the text.
+     * on to the field below, and a long press adds or deletes rows and columns: it is given the
+     * change to make to the text.
      */
     onEditTable: (((String) -> String) -> Unit)? = null,
     /** Told when a table field starts and stops being edited. */
@@ -146,6 +154,7 @@ fun OrgContent(
                     var editing by remember(tableIndex) { mutableStateOf<Pair<Int, Int>?>(null) }
                     var draft by remember(tableIndex) { mutableStateOf(TextFieldValue()) }
                     fun stored(line: Int, column: Int) = block.rows.getOrNull(line)?.getOrNull(column).orEmpty()
+                    val scope = rememberCoroutineScope()
                     if (editing != null) {
                         DisposableEffect(Unit) {
                             onCellEditing(true)
@@ -157,7 +166,7 @@ fun OrgContent(
                         draft = TextFieldValue(value, TextRange(0, value.length))
                         editing = line to column
                     }
-                    /** Saves the field being edited, if it changed, then [then] in the same save (a new row). */
+                    /** Saves the field being edited, if it changed, then [then] in the same save (a new row or column). */
                     fun save(then: ((String) -> String)? = null) {
                         val pending = editing?.let { (line, column) ->
                             val value = draft.text
@@ -176,7 +185,7 @@ fun OrgContent(
                         val below = (line + 1 until block.rows.size).firstOrNull { block.rows[it] != null }
                         when {
                             below == null -> {
-                                save { t -> Blocks.withRowBelow(t, tableIndex, line) }
+                                save { t -> Blocks.withTableChange(t, tableIndex, line, column, Blocks.TableChange.RowBelow) }
                                 edit(line + 1, column, "")
                             }
                             (below to column) !in computed -> {
@@ -202,6 +211,38 @@ fun OrgContent(
                                         save()
                                         edit(line, column)
                                     }
+                                }
+                            }
+                        },
+                        cellMenu = onEditTable?.let {
+                            { line, column, dismiss ->
+                                DropdownMenu(expanded = true, onDismissRequest = dismiss) {
+                                    /** [change] next to the field, then the new row's or column's field opened. */
+                                    @Composable
+                                    fun Item(label: Int, change: Blocks.TableChange, open: Pair<Int, Int>? = null, enabled: Boolean = true) = DropdownMenuItem(
+                                        text = { Text(stringResource(label)) },
+                                        enabled = enabled,
+                                        onClick = {
+                                            dismiss()
+                                            save { t -> Blocks.withTableChange(t, tableIndex, line, column, change) }
+                                            // Once the menu is gone: it holds the focus until then,
+                                            // and the field could not bring up the keyboard
+                                            open?.let { (l, c) ->
+                                                scope.launch {
+                                                    delay(MENU_CLOSE_MS)
+                                                    edit(l, c, "")
+                                                }
+                                            }
+                                        },
+                                    )
+                                    Item(R.string.table_row_above, Blocks.TableChange.RowAbove, line to column)
+                                    Item(R.string.table_row_below, Blocks.TableChange.RowBelow, line + 1 to column)
+                                    Item(R.string.table_column_left, Blocks.TableChange.ColumnLeft, line to column)
+                                    Item(R.string.table_column_right, Blocks.TableChange.ColumnRight, line to column + 1)
+                                    HorizontalDivider()
+                                    // Not the last row or column: the table would be gone
+                                    Item(R.string.table_delete_row, Blocks.TableChange.DeleteRow, enabled = block.rows.count { it != null } > 1)
+                                    Item(R.string.table_delete_column, Blocks.TableChange.DeleteColumn, enabled = block.columns > 1)
                                 }
                             }
                         },
@@ -496,6 +537,8 @@ private fun OrgTable(
     modifier: Modifier,
     /** Given, a tap on a field calls it with the field's line in the table and its column. */
     onCellTap: ((Int, Int) -> Unit)? = null,
+    /** Given, a long press on a field shows it as the field's menu, until it is dismissed. */
+    cellMenu: (@Composable (Int, Int, () -> Unit) -> Unit)? = null,
     /** The field shown by [editor] instead of its text, with the style it would have. */
     editing: Pair<Int, Int>? = null,
     editor: @Composable (Int, Int, TextStyle) -> Unit = { _, _, _ -> },
@@ -518,10 +561,20 @@ private fun OrgTable(
             Column(Modifier.width(IntrinsicSize.Max)) {
                 rows.forEach { (i, cells) ->
                     val isHeader = i < header
+                    var menu by remember { mutableStateOf(false) }
                     Box(
                         Modifier
                             .fillMaxWidth()
-                            .then(if (onCellTap != null) Modifier.clickable { onCellTap(i, c) } else Modifier)
+                            .then(
+                                if (onCellTap != null) {
+                                    Modifier.combinedClickable(
+                                        onClick = { onCellTap(i, c) },
+                                        onLongClick = cellMenu?.let { { menu = true } },
+                                    )
+                                } else {
+                                    Modifier
+                                },
+                            )
                             .background(if (isHeader) headerColor else Color.Transparent)
                             .border(if (editing == i to c) 2.dp else 0.5.dp, if (editing == i to c) MaterialTheme.colorScheme.primary else line)
                             .padding(horizontal = 10.dp, vertical = 6.dp),
@@ -533,9 +586,13 @@ private fun OrgTable(
                         } else {
                             LinkedText(cells.getOrElse(c) { "" }, cellStyle, onOpenLink, maxLines = 1)
                         }
+                        if (menu) cellMenu?.invoke(i, c) { menu = false }
                     }
                 }
             }
         }
     }
 }
+
+/** How long a menu takes to close, after which a field it opened can take the focus. */
+private const val MENU_CLOSE_MS = 250L

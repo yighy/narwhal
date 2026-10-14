@@ -238,6 +238,12 @@
     <string name="settings_tables">Table formulas</string>
     <string name="settings_tables_summary">Recalculate tables with formulas when a note shows them</string>
     <string name="settings_edit_cells">Edit table cells on tap</string>
+    <string name="table_row_above">Row above</string>
+    <string name="table_row_below">Row below</string>
+    <string name="table_column_left">Column left</string>
+    <string name="table_column_right">Column right</string>
+    <string name="table_delete_row">Delete row</string>
+    <string name="table_delete_column">Delete column</string>
     <string name="settings_edit_cells_summary">In a note, a tap on a value edits it in the table; values a formula computes stay as they are</string>
     <string name="settings_theme">Theme</string>
     <string name="settings_title">Settings</string>
