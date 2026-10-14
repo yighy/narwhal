@@ -163,6 +163,20 @@ object Blocks {
         return text.replaceRange(table.tableStart, table.tableEnd, updated.joinToString("\n"))
     }
 
+    /**
+     * [text] with an empty row put under the row at [line] of its [table]th table (from 0),
+     * realigned, its formulas' row references moved past it, as Emacs does.
+     */
+    fun withRowBelow(text: String, table: Int, line: Int): String {
+        val block = parse(text).filterIsInstance<Table>().getOrNull(table) ?: return text
+        val lines = text.substring(block.tableStart, block.tableEnd).split('\n')
+        val (rows, number) = TableFormulas.insertRowBelow(lines, line)
+        // The #+TBLFM lines, after the table's own
+        val formulas = text.substring(block.tableEnd, block.range.last + 1).split('\n')
+            .joinToString("\n") { if (TBLFM.matches(it)) TableFormulas.shiftRows(it, number, 1) else it }
+        return text.replaceRange(block.tableStart, block.range.last + 1, rows.joinToString("\n") + formulas)
+    }
+
     /** Whether [text] shows nothing: blank, or only a logbook (shown as the clock's time). */
     fun showsNothing(text: String): Boolean = parse(text).all { it is Drawer && it.name == "LOGBOOK" }
 

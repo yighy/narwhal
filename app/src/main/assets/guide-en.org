@@ -143,7 +143,7 @@ The link "meeting-point" leads here: <<meeting-point>> in front of the station.
 
 Columns of numbers align right.
 
-Tap a field to change it right in the table: *Enter*, another field or closing the keyboard saves it, and the table realigns as Emacs writes it. Tap elsewhere in the note to edit its text. This can be turned off in *Settings → Edit table cells on tap*.
+Tap a field to change it right in the table; another field, a tap elsewhere or closing the keyboard saves it, and the table realigns as Emacs writes it. *Enter* goes on to the field below, as in Emacs; on the last row it adds a new row. Tap elsewhere in the note to edit its text. This can be turned off in *Settings → Edit table cells on tap*.
 
 ** Formulas
 Under a table, a =#+TBLFM:= line holds its formulas. The "ƒ formulas" line shows them; *Recalculate* computes them and realigns the table, as =C-c C-c= does in Emacs.

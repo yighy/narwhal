@@ -158,6 +158,39 @@ object TableFormulas {
         return align(table, indent(tableLines.first()))
     }
 
+    /**
+     * [tableLines] with an empty row put under the row at [line] (in the table), realigned; its
+     * data row number, which formulas' references from it on move past.
+     */
+    fun insertRowBelow(tableLines: List<String>, line: Int): Pair<List<String>, Int> {
+        val table = Table(tableLines.map { parseRow(it) }.toMutableList())
+        val at = (line + 1).coerceIn(0, table.rows.size)
+        val number = table.rows.take(at).count { it != null } + 1
+        table.rows.add(at, MutableList(table.columns) { "" })
+        return align(table, indent(tableLines.first())) to number
+    }
+
+    private val REMOTE = Regex("""remote\([^)]*\)""", RegexOption.IGNORE_CASE)
+    private val ROW_REF = Regex("""(?<![\w@])@(\d+)""")
+
+    /**
+     * A #+TBLFM line with its absolute row references (@3) from [from] on moved by [by], as Emacs
+     * does when rows come or go; those inside remote() are another table's, left alone.
+     */
+    fun shiftRows(formulaLine: String, from: Int, by: Int): String {
+        fun moved(part: String) = ROW_REF.replace(part) { m ->
+            val n = m.groupValues[1].toInt()
+            if (n >= from) "@${n + by}" else m.value
+        }
+        val out = StringBuilder()
+        var at = 0
+        REMOTE.findAll(formulaLine).forEach { r ->
+            out.append(moved(formulaLine.substring(at, r.range.first))).append(r.value)
+            at = r.range.last + 1
+        }
+        return out.append(moved(formulaLine.substring(at))).toString()
+    }
+
     /** Whether a field holds a number (edited with a keyboard of digits). */
     fun isNumber(value: String): Boolean = value.trim().toBigDecimalOrNull() != null
 

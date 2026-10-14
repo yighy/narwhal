@@ -1,5 +1,7 @@
 package io.github.yighy.orgwhal.ui
 
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.geometry.Rect
@@ -88,8 +90,13 @@ fun OrgContent(
     tableNamed: (String) -> List<String>? = { null },
     /** Tables with formulas show their values recalculated (the file keeps its own until saved). */
     liveFormulas: Boolean = false,
-    /** Given, a tap on a table field opens it for editing (not those a formula computes). */
-    onEditCell: ((Blocks.CellEdit) -> Unit)? = null,
+    /**
+     * Given, a tap on a table field edits it in place (not those a formula computes), Enter going
+     * on to the field below: it is given the change to make to the text.
+     */
+    onEditTable: (((String) -> String) -> Unit)? = null,
+    /** Told when a table field starts and stops being edited. */
+    onCellEditing: (Boolean) -> Unit = {},
     /** The :LOGBOOK: drawer folds as the others, for its clock lines; else it is hidden. */
     showLogbook: Boolean = false,
 ) {
@@ -134,31 +141,66 @@ fun OrgContent(
                     val computed = remember(text, block) {
                         TableFormulas.computedCells(text.substring(block.tableStart, block.tableEnd).split('\n'), block.formulas)
                     }
-                    // The field being edited in place, and its text
-                    var editing by remember(text) { mutableStateOf<Pair<Int, Int>?>(null) }
-                    var draft by remember(text) { mutableStateOf(TextFieldValue()) }
+                    // The field being edited in place, and its text; kept as the table changes, a
+                    // new row or column opening its field
+                    var editing by remember(tableIndex) { mutableStateOf<Pair<Int, Int>?>(null) }
+                    var draft by remember(tableIndex) { mutableStateOf(TextFieldValue()) }
                     fun stored(line: Int, column: Int) = block.rows.getOrNull(line)?.getOrNull(column).orEmpty()
-                    /** Saves the field being edited, if it changed. */
-                    fun commit() {
-                        val (line, column) = editing ?: return
+                    if (editing != null) {
+                        DisposableEffect(Unit) {
+                            onCellEditing(true)
+                            onDispose { onCellEditing(false) }
+                        }
+                    }
+                    /** Opens the field at [line] and [column], its [value] selected. */
+                    fun edit(line: Int, column: Int, value: String = stored(line, column)) {
+                        draft = TextFieldValue(value, TextRange(0, value.length))
+                        editing = line to column
+                    }
+                    /** Saves the field being edited, if it changed, then [then] in the same save (a new row). */
+                    fun save(then: ((String) -> String)? = null) {
+                        val pending = editing?.let { (line, column) ->
+                            val value = draft.text
+                            if (value.trim() == stored(line, column)) null else { t: String -> Blocks.withCell(t, Blocks.CellEdit(tableIndex, line, column, value)) }
+                        }
                         editing = null
-                        if (draft.text.trim() != stored(line, column)) onEditCell?.invoke(Blocks.CellEdit(tableIndex, line, column, draft.text))
+                        val changes = listOfNotNull(pending, then)
+                        if (changes.isNotEmpty()) onEditTable?.invoke { t -> changes.fold(t) { acc, change -> change(acc) } }
+                    }
+                    /**
+                     * Enter, as in Emacs: the field below opens, or on the last row a new row
+                     * under it; a field below that a formula computes ends the editing.
+                     */
+                    fun next() {
+                        val (line, column) = editing ?: return
+                        val below = (line + 1 until block.rows.size).firstOrNull { block.rows[it] != null }
+                        when {
+                            below == null -> {
+                                save { t -> Blocks.withRowBelow(t, tableIndex, line) }
+                                edit(line + 1, column, "")
+                            }
+                            (below to column) !in computed -> {
+                                save()
+                                edit(below, column)
+                            }
+                            else -> save()
+                        }
                     }
                     OrgTable(
                         fresh?.let { block.copy(rows = it.rows) } ?: block,
                         style,
                         onOpenLink,
                         Modifier.tapToEdit(onTextTap, block.range.first),
-                        onCellTap = onEditCell?.let {
+                        onCellTap = onEditTable?.let {
                             { line, column ->
-                                if ((line to column) in computed || editing == line to column) {
-                                    null
-                                } else {
-                                    {
-                                        commit()
-                                        val value = stored(line, column)
-                                        draft = TextFieldValue(value, TextRange(0, value.length))
-                                        editing = line to column
+                                when {
+                                    editing == line to column -> {}
+                                    // A field a formula computes: the note's text, as before (only
+                                    // saving the field being edited, if one is)
+                                    (line to column) in computed -> if (editing != null) save() else onTextTap?.invoke(block.range.first)
+                                    else -> {
+                                        save()
+                                        edit(line, column)
                                     }
                                 }
                             }
@@ -183,10 +225,11 @@ fun OrgContent(
                                 // sends its text again, which would go into the next field
                                 onValueChange = { if (editing == line to column) draft = it },
                                 style = cellStyle,
-                                onFocusLost = { if (editing == line to column) commit() },
-                                onDone = ::commit,
+                                onFocusLost = { if (editing == line to column) save() },
+                                onDone = ::next,
+                                imeAction = ImeAction.Next,
                                 keyboardType = if (TableFormulas.isNumber(stored(line, column))) KeyboardType.Decimal else KeyboardType.Text,
-                                // A field is one line: Enter saves it
+                                // A field is one line: Enter goes to the next
                                 singleLine = true,
                                 modifier = Modifier.width(IntrinsicSize.Min).bringIntoViewRequester(bring).onSizeChanged { size = it },
                             )
@@ -451,8 +494,8 @@ private fun OrgTable(
     style: TextStyle,
     onOpenLink: (String) -> Unit,
     modifier: Modifier,
-    /** Given, the action of a tap on the field at a line of the table and a column, if it has one. */
-    onCellTap: ((Int, Int) -> (() -> Unit)?)? = null,
+    /** Given, a tap on a field calls it with the field's line in the table and its column. */
+    onCellTap: ((Int, Int) -> Unit)? = null,
     /** The field shown by [editor] instead of its text, with the style it would have. */
     editing: Pair<Int, Int>? = null,
     editor: @Composable (Int, Int, TextStyle) -> Unit = { _, _, _ -> },
@@ -478,7 +521,7 @@ private fun OrgTable(
                     Box(
                         Modifier
                             .fillMaxWidth()
-                            .then(onCellTap?.invoke(i, c)?.let { Modifier.clickable(onClick = it) } ?: Modifier)
+                            .then(if (onCellTap != null) Modifier.clickable { onCellTap(i, c) } else Modifier)
                             .background(if (isHeader) headerColor else Color.Transparent)
                             .border(if (editing == i to c) 2.dp else 0.5.dp, if (editing == i to c) MaterialTheme.colorScheme.primary else line)
                             .padding(horizontal = 10.dp, vertical = 6.dp),

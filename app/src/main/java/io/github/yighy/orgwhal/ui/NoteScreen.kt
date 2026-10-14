@@ -700,10 +700,16 @@ fun NoteScreen(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                 )
             } else {
+                // A table field being edited: a tap elsewhere in the content only saves it (the
+                // text editor, opened from the text as it was, would write the field back)
+                var cellEditing by remember { mutableStateOf(false) }
+                val focusManager = LocalFocusManager.current
                 Box(
                     Modifier
                         .fillMaxWidth()
-                        .clickable(interactionSource = null, indication = null) { startEditing(Editing.Content) }
+                        .clickable(interactionSource = null, indication = null) {
+                            if (cellEditing) focusManager.clearFocus() else startEditing(Editing.Content)
+                        }
                         .padding(vertical = 8.dp),
                 ) {
                     // Tables read with remote(), and recalculated as shown if so set
@@ -725,7 +731,8 @@ fun NoteScreen(
                             contentStyle,
                             viewModel::openLink,
                             Modifier.sharedText(noteContentKey(note)),
-                            onTextTap = { startEditing(Editing.Content, it) },
+                            onTextTap = { if (cellEditing) focusManager.clearFocus() else startEditing(Editing.Content, it) },
+                            onCellEditing = { cellEditing = it },
                             onToggleCheckbox = { n ->
                                 saved = Editing.Content to Checkboxes.toggle(content, n)
                                 viewModel.update(note) { it.copy(content = Checkboxes.toggle(it.content, n)) }
@@ -733,10 +740,10 @@ fun NoteScreen(
                             tableNamed = tables,
                             liveFormulas = settings.tableRecalc != TableRecalc.Never,
                             showLogbook = true,
-                            onEditCell = if (settings.editCells) {
-                                { cell ->
-                                    saved = Editing.Content to Blocks.withCell(content, cell)
-                                    viewModel.update(note) { it.copy(content = Blocks.withCell(it.content, cell)) }
+                            onEditTable = if (settings.editCells) {
+                                { change ->
+                                    saved = Editing.Content to change(content)
+                                    viewModel.update(note) { it.copy(content = change(it.content)) }
                                 }
                             } else {
                                 null

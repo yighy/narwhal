@@ -796,6 +796,8 @@ fun InPlaceField(
     onDone: (() -> Unit)? = null,
     keyboardType: KeyboardType = KeyboardType.Text,
     singleLine: Boolean = false,
+    /** The key that calls [onDone]: Done, or Next to go on to another field. */
+    imeAction: ImeAction = ImeAction.Done,
 ) {
     val focus = remember { FocusRequester() }
     var focused by remember { mutableStateOf(false) }
@@ -807,8 +809,8 @@ fun InPlaceField(
         textStyle = textStyle,
         singleLine = singleLine,
         cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-        keyboardOptions = KeyboardOptions(keyboardType = keyboardType, imeAction = if (onDone != null) ImeAction.Done else ImeAction.Default),
-        keyboardActions = KeyboardActions(onDone = { onDone?.invoke() }),
+        keyboardOptions = KeyboardOptions(keyboardType = keyboardType, imeAction = if (onDone != null) imeAction else ImeAction.Default),
+        keyboardActions = KeyboardActions(onDone = { onDone?.invoke() }, onNext = { onDone?.invoke() }),
         modifier = modifier
             .focusRequester(focus)
             .onFocusChanged {
