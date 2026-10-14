@@ -314,7 +314,7 @@ private fun NotebookOutline(
                 .nestedScroll(scrollConnection),
         ) {
             item(key = "header") {
-                val prefaceStyle = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
+                val prefaceStyle = contentStyle(MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant))
                 if (prefaceDraft != null) {
                     InPlaceField(
                         value = prefaceDraft,
@@ -322,6 +322,7 @@ private fun NotebookOutline(
                         style = prefaceStyle,
                         placeholder = stringResource(R.string.preface_placeholder),
                         onFocusLost = onCommitPreface,
+                        visualTransformation = TableLinesMonospace,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(start = 16.dp, end = 16.dp, bottom = 12.dp),
@@ -542,7 +543,7 @@ private fun OutlineRow(
                     if (onTablesShown != null) LaunchedEffect(note.content, tables) { onTablesShown() }
                     OrgContent(
                         note.content.trimIndent(),
-                        MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
+                        contentStyle(MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)),
                         onOpenLink,
                         Modifier.padding(top = 4.dp).sharedText(noteContentKey(note)),
                         onToggleCheckbox = onToggleCheckbox,

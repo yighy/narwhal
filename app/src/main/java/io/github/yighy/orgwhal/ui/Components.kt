@@ -1,5 +1,9 @@
 package io.github.yighy.orgwhal.ui
 
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.input.OffsetMapping
+import androidx.compose.ui.text.input.TransformedText
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.material3.TopAppBarState
 import androidx.compose.animation.core.animate
@@ -743,6 +747,26 @@ private fun rawOffset(shown: Int, parts: List<ShownPart>): Int? {
 /** Whether done notes show struck through (a setting). */
 val LocalStrikeDone = compositionLocalOf { true }
 
+/** Whether notes' content shows in a fixed-width font (a setting). */
+val LocalMonospace = compositionLocalOf { false }
+
+/** [style] for notes' content: in a fixed-width font when so set. */
+@Composable
+fun contentStyle(style: TextStyle): TextStyle = if (LocalMonospace.current) style.copy(fontFamily = FontFamily.Monospace) else style
+
+private val TABLE_LINE = Regex("""^[ \t]*(\||#\+TBLFM:).*$""", setOf(RegexOption.MULTILINE, RegexOption.IGNORE_CASE))
+
+/**
+ * Text being edited with its table lines (and their formulas) in a fixed-width font, so that
+ * columns aligned as Emacs writes them line up.
+ */
+val TableLinesMonospace = VisualTransformation { text ->
+    val styled = AnnotatedString.Builder(text).apply {
+        TABLE_LINE.findAll(text.text).forEach { addStyle(SpanStyle(fontFamily = FontFamily.Monospace), it.range.first, it.range.last + 1) }
+    }.toAnnotatedString()
+    TransformedText(styled, OffsetMapping.Identity)
+}
+
 /** A part of the text shown otherwise than written: a link, a checkbox, emphasis. */
 private data class ShownPart(val shown: IntRange, val raw: IntRange, val editable: Boolean)
 
@@ -798,6 +822,7 @@ fun InPlaceField(
     singleLine: Boolean = false,
     /** The key that calls [onDone]: Done, or Next to go on to another field. */
     imeAction: ImeAction = ImeAction.Done,
+    visualTransformation: VisualTransformation = VisualTransformation.None,
 ) {
     val focus = remember { FocusRequester() }
     var focused by remember { mutableStateOf(false) }
@@ -808,6 +833,7 @@ fun InPlaceField(
         onValueChange = onValueChange,
         textStyle = textStyle,
         singleLine = singleLine,
+        visualTransformation = visualTransformation,
         cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType, imeAction = if (onDone != null) imeAction else ImeAction.Default),
         keyboardActions = KeyboardActions(onDone = { onDone?.invoke() }, onNext = { onDone?.invoke() }),

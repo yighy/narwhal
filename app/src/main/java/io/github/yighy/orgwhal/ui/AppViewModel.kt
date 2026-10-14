@@ -254,6 +254,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun setStrikeDone(on: Boolean) = appSettings.setStrikeDone(on)
 
+    fun setMonospace(on: Boolean) = appSettings.setMonospace(on)
+
     fun setNoteSpacing(spacing: NoteSpacing) = appSettings.setNoteSpacing(spacing)
 
     fun setHiddenProperties(names: Set<String>) = appSettings.setHiddenProperties(names)

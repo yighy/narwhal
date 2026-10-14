@@ -693,7 +693,7 @@ fun NoteScreen(
             HorizontalDivider(Modifier.padding(vertical = 8.dp))
 
             // Content: edited where it is shown, looking the same
-            val contentStyle = MaterialTheme.typography.bodyLarge
+            val contentStyle = contentStyle(MaterialTheme.typography.bodyLarge)
             val contentPlaceholder = stringResource(R.string.content_placeholder)
             if (editing == Editing.Content) {
                 InPlaceField(
@@ -702,6 +702,7 @@ fun NoteScreen(
                     style = contentStyle,
                     placeholder = contentPlaceholder,
                     onFocusLost = { if (editing == Editing.Content) commit() },
+                    visualTransformation = TableLinesMonospace,
                     modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                 )
             } else {

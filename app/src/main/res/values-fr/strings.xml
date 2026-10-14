@@ -233,6 +233,8 @@
     <string name="settings_spacing">Espacement entre les notes</string>
     <string name="settings_strike_done">Barrer les notes faites</string>
     <string name="settings_strike_done_summary">Leurs titres, liens compris</string>
+    <string name="settings_monospace">Police à largeur fixe</string>
+    <string name="settings_monospace_summary">Pour le contenu des notes, comme dans Emacs : tableaux et textes alignés par des espaces tombent juste</string>
     <string name="settings_tables">Formules des tableaux</string>
     <string name="settings_tables_summary">Recalculer les tableaux à formules quand une note les affiche</string>
     <string name="settings_edit_cells">Modifier les cellules au toucher</string>
