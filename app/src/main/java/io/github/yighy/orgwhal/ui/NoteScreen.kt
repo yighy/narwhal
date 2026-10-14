@@ -717,9 +717,9 @@ fun NoteScreen(
                             }
                         }
                     }
-                    if (remember(content) { Blocks.showsNothing(content) }) {
-                        Text(contentPlaceholder, style = contentStyle, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    } else {
+                    // A logbook alone shows folded, over the placeholder
+                    val empty = remember(content) { Blocks.showsNothing(content) }
+                    if (content.isNotBlank()) {
                         OrgContent(
                             content,
                             contentStyle,
@@ -732,6 +732,7 @@ fun NoteScreen(
                             },
                             tableNamed = tables,
                             liveFormulas = settings.tableRecalc != TableRecalc.Never,
+                            showLogbook = true,
                             onEditCell = if (settings.editCells) {
                                 { cell ->
                                     saved = Editing.Content to Blocks.withCell(content, cell)
@@ -753,6 +754,14 @@ fun NoteScreen(
                                     },
                                 )
                             },
+                        )
+                    }
+                    if (empty) {
+                        Text(
+                            contentPlaceholder,
+                            style = contentStyle,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = if (content.isNotBlank()) Modifier.padding(top = 8.dp) else Modifier,
                         )
                     }
                 }

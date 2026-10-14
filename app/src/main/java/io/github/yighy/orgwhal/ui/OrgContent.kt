@@ -70,7 +70,8 @@ import io.github.yighy.orgwhal.core.Checkboxes
 
 /**
  * A note's content as Org shows it: text with its links and checkboxes ([LinkedText]), tables,
- * source and example blocks in a monospace box, quotes with a bar; drawers (:LOGBOOK:…) hidden.
+ * source and example blocks in a monospace box, quotes with a bar; drawers folded under their
+ * name, the logbook hidden unless [showLogbook].
  * Taps give positions in [text], as for [LinkedText].
  */
 @Composable
@@ -89,6 +90,8 @@ fun OrgContent(
     liveFormulas: Boolean = false,
     /** Given, a tap on a table field opens it for editing (not those a formula computes). */
     onEditCell: ((Blocks.CellEdit) -> Unit)? = null,
+    /** The :LOGBOOK: drawer folds as the others, for its clock lines; else it is hidden. */
+    showLogbook: Boolean = false,
 ) {
     val blocks = remember(text) { Blocks.parse(text) }
     // Plain text, the usual case, shows as written
@@ -108,8 +111,9 @@ fun OrgContent(
     Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         blocks.forEach { block ->
             when (block) {
-                // The logbook shows as the clock's time; other drawers open with a tap
-                is Blocks.Drawer -> if (block.name != "LOGBOOK") {
+                // Drawers open with a tap; the logbook only where asked, the clock's time
+                // showing it elsewhere
+                is Blocks.Drawer -> if (showLogbook || !block.name.equals("LOGBOOK", ignoreCase = true)) {
                     DrawerBlock(block, style, onOpenLink, tapFrom(block.innerStart), toggleFrom(block.innerStart))
                 }
                 is Blocks.Text -> FoldableText(block.text, block.range.first, style, onOpenLink, ::tapFrom, ::toggleFrom)
