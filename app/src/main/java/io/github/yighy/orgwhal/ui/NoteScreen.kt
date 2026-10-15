@@ -1,5 +1,13 @@
 package io.github.yighy.orgwhal.ui
 
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.runtime.mutableLongStateOf
 import android.os.SystemClock
 import io.github.yighy.orgwhal.data.TableRecalc
@@ -1145,26 +1153,47 @@ private fun ClockRow(content: String, onStart: () -> Unit, onStop: () -> Unit) {
         running != null -> stringResource(R.string.clock_total, total)
         else -> last?.let { stringResource(R.string.clock_last, it) }
     }
+    val color by animateColorAsState(
+        if (running != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+        label = "clock color",
+    )
     MetaRow(stringResource(R.string.clock), onClick = if (running != null) onStop else onStart) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                main,
-                style = MaterialTheme.typography.bodyLarge,
-                color = if (running != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-            )
-            if (aside != null) {
-                Text(
-                    " · $aside",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+        Row(Modifier.animateContentSize(), verticalAlignment = Alignment.CenterVertically) {
+            // Starting the clock brings its session up from below, stopping takes the total back
+            // down; the minutes ticking change in place
+            AnimatedContent(
+                targetState = main to (running != null),
+                contentKey = { it.second },
+                transitionSpec = {
+                    val up = targetState.second
+                    (slideInVertically { if (up) it else -it } + fadeIn()) togetherWith
+                        (slideOutVertically { if (up) -it else it } + fadeOut())
+                },
+                label = "clock time",
+            ) { (time, _) ->
+                Text(time, style = MaterialTheme.typography.bodyLarge, color = color)
+            }
+            AnimatedContent(aside, transitionSpec = { fadeIn() togetherWith fadeOut() }, label = "clock aside") { text ->
+                if (text != null) {
+                    Text(
+                        " · $text",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
             Spacer(Modifier.width(12.dp))
-            Icon(
-                if (running != null) OrgwhalIcons.Stop else Icons.Default.PlayArrow,
-                stringResource(if (running != null) R.string.clock_out else R.string.clock_in),
-                tint = MaterialTheme.colorScheme.primary,
-            )
+            AnimatedContent(
+                running != null,
+                transitionSpec = { (scaleIn() + fadeIn()) togetherWith (scaleOut() + fadeOut()) },
+                label = "clock button",
+            ) { on ->
+                Icon(
+                    if (on) OrgwhalIcons.Stop else Icons.Default.PlayArrow,
+                    stringResource(if (on) R.string.clock_out else R.string.clock_in),
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+            }
         }
     }
 }
