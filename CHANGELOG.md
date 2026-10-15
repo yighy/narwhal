@@ -4,6 +4,13 @@ All notable changes to Orgwhal (named Narwhal up to 0.16.0). Versions follow [Se
 
 ## [Unreleased]
 
+## [0.23.0] - 2026-10-15
+
+### Changed
+- A note's Clock line shows, beside the total, the last time clocked; while the clock runs, it
+  shows the time since it started, with the total beside
+- The Clock line animates as the clock starts or stops
+
 ## [0.22.0] - 2026-10-14
 
 ### Added
@@ -353,7 +360,8 @@ All notable changes to Orgwhal (named Narwhal up to 0.16.0). Versions follow [Se
 - First prototype: notebooks from a folder of `.org` files, outline, note editing, search, tags,
   and `id:` links to other notes
 
-[Unreleased]: https://github.com/yighy/orgwhal/compare/v0.22.0...HEAD
+[Unreleased]: https://github.com/yighy/orgwhal/compare/v0.23.0...HEAD
+[0.23.0]: https://github.com/yighy/orgwhal/compare/v0.22.0...v0.23.0
 [0.22.0]: https://github.com/yighy/orgwhal/compare/v0.21.0...v0.22.0
 [0.21.0]: https://github.com/yighy/orgwhal/compare/v0.20.1...v0.21.0
 [0.20.1]: https://github.com/yighy/orgwhal/compare/v0.20.0...v0.20.1
