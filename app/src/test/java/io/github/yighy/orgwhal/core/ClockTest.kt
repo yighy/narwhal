@@ -34,4 +34,13 @@ class ClockTest {
         assertEquals("  :LOGBOOK:\n  CLOCK: [2026-10-09 Fri 10:00]\n  CLOCK: [2026-10-08 Thu 09:00]--[2026-10-08 Thu 09:30] =>  0:30\n  :END:\nText", started)
         assertEquals(Duration.ofMinutes(45), Clock.total(started, ten.plusMinutes(15)))
     }
+
+    @Test
+    fun lastIsTheRunningClockOrElseTheLatest() {
+        val content = ":LOGBOOK:\nCLOCK: [2026-10-07 Wed 09:00]--[2026-10-07 Wed 10:00] =>  1:00\nCLOCK: [2026-10-08 Thu 09:00]--[2026-10-08 Thu 09:30] =>  0:30\n:END:"
+        assertEquals(Duration.ofMinutes(30), Clock.duration(Clock.last(content)!!, ten))
+        val started = Clock.clockIn(content, ten)
+        assertEquals(Duration.ofMinutes(20), Clock.duration(Clock.last(started)!!, ten.plusMinutes(20)))
+        assertNull(Clock.last("No clocking"))
+    }
 }

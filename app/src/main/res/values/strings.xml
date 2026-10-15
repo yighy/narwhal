@@ -31,6 +31,8 @@
     <string name="clock_in">Start the clock</string>
     <string name="clock_out">Stop the clock</string>
     <string name="clock_running">Clock running</string>
+    <string name="clock_total">total %1$s</string>
+    <string name="clock_last">last %1$s</string>
     <string name="close">Close</string>
     <string name="close_search">Close search</string>
     <string name="closed">Closed</string>

@@ -29,6 +29,8 @@
     <string name="clock_in">Démarrer le pointage</string>
     <string name="clock_out">Arrêter le pointage</string>
     <string name="clock_running">Pointage en cours</string>
+    <string name="clock_total">total %1$s</string>
+    <string name="clock_last">dernier %1$s</string>
     <string name="close">Fermer</string>
     <string name="close_search">Fermer la recherche</string>
     <string name="closed">Terminée</string>

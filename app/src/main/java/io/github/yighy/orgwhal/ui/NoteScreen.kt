@@ -1119,10 +1119,14 @@ private fun ChoiceRow(
     }
 }
 
-/** Time clocked on the note (the running clock ticking), with a button to start or stop it. */
+/**
+ * Time clocked on the note, with a button to start or stop it: while the clock runs, the time
+ * since it started (ticking) with the total beside; else the total, with the last clocking beside.
+ */
 @Composable
 private fun ClockRow(content: String, onStart: () -> Unit, onStop: () -> Unit) {
     val running = remember(content) { Clock.running(content) }
+    val entries = remember(content) { Clock.entries(content).size }
     var now by remember { mutableStateOf(LocalDateTime.now()) }
     if (running != null) {
         LaunchedEffect(running) {
@@ -1133,13 +1137,28 @@ private fun ClockRow(content: String, onStart: () -> Unit, onStop: () -> Unit) {
         }
     }
     val total = Clock.format(Clock.total(content, now))
+    val last = Clock.last(content)?.let { Clock.format(Clock.duration(it, now)) }
+    // The other figure only says something new when there was more than one clocking
+    val main = if (running != null) last ?: total else total
+    val aside = when {
+        entries < 2 -> null
+        running != null -> stringResource(R.string.clock_total, total)
+        else -> last?.let { stringResource(R.string.clock_last, it) }
+    }
     MetaRow(stringResource(R.string.clock), onClick = if (running != null) onStop else onStart) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                total,
+                main,
                 style = MaterialTheme.typography.bodyLarge,
                 color = if (running != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
             )
+            if (aside != null) {
+                Text(
+                    " · $aside",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
             Spacer(Modifier.width(12.dp))
             Icon(
                 if (running != null) OrgwhalIcons.Stop else Icons.Default.PlayArrow,

@@ -27,9 +27,15 @@ object Clock {
     /** The clock running in [content], if any. */
     fun running(content: String): Entry? = entries(content).firstOrNull { it.end == null }
 
+    /** The latest clocking in [content]: the running clock, or else the last started. */
+    fun last(content: String): Entry? = entries(content).let { all -> all.firstOrNull { it.end == null } ?: all.maxByOrNull { it.start } }
+
+    /** Time clocked by [entry], a running one counting up to [now]. */
+    fun duration(entry: Entry, now: LocalDateTime): Duration = Duration.between(entry.start, entry.end ?: now).coerceAtLeast(Duration.ZERO)
+
     /** Time clocked in [content], the running clock counting up to [now]. */
     fun total(content: String, now: LocalDateTime): Duration =
-        entries(content).fold(Duration.ZERO) { sum, e -> sum + Duration.between(e.start, e.end ?: now).coerceAtLeast(Duration.ZERO) }
+        entries(content).fold(Duration.ZERO) { sum, e -> sum + duration(e, now) }
 
     /** [content] with a running clock from [now], first in its logbook (made if needed). */
     fun clockIn(content: String, now: LocalDateTime): String {
